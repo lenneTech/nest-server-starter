@@ -1,0 +1,65 @@
+{
+  "name": "@lenne.tech/nest-server-starter",
+  "version": "0.0.1",
+  "description": "Starter for lenne.Tech Nest Server",
+  "keywords": [
+    "starter",
+    "lenne.Tech",
+    "node",
+    "nest",
+    "server",
+    "mongodb",
+    "graphql",
+    "typescript"
+  ],
+  "author": "Kai Haase",
+  "homepage": "http://lenne.tech",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lenneTech/nest-server-starter"
+  },
+  "bugs": {
+    "url": "https://github.com/lenneTech/nest-server-starter/issues"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "lint": "tslint -p tsconfig.json -c tslint.json",
+    "prestart:prod": "rimraf dist && npm run build",
+    "reinit": "rm -f package-lock.json && rm -rf node_modules && npm cache clean --force && npm i",
+    "start": "ts-node -r tsconfig-paths/register src/main.ts",
+    "start:debug": "nodemon --config nodemon-debug.json",
+    "start:dev": "nodemon",
+    "start:prod": "node dist/main.js",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --detectOpenHandles --config ./test/jest-e2e.json",
+    "test:watch": "jest --watch"
+  },
+  "engines": {
+    "node": ">= 12.4.0"
+  },
+  "dependencies": {
+    "@lenne.tech/nest-server": "latest"
+  },
+  "jest": {
+    "coverageDirectory": "../coverage",
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": "src",
+    "testEnvironment": "node",
+    "testRegex": ".spec.ts$",
+    "transform": {
+      ".+\\.(t|j)s$": "ts-jest"
+    }
+  },
+  "main": "dist/main.js",
+  "files": [
+    "dist"
+  ]
+}
