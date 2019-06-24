@@ -57,7 +57,7 @@ have a look at the [source code](https://github.com/lenneTech/nest-server/tree/m
 There you will find a lot of things that will help you to extend your server, such as:
 
 - [GraphQL scalars](https://github.com/lenneTech/nest-server/tree/master/src/core/common/scalars)
-- [Filter and Pagignation](https://github.com/lenneTech/nest-server/tree/master/src/core/common/args)
+- [Filter and pagination](https://github.com/lenneTech/nest-server/tree/master/src/core/common/args)
 - [Decorators for restrictions and roles](https://github.com/lenneTech/nest-server/tree/master/src/core/common/decorators)
 - [Authorisation handling](https://github.com/lenneTech/nest-server/tree/master/src/core/modules/auth)
 - [Ready to use user module](https://github.com/lenneTech/nest-server/tree/master/src/core/modules/user)
