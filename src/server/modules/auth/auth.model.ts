@@ -1,12 +1,12 @@
-import { CoreAuth } from '@lenne.tech/nest-server';
+import { CoreAuthModel } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from 'type-graphql';
 import { User } from '../user/user.model';
 
 /**
- * CoreAuth model for the response after the sign in
+ * CoreAuthModel model for the response after the sign in
  */
 @ObjectType({ description: 'Auth' })
-export class Auth extends CoreAuth {
+export class Auth extends CoreAuthModel {
 
   // ===================================================================================================================
   // Properties

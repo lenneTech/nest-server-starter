@@ -1,5 +1,6 @@
 import { FilterArgs, GraphQLUser, InputHelper, RoleEnum, Roles } from '@lenne.tech/nest-server';
-import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
+import { Args, Info, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
+import { GraphQLResolveInfo } from 'graphql';
 import { PubSub } from 'graphql-subscriptions';
 import { UserCreateInput } from './inputs/user-create.input';
 import { UserInput } from './inputs/user.input';
@@ -28,8 +29,8 @@ export class UserResolver {
    * Get user via ID
    */
   @Query(returns => User, { description: 'Get user with specified ID' })
-  async getUser(@Args('id') id: string): Promise<User> {
-    return await this.usersService.get(id);
+  async getUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo): Promise<User> {
+    return await this.usersService.get(id, info);
   }
 
   /**
@@ -37,8 +38,8 @@ export class UserResolver {
    */
   @Roles(RoleEnum.USER)
   @Query(returns => [User], { description: 'Find users (via filter)' })
-  async findUsers(@Args() args?: FilterArgs) {
-    return await this.usersService.find(args);
+  async findUsers(@Info() info: GraphQLResolveInfo, @Args() args?: FilterArgs) {
+    return await this.usersService.find(args, info);
   }
 
   // ===========================================================================
@@ -49,8 +50,8 @@ export class UserResolver {
    * Create new user
    */
   @Mutation(returns => User, { description: 'Create a new user' })
-  async createUser(@Args('input') input: UserCreateInput): Promise<User> {
-    return await this.usersService.create(input);
+  async createUser(@Args('input') input: UserCreateInput, @GraphQLUser() user: User, @Info() info: GraphQLResolveInfo): Promise<User> {
+    return await this.usersService.create(input, user, info);
   }
 
   /**
@@ -62,15 +63,16 @@ export class UserResolver {
     @Args('input') input: UserInput,
     @Args('id') id: string,
     @GraphQLUser() user: User,
+    @Info() info: GraphQLResolveInfo,
   ): Promise<User> {
 
     // Check input
     // Hint: necessary as long as global CheckInputPipe can't access context for current user
-    // (see https://github.com/nestjs/nest/issues/2032)
+    // (see https://github.com/nestjs/graphql/issues/325)
     input = await InputHelper.check(input, user, User);
 
     // Update user
-    return await this.usersService.update(id, input);
+    return await this.usersService.update(id, input, user, info);
   }
 
   /**
@@ -78,8 +80,8 @@ export class UserResolver {
    */
   @Roles(RoleEnum.ADMIN, RoleEnum.OWNER)
   @Mutation(returns => User, { description: 'Delete existing user' })
-  async deleteUser(@Args('id') id: string): Promise<User> {
-    return await this.usersService.delete(id);
+  async deleteUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo): Promise<User> {
+    return await this.usersService.delete(id, info);
   }
 
   // ===========================================================================

@@ -42,7 +42,7 @@
     "node": ">= 12.4.0"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "latest"
+    "@lenne.tech/nest-server": "0.0.10"
   },
   "jest": {
     "coverageDirectory": "../coverage",
