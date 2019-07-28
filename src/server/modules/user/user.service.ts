@@ -6,7 +6,6 @@ import {
   FilterArgs,
   GraphQLHelper,
   InputHelper,
-  TemplateService,
 } from '@lenne.tech/nest-server';
 import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -50,7 +49,6 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   constructor(
     protected readonly configService: ConfigService,
     protected readonly emailService: EmailService,
-    protected readonly templateService: TemplateService,
   ) {
     super();
   }
@@ -66,8 +64,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     try {
       const user = await super.create(input, currentUser);
       const text = `Welcome ${user.firstName}, this is plain text from server.`;
-      const html = await this.templateService.renderTemplate('welcome', user);
-      await this.emailService.sendMail(user.email, 'Welcome', { text, html });
+      await this.emailService.sendMail(user.email, 'Welcome', { htmlTemplate: 'welcome', templateData: user, text });
       return user;
     } catch (err) {
       console.log(err);
