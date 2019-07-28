@@ -1,10 +1,12 @@
 import {
   ConfigService,
   CoreUserService,
+  EmailService,
   Filter,
   FilterArgs,
   GraphQLHelper,
   InputHelper,
+  TemplateService,
 } from '@lenne.tech/nest-server';
 import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -45,13 +47,28 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   /**
    * Constructor for injecting services
    */
-  constructor(protected readonly configService: ConfigService) {
+  constructor(
+    protected readonly configService: ConfigService,
+    protected readonly emailService: EmailService,
+    protected readonly templateService: TemplateService,
+  ) {
     super();
   }
 
   // ===================================================================================================================
   // Methods
   // ===================================================================================================================
+
+  /**
+   * Create new user and send welcome email
+   */
+  async create(input: UserCreateInput, currentUser?: User, ...args: any[]): Promise<User> {
+    const user = await super.create(input, currentUser);
+    const text = `Welcome ${user.firstName}, this is plain text from server.`;
+    const html = await this.templateService.renderTemplate('welcome', user);
+    await this.emailService.sendMail(user.email, 'Welcome', { text, html });
+    return user;
+  }
 
   /**
    * Get users via filter
