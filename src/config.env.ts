@@ -27,6 +27,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     },
     env: 'development',
     jwt: {
+      // tslint:disable-next-line:max-line-length
       secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_DEV',
     },
     port: 3000,
@@ -69,6 +70,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     },
     env: 'productive',
     jwt: {
+      // tslint:disable-next-line:max-line-length
       secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PROD',
     },
     port: 3000,
