@@ -4,6 +4,9 @@ This is the starter kit for the [lenne.Tech Nest Server](https://github.com/lenn
 
 It contains everything you need to get started right away and a few code examples to help you create your own modules.
 
+[![License](https://img.shields.io/github/license/lenneTech/nest-server-starter)](/LICENSE) [![CircleCI](https://circleci.com/gh/lenneTech/nest-server-starter/tree/master.svg?style=shield)](https://circleci.com/gh/lenneTech/nest-server-starter/tree/master)
+[![Dependency Status](https://david-dm.org/lenneTech/nest-server-starter.svg)](https://david-dm.org/lenneTech/nest-server-starter) [![devDependency Status](https://david-dm.org/lenneTech/nest-server-starter/dev-status.svg)](https://david-dm.org/lenneTech/nest-server-starter?type=dev)
+
 ## Requirements
 
 - [Node.js incl. npm](https://nodejs.org):  
@@ -16,37 +19,30 @@ It contains everything you need to get started right away and a few code example
   (or any other database compatible with [TypeORM](https://typeorm.io)):  
   the database for your objects
 
-## 1. Install the starter kit
+## 1. Install the starter kit via [CLI](https://github.com/lenneTech/cli)
 
-```bash
-# Download
-$ git clone https://github.com/lenneTech/nest-server-starter.git YOUR_NEW_PROJECT_DIR
-
-# Integrate dependencies
-$ cd YOUR_NEW_PROJECT_DIR
-$ npm i
+```
+$ npm install -g @lenne.tech/cli
+$ lt server create <ServerName>
+$ cd <ServerName>
 ```
 
-## 2. Configure your project
+## 2. Start the server
 
-- `src/config.env.ts`:  
-  Here you can configure the behavior and the connection of the server for the different runtime
-  environments. **You should definitely adjust the secretOrPrivateKey!**
+```
+$ npm run start:dev
+```
 
-- `package.json`:  
-  Customize metadata for your project.
-
-- `README.md`:  
-  Replace the file with information relevant to your project.
-
-## 3. Start the server
-
-`$ npm run start:dev`
-
-## 4. Extend the server
+## 3. Extend the server
 
 Since the server is based on [Nest](https://nestjs.com/), you can find all information about extending your server
 in the [documentation of Nest](https://docs.nestjs.com/).
+
+To create a new Module with model, inputs, resolver and service you can use the [CLI](https://github.com/lenneTech/cli):
+
+```
+$ lt server module <ModuleName>
+```
 
 We are currently working on a documentation of the extensions and auxiliary classes that the
 [lenne.Tech Nest Server](https://github.com/lenneTech/nest-server) contains. As long as this is not yet available,

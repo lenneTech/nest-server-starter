@@ -24,7 +24,7 @@
   },
   "scripts": {
     "build": "rimraf dist && tsc -p tsconfig.build.json",
-    "format": "prettier --write \"src/**/*.ts\"",
+    "format": "prettier --write 'src/**/*.ts'",
     "lint": "tslint -p tsconfig.json -c tslint.json",
     "prestart:prod": "rimraf dist && npm run build",
     "reinit": "rimraf package-lock.json && rimraf node_modules && npm cache clean --force && npm i && npm run test:e2e",
@@ -48,7 +48,7 @@
     "node": ">= 12.4.0"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "0.0.17"
+    "@lenne.tech/nest-server": "0.0.18"
   },
   "jest": {
     "collectCoverage": true,
