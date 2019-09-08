@@ -5,7 +5,6 @@ import { join } from 'path';
  * Configuration for the different environments
  */
 const config: { [env: string]: Partial<IServerOptions> } = {
-
   // ===========================================================================
   // Development environment
   // ===========================================================================
@@ -46,6 +45,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       synchronize: true,
       entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
       useNewUrlParser: true,
+      useUnifiedTopology: true,
     },
   },
 
@@ -89,6 +89,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       synchronize: false, // https://typeorm.io/#/migrations/how-migrations-work
       entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
       useNewUrlParser: true,
+      useUnifiedTopology: true,
     },
   },
 };
@@ -98,7 +99,8 @@ const config: { [env: string]: Partial<IServerOptions> } = {
  *
  * default: development
  */
-const envConfig = config[process.env.NODE_ENV || 'development'] || config.development;
+const envConfig =
+  config[process.env.NODE_ENV || 'development'] || config.development;
 
 /**
  * Export envConfig as default
