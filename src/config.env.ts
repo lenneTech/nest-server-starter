@@ -13,29 +13,29 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       smtp: {
         auth: {
           user: 'everardo.hansen7@ethereal.email',
-          pass: 'hP6dNm7eQn7QRTmWH2',
+          pass: 'hP6dNm7eQn7QRTmWH2'
         },
         host: 'smtp.ethereal.email',
         port: 587,
-        secure: false,
+        secure: false
       },
       defaultSender: {
         email: 'everardo.hansen7@ethereal.email',
-        name: 'Everardo Hansen',
-      },
+        name: 'Everardo Hansen'
+      }
     },
     env: 'development',
     jwt: {
       // tslint:disable-next-line:max-line-length
-      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_DEV',
+      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_DEV'
     },
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
-      options: { prefix: '/public/' },
+      options: { prefix: '/public/' }
     },
     templates: {
-      path: join(__dirname, 'templates'),
+      path: join(__dirname, 'templates')
     },
     typeOrm: {
       type: 'mongodb',
@@ -45,8 +45,8 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       synchronize: true,
       entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
       useNewUrlParser: true,
-      useUnifiedTopology: true,
-    },
+      useUnifiedTopology: true
+    }
   },
 
   // ===========================================================================
@@ -57,29 +57,29 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       smtp: {
         auth: {
           user: 'everardo.hansen7@ethereal.email',
-          pass: 'hP6dNm7eQn7QRTmWH2',
+          pass: 'hP6dNm7eQn7QRTmWH2'
         },
         host: 'smtp.ethereal.email',
         port: 587,
-        secure: false,
+        secure: false
       },
       defaultSender: {
         email: 'everardo.hansen7@ethereal.email',
-        name: 'Everardo Hansen',
-      },
+        name: 'Everardo Hansen'
+      }
     },
     env: 'productive',
     jwt: {
       // tslint:disable-next-line:max-line-length
-      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PROD',
+      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PROD'
     },
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
-      options: { prefix: '/public/' },
+      options: { prefix: '/public/' }
     },
     templates: {
-      path: join(__dirname, 'templates'),
+      path: join(__dirname, 'templates')
     },
     typeOrm: {
       type: 'mongodb',
@@ -89,9 +89,9 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       synchronize: false, // https://typeorm.io/#/migrations/how-migrations-work
       entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
       useNewUrlParser: true,
-      useUnifiedTopology: true,
-    },
-  },
+      useUnifiedTopology: true
+    }
+  }
 };
 
 /**
@@ -99,8 +99,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
  *
  * default: development
  */
-const envConfig =
-  config[process.env.NODE_ENV || 'development'] || config.development;
+const envConfig = config[process.env.NODE_ENV || 'development'] || config.development;
 
 /**
  * Export envConfig as default
