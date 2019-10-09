@@ -25,6 +25,11 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       }
     },
     env: 'development',
+    graphQl: {
+      debug: true,
+      introspection: true,
+      playground: true
+    },
     jwt: {
       // tslint:disable-next-line:max-line-length
       secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_DEV'
@@ -69,6 +74,11 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       }
     },
     env: 'productive',
+    graphQl: {
+      debug: false,
+      introspection: true,
+      playground: false
+    },
     jwt: {
       // tslint:disable-next-line:max-line-length
       secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PROD'
