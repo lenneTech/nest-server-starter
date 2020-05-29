@@ -1,5 +1,5 @@
 import { CoreEditorModel } from '@lenne.tech/nest-server';
-import { Field, ObjectType } from 'type-graphql';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 /**
  * Editor model

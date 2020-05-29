@@ -1,5 +1,5 @@
 import { CoreUserCreateInput } from '@lenne.tech/nest-server';
-import { InputType } from 'type-graphql';
+import { InputType } from '@nestjs/graphql';
 
 /**
  * User input to create a new user

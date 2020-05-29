@@ -1,5 +1,5 @@
 import { CoreUserInput } from '@lenne.tech/nest-server';
-import { InputType } from 'type-graphql';
+import { InputType } from '@nestjs/graphql';
 
 /**
  * User input to update a user
