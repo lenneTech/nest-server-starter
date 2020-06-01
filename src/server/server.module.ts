@@ -1,8 +1,9 @@
 import { CoreModule } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
-import envConfig from './config.env';
-import { AuthModule } from './server/modules/auth/auth.module';
-import { FileController } from './server/modules/file/file.controller';
+import envConfig from '../config.env';
+import { AuthModule } from './modules/auth/auth.module';
+import { FileController } from './modules/file/file.controller';
+import { ServerController } from './server.controller';
 
 /**
  * Server module (dynamic)
@@ -18,10 +19,10 @@ import { FileController } from './server/modules/file/file.controller';
 
     // Include AuthModule for authorization handling,
     // which will also include UserModule
-    AuthModule.forRoot(envConfig.jwt)
+    AuthModule.forRoot(envConfig.jwt),
   ],
 
   // Include REST controllers
-  controllers: [FileController]
+  controllers: [FileController, ServerController],
 })
 export class ServerModule {}
