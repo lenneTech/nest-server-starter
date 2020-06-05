@@ -4,6 +4,7 @@ import envConfig from '../config.env';
 import { AuthModule } from './modules/auth/auth.module';
 import { FileController } from './modules/file/file.controller';
 import { ServerController } from './server.controller';
+import { MetaModule } from './modules/meta/meta.module';
 
 /**
  * Server module (dynamic)
@@ -20,6 +21,9 @@ import { ServerController } from './server.controller';
     // Include AuthModule for authorization handling,
     // which will also include UserModule
     AuthModule.forRoot(envConfig.jwt),
+
+    // Include MetaModule to offer information about the server
+    MetaModule,
   ],
 
   // Include REST controllers

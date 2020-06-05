@@ -56,7 +56,57 @@ const config: { [env: string]: Partial<IServerOptions> } = {
   },
 
   // ===========================================================================
-  // Production environment
+  // Preview environment
+  // ===========================================================================
+  preview: {
+    email: {
+      smtp: {
+        auth: {
+          user: 'everardo.hansen7@ethereal.email',
+          pass: 'hP6dNm7eQn7QRTmWH2',
+        },
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+      },
+      defaultSender: {
+        email: 'everardo.hansen7@ethereal.email',
+        name: 'Everardo Hansen',
+      },
+    },
+    env: 'preview',
+    graphQl: {
+      debug: true,
+      introspection: true,
+      playground: true,
+    },
+    jwt: {
+      // tslint:disable-next-line:max-line-length
+      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PREV',
+    },
+    port: 3001,
+    staticAssets: {
+      path: join(__dirname, '..', 'public'),
+      options: { prefix: '/public/' },
+    },
+    templates: {
+      path: join(__dirname, 'templates'),
+      engine: 'ejs',
+    },
+    typeOrm: {
+      type: 'mongodb',
+      host: 'localhost',
+      port: 27017,
+      database: 'nest-server-test',
+      synchronize: false, // https://typeorm.io/#/migrations/how-migrations-work
+      entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    },
+  },
+
+  // ===========================================================================
+  // Productive environment
   // ===========================================================================
   production: {
     email: {

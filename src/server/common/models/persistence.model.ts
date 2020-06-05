@@ -1,7 +1,7 @@
 import { CorePersistenceModel } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Column } from 'typeorm';
-import { Editor } from './editor.model';
+import { User } from '../../modules/user/user.model';
 
 /**
  * Metadata for persistent objects
@@ -14,26 +14,36 @@ import { Editor } from './editor.model';
 })
 export abstract class PersistenceModel extends CorePersistenceModel {
   /**
-   * Editor who created the object
+   * User who created the object
    *
    * Not set when created by system
    */
-  @Field((type) => Editor, {
-    description: 'Editor who created the object',
+  @Field((type) => User, {
+    description: 'User who created the object',
     nullable: true,
   })
   @Column('varchar')
-  createdBy?: string | Editor;
+  createdBy?: string | User;
 
   /**
-   * Editor who last updated the object
+   * IDs of the Owners
+   */
+  @Field((type) => [String], {
+    description: 'Users who own the object',
+    nullable: 'items',
+  })
+  @Column('simple-array')
+  ownerIds: string[] = [];
+
+  /**
+   * User who last updated the object
    *
    * Not set when updated by system
    */
-  @Field((type) => Editor, {
-    description: 'Editor who last updated the object',
+  @Field((type) => User, {
+    description: 'User who last updated the object',
     nullable: true,
   })
   @Column('varchar')
-  updatedBy?: string | Editor;
+  updatedBy?: string | User;
 }

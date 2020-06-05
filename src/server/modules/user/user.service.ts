@@ -4,7 +4,7 @@ import {
   EmailService,
   Filter,
   FilterArgs,
-  ServiceHelper
+  ServiceHelper,
 } from '@lenne.tech/nest-server';
 import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,7 +13,6 @@ import { GraphQLResolveInfo } from 'graphql';
 import { PubSub } from 'graphql-subscriptions';
 import { MongoRepository } from 'typeorm';
 import envConfig from '../../../config.env';
-import { Editor } from '../../common/models/editor.model';
 import { UserCreateInput } from './inputs/user-create.input';
 import { UserInput } from './inputs/user.input';
 import { User } from './user.model';
@@ -61,7 +60,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
       await this.emailService.sendMail(user.email, 'Welcome', {
         htmlTemplate: 'welcome',
         templateData: user,
-        text
+        text,
       });
       return user;
     } catch (err) {
@@ -76,7 +75,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     // Return found users
     return this.db.find(
       Filter.generateFilterOptions(filterArgs, {
-        dbType: this.configService.get('typeOrm.type')
+        dbType: this.configService.get('typeOrm.type'),
       })
     );
   }
@@ -126,6 +125,6 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    * Prepare output before return
    */
   protected async prepareOutput(user: User, info?: GraphQLResolveInfo) {
-    return ServiceHelper.prepareOutput(user, Editor, this);
+    return ServiceHelper.prepareOutput(user, User, this);
   }
 }

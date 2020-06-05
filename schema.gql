@@ -44,27 +44,6 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-"""Editor"""
-type Editor {
-  """ID of the editor"""
-  id: ID!
-
-  """Email of the editor"""
-  email: String
-
-  """First name of the editor"""
-  firstName: String
-
-  """Last name of the editor"""
-  lastName: String
-
-  """Username of the editor"""
-  username: String
-
-  """URL to avatar file of the editor"""
-  avatar: String
-}
-
 """
 Input for filtering. The `singleFilter` will be ignored if the `combinedFilter` is set.
 """
@@ -86,6 +65,21 @@ enum LogicalOperatorEnum {
   AND
   NOR
   OR
+}
+
+"""Metadata of API"""
+type Meta {
+  """Environment of API"""
+  environment: String!
+
+  """Title of API"""
+  title: String!
+
+  """Package name of API"""
+  package: String!
+
+  """Version of API"""
+  version: String!
 }
 
 type Mutation {
@@ -122,6 +116,9 @@ type Query {
     """Input for filtering"""
     filter: FilterInput
   ): [User!]!
+
+  """Get Meta"""
+  getMeta: Meta!
 }
 
 """Input for a configuration of a filter"""
@@ -206,10 +203,10 @@ type User {
   avatar: String
 
   """ID of the user who created the object"""
-  createdBy: Editor
+  createdBy: User
 
   """ID of the user who last updated the object"""
-  updatedBy: Editor
+  updatedBy: User
 }
 
 """User input to create a new user"""

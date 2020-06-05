@@ -1,7 +1,6 @@
 import { CoreUserModel } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Column, Entity } from 'typeorm';
-import { Editor } from '../../common/models/editor.model';
 import { PersistenceModel } from '../../common/models/persistence.model';
 
 /**
@@ -22,26 +21,26 @@ export class User extends CoreUserModel implements PersistenceModel {
   avatar: string;
 
   /**
-   * Editor who created the object
+   * User who created the object
    *
    * Not set when created by system
    */
-  @Field((type) => Editor, {
+  @Field((type) => User, {
     description: 'ID of the user who created the object',
     nullable: true,
   })
   @Column('varchar')
-  createdBy: string | Editor;
+  createdBy: string | User;
 
   /**
-   * Editor who last updated the object
+   * User who last updated the object
    *
    * Not set when updated by system
    */
-  @Field((type) => Editor, {
+  @Field((type) => User, {
     description: 'ID of the user who last updated the object',
     nullable: true,
   })
   @Column('varchar')
-  updatedBy: string | Editor;
+  updatedBy: string | User;
 }

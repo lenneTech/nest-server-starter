@@ -23,6 +23,9 @@ async function bootstrap() {
   // Enable cors to allow requests from other domains
   server.enableCors();
 
+  // Set global prefix (if server runs in subdirectory, e.g. /api)
+  // server.setGlobalPrefix('api');
+
   // Start server on configured port
   await server.listen(envConfig.port);
 }

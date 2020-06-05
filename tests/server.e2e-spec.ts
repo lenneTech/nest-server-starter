@@ -2,6 +2,7 @@ import { TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import envConfig from '../src/config.env';
 import { ServerModule } from '../src/server/server.module';
+import * as pack from '../package.json';
 
 describe('ServerModule (e2e)', () => {
   let app;
@@ -51,15 +52,31 @@ describe('ServerModule (e2e)', () => {
    */
   it('get index', async () => {
     const res: any = await testHelper.rest('');
-    expect(res.includes('Welcome to API')).toBe(true);
+    expect(res.includes('Welcome to ' + pack.description)).toBe(true);
     expect(res.includes(envConfig.env + ' environment')).toBe(true);
+    expect(res.includes('version ' + pack.version)).toBe(true);
   });
 
   /**
    * Get config without token should fail
    */
   it('get config without token', async () => {
-    const res: any = await testHelper.rest('/config', { statusCode: 401 });
+    await testHelper.rest('/config', { statusCode: 401 });
+  });
+
+  /**
+   * Get meta data with admin role
+   */
+  it('get meta data', async () => {
+    const res: any = await testHelper.graphQl({
+      name: 'getMeta',
+      fields: ['environment', 'title', 'package', 'version'],
+    });
+    expect(res.errors).toBeUndefined();
+    expect(res.environment).toEqual(envConfig.env);
+    expect(res.title).toEqual(pack.description);
+    expect(res.package).toEqual(pack.name);
+    expect(res.version).toEqual(pack.version);
   });
 
   /**
@@ -164,7 +181,7 @@ describe('ServerModule (e2e)', () => {
   });
 
   /**
-   * Get config with token
+   * Get config with admin rights
    */
   it('get config with admin rights', async () => {
     const res: any = await testHelper.rest('/config', { token: gToken });
