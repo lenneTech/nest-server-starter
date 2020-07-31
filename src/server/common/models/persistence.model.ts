@@ -23,7 +23,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     nullable: true,
   })
   @Column('varchar')
-  createdBy?: string | User;
+  createdBy?: string | User = undefined;
 
   /**
    * IDs of the Owners
@@ -45,5 +45,5 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     nullable: true,
   })
   @Column('varchar')
-  updatedBy?: string | User;
+  updatedBy?: string | User = undefined;
 }

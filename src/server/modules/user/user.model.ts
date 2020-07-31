@@ -18,7 +18,7 @@ export class User extends CoreUserModel implements PersistenceModel {
    */
   @Field({ description: 'URL to avatar file of the user', nullable: true })
   @Column()
-  avatar: string;
+  avatar: string = undefined;
 
   /**
    * User who created the object
@@ -30,7 +30,7 @@ export class User extends CoreUserModel implements PersistenceModel {
     nullable: true,
   })
   @Column('varchar')
-  createdBy: string | User;
+  createdBy: string | User = undefined;
 
   /**
    * User who last updated the object
@@ -42,5 +42,5 @@ export class User extends CoreUserModel implements PersistenceModel {
     nullable: true,
   })
   @Column('varchar')
-  updatedBy: string | User;
+  updatedBy: string | User = undefined;
 }
