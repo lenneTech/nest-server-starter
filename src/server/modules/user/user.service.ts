@@ -4,14 +4,14 @@ import {
   EmailService,
   Filter,
   FilterArgs,
+  ICorePersistenceModel,
   ServiceHelper,
 } from '@lenne.tech/nest-server';
+import { EntityRepository, MikroORM } from '@mikro-orm/core';
 import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import * as fs from 'fs';
 import { GraphQLResolveInfo } from 'graphql';
 import { PubSub } from 'graphql-subscriptions';
-import { MongoRepository } from 'typeorm';
 import envConfig from '../../../config.env';
 import { UserCreateInput } from './inputs/user-create.input';
 import { UserInput } from './inputs/user.input';
@@ -32,8 +32,12 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   /**
    * User repository
    */
-  @InjectRepository(User)
-  protected readonly db: MongoRepository<User>;
+  protected readonly db: EntityRepository<User>;
+
+  /**
+   * User model
+   */
+  protected readonly model: ICorePersistenceModel;
 
   // ===================================================================================================================
   // Injections
@@ -42,8 +46,14 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   /**
    * Constructor for injecting services
    */
-  constructor(protected readonly configService: ConfigService, protected readonly emailService: EmailService) {
+  constructor(
+    protected readonly configService: ConfigService,
+    protected readonly emailService: EmailService,
+    protected readonly orm: MikroORM
+  ) {
     super();
+    this.db = orm.em.getRepository(User);
+    this.model = User;
   }
 
   // ===================================================================================================================
@@ -73,11 +83,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    */
   find(filterArgs?: FilterArgs, ...args: any[]): Promise<User[]> {
     // Return found users
-    return this.db.find(
-      Filter.generateFilterOptions(filterArgs, {
-        dbType: this.configService.get('typeOrm.type'),
-      })
-    );
+    return this.db.find(...Filter.convertFilterArgsToQuery(filterArgs));
   }
 
   /**
@@ -104,7 +110,8 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     }
 
     // Update user
-    await this.db.update(user.id.toString(), { avatar: file.filename });
+    user.map({ avatar: file.filename });
+    await this.db.flush();
 
     // Return user
     return file.filename;

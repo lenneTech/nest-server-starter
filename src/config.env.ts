@@ -34,6 +34,13 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_DEV',
     },
+    mikroOrm: {
+      autoLoadEntities: true,
+      dbName: 'nest-server-dev',
+      host: 'localhost',
+      port: 27017,
+      type: 'mongo',
+    },
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
@@ -42,16 +49,6 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     templates: {
       path: join(__dirname, 'templates'),
       engine: 'ejs',
-    },
-    typeOrm: {
-      type: 'mongodb',
-      host: 'localhost',
-      port: 27017,
-      database: 'nest-server-dev',
-      synchronize: true,
-      entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
     },
   },
 
@@ -84,6 +81,13 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PREV',
     },
+    mikroOrm: {
+      autoLoadEntities: true,
+      dbName: 'nest-server-test',
+      host: 'localhost',
+      port: 27017,
+      type: 'mongo',
+    },
     port: 3001,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
@@ -92,16 +96,6 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     templates: {
       path: join(__dirname, 'templates'),
       engine: 'ejs',
-    },
-    typeOrm: {
-      type: 'mongodb',
-      host: 'localhost',
-      port: 27017,
-      database: 'nest-server-test',
-      synchronize: false, // https://typeorm.io/#/migrations/how-migrations-work
-      entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
     },
   },
 
@@ -134,6 +128,13 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PROD',
     },
+    mikroOrm: {
+      autoLoadEntities: true,
+      dbName: 'nest-server-prod',
+      host: 'localhost',
+      port: 27017,
+      type: 'mongo',
+    },
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
@@ -142,16 +143,6 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     templates: {
       path: join(__dirname, 'templates'),
       engine: 'ejs',
-    },
-    typeOrm: {
-      type: 'mongodb',
-      host: 'localhost',
-      port: 27017,
-      database: 'nest-server-prod',
-      synchronize: false, // https://typeorm.io/#/migrations/how-migrations-work
-      entities: [__dirname + '/**/*.{entity,model}.{ts,js}'],
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
     },
   },
 };

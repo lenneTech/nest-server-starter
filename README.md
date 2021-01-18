@@ -16,7 +16,7 @@ It contains everything you need to get started right away and a few code example
   the version control system for your source code
 
 - [MongoDB](https://docs.mongodb.com/manual/installation/#mongodb-community-edition-installation-tutorials)
-  (or any other database compatible with [TypeORM](https://typeorm.io)):  
+  (or any other database compatible with [MikroORM](https://mikro-orm.io)):  
   the database for your objects
 
 ## 1. Install the starter kit via [CLI](https://github.com/lenneTech/cli)

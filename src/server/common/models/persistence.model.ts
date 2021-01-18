@@ -1,17 +1,18 @@
 import { CorePersistenceModel } from '@lenne.tech/nest-server';
+import { Entity, ManyToOne, Property } from '@mikro-orm/core';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Column } from 'typeorm';
 import { User } from '../../modules/user/user.model';
 
 /**
  * Metadata for persistent objects
  *
- * The models are a combination of TypeORM Entities and TypeGraphQL Types
+ * The models are a combination of MikroORM Entities and TypeGraphQL Types
  */
 @ObjectType({
   description: 'Persistence model which will be saved in DB',
   isAbstract: true,
 })
+@Entity()
 export abstract class PersistenceModel extends CorePersistenceModel {
   /**
    * User who created the object
@@ -22,8 +23,8 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'User who created the object',
     nullable: true,
   })
-  @Column('varchar')
-  createdBy?: string | User = undefined;
+  @ManyToOne()
+  createdBy?: User = undefined;
 
   /**
    * IDs of the Owners
@@ -32,7 +33,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'Users who own the object',
     nullable: 'items',
   })
-  @Column('simple-array')
+  @Property()
   ownerIds: string[] = [];
 
   /**
@@ -44,6 +45,6 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'User who last updated the object',
     nullable: true,
   })
-  @Column('varchar')
-  updatedBy?: string | User = undefined;
+  @ManyToOne()
+  updatedBy: User = undefined;
 }

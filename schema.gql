@@ -88,13 +88,19 @@ type Query {
     """
     Limit specifies the maximum number of elements found that are to be returned
     """
-    take: Int = 25
+    limit: Int = 25
 
-    """Skip specifies how many found elements should be skipped on return"""
+    """Offset specifies how many found elements should be skipped on return"""
+    offset: Int = 0
+
+    """Alias for offset"""
     skip: Int = 0
 
     """Sorting the returned elements"""
     sort: [SortInput!]
+
+    """Alias for limit"""
+    take: Int = 25
 
     """Input for filtering"""
     filter: FilterInput
@@ -140,7 +146,7 @@ input CombinedFilterInput {
   """
   Filters to combine via logical operator. If set `logicalOperator` must be also set.
   """
-  filters: FilterInput
+  filters: [FilterInput!]
 }
 
 """Logical operators to combine filters"""
