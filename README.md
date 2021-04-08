@@ -4,6 +4,10 @@ This is the starter kit for the [lenne.Tech Nest Server](https://github.com/lenn
 
 It contains everything you need to get started right away and a few code examples to help you create your own modules.
 
+In combination with Angular (see [lenne.Tech Angular example](https://github.com/lenneTech/angular-example)
+incl. [ng-base](https://github.com/lenneTech/ng-base/tree/main/projects/ng-base/README.md)) the Nest Server is an ideal
+basis for your next project.
+
 [![License](https://img.shields.io/github/license/lenneTech/nest-server-starter)](/LICENSE) [![CircleCI](https://circleci.com/gh/lenneTech/nest-server-starter/tree/master.svg?style=shield)](https://circleci.com/gh/lenneTech/nest-server-starter/tree/master)
 [![Dependency Status](https://david-dm.org/lenneTech/nest-server-starter.svg)](https://david-dm.org/lenneTech/nest-server-starter) [![devDependency Status](https://david-dm.org/lenneTech/nest-server-starter/dev-status.svg)](https://david-dm.org/lenneTech/nest-server-starter?type=dev)
 
