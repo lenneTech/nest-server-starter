@@ -32,7 +32,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     },
     jwt: {
       // tslint:disable-next-line:max-line-length
-      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_DEV',
+      secret: 'SECRET_OR_PRIVATE_KEY_DEV',
     },
     mikroOrm: {
       autoLoadEntities: true,
@@ -79,7 +79,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     },
     jwt: {
       // tslint:disable-next-line:max-line-length
-      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PREV',
+      secret: 'SECRET_OR_PRIVATE_KEY_PREV',
     },
     mikroOrm: {
       autoLoadEntities: true,
@@ -126,7 +126,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
     },
     jwt: {
       // tslint:disable-next-line:max-line-length
-      secretOrPrivateKey: 'SECRET_OR_PRIVATE_KEY_PROD',
+      secret: 'SECRET_OR_PRIVATE_KEY_PROD',
     },
     mikroOrm: {
       autoLoadEntities: true,
