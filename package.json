@@ -23,11 +23,12 @@
     "url": "https://github.com/lenneTech/nest-server-starter/issues"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy:templates",
-    "copy:templates": "cpy --parents --cwd=./src  templates/**/* ../dist",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy:assets && npm run copy:meta",
+    "copy:assets": "cpy --parents --cwd=./src  assets/**/* ../dist",
+    "copy:meta": "rimraf .dist/meta.json && cpy ./package.json --rename=meta.json ./dist/",
     "format": "prettier --write 'src/**/*.ts'",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "prepare": "npm run prestart:prod",
+    "prepare": "npm run prestart:prod && husky install",
     "prepublishOnly": "npm run format && npm run lint && npm run test:e2e",
     "prestart:prod": "rimraf dist && npm run build",
     "preversion": "npm run lint",
@@ -67,12 +68,6 @@
     "testRegex": ".spec.ts$",
     "transform": {
       ".+\\.(t|j)s$": "ts-jest"
-    }
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "pretty-quick --staged",
-      "pre-push": "npm run lint && npm run test:e2e"
     }
   },
   "main": "dist/main.js",

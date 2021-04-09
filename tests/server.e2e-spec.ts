@@ -2,7 +2,7 @@ import { TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import envConfig from '../src/config.env';
 import { ServerModule } from '../src/server/server.module';
-import * as pack from '../package.json';
+import * as metaData from '../src/meta.json';
 
 describe('ServerModule (e2e)', () => {
   let app;
@@ -52,9 +52,9 @@ describe('ServerModule (e2e)', () => {
    */
   it('get index', async () => {
     const res: any = await testHelper.rest('');
-    expect(res.includes('Welcome to ' + pack.description)).toBe(true);
+    expect(res.includes('Welcome to ' + metaData.description)).toBe(true);
     expect(res.includes(envConfig.env + ' environment')).toBe(true);
-    expect(res.includes('version ' + pack.version)).toBe(true);
+    expect(res.includes('version ' + metaData.version)).toBe(true);
   });
 
   /**
@@ -74,9 +74,9 @@ describe('ServerModule (e2e)', () => {
     });
     expect(res.errors).toBeUndefined();
     expect(res.environment).toEqual(envConfig.env);
-    expect(res.title).toEqual(pack.description);
-    expect(res.package).toEqual(pack.name);
-    expect(res.version).toEqual(pack.version);
+    expect(res.title).toEqual(metaData.description);
+    expect(res.package).toEqual(metaData.name);
+    expect(res.version).toEqual(metaData.version);
   });
 
   /**

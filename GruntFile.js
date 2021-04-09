@@ -14,10 +14,19 @@ module.exports = function (grunt) {
       buildFolder: ['dist'],
     },
 
-    // Copy templates
+    // Copy files
     sync: {
+      assets: {
+        files: [{ cwd: 'src/assets', src: ['**'], dest: 'dist/assets/' }],
+        verbose: true,
+        failOnError: true,
+        updateAndDelete: true,
+      },
+      meta: {
+        files: [{ src: './package.json', dest: 'dist/meta.json' }],
+      },
       templates: {
-        files: [{ cwd: 'src/templates', src: ['**'], dest: 'dist/templates/' }],
+        files: [{ cwd: 'src/assets/templates', src: ['**'], dest: 'dist/assets/templates/' }],
         verbose: true,
         failOnError: true,
         updateAndDelete: true,
@@ -57,8 +66,8 @@ module.exports = function (grunt) {
     // Watch for file changes
     watch: {
       templates: {
-        files: 'src/templates/**/*',
-        tasks: ['sync:templates'],
+        files: 'src/assets/template/**/*',
+        tasks: ['sync:assets'],
       },
     },
   });
@@ -70,7 +79,8 @@ module.exports = function (grunt) {
   grunt.registerTask('default', [
     'clean:buildFolder',
     'bgShell:tsc',
-    'sync',
+    'sync:assets',
+    'sync:meta',
     'bgShell:tscWatch',
     'bgShell:pm2',
     'watch',
@@ -78,10 +88,11 @@ module.exports = function (grunt) {
   grunt.registerTask('productive', [
     'clean:buildFolder',
     'bgShell:tsc',
-    'sync',
+    'sync:assets',
+    'sync:meta',
     'bgShell:tscWatch',
     'bgShell:pm2Prod',
     'watch',
   ]);
-  grunt.registerTask('build', ['clean:buildFolder', 'sync', 'bgShell:parsLocales', 'bgShell:tsc']);
+  grunt.registerTask('build', ['clean:buildFolder', 'sync:assets', 'sync:meta', 'bgShell:parsLocales', 'bgShell:tsc']);
 };

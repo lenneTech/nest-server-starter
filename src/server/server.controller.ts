@@ -1,6 +1,6 @@
 import { ConfigService, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Controller, Get, Render } from '@nestjs/common';
-import * as pack from '../../package.json';
+import * as metaData from '../meta.json';
 import { MetaService } from './modules/meta/meta.service';
 
 @Controller()
@@ -12,8 +12,8 @@ export class ServerController {
   root() {
     return {
       env: this.configService.get('env'),
-      version: pack.version,
-      title: pack.description,
+      version: metaData.version,
+      title: metaData.description,
     };
   }
 

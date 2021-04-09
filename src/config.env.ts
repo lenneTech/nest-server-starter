@@ -47,7 +47,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       options: { prefix: '/public/' },
     },
     templates: {
-      path: join(__dirname, 'templates'),
+      path: join(__dirname, 'assets', 'templates'),
       engine: 'ejs',
     },
   },
@@ -94,7 +94,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       options: { prefix: '/public/' },
     },
     templates: {
-      path: join(__dirname, 'templates'),
+      path: join(__dirname, 'assets', 'templates'),
       engine: 'ejs',
     },
   },
@@ -141,7 +141,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
       options: { prefix: '/public/' },
     },
     templates: {
-      path: join(__dirname, 'templates'),
+      path: join(__dirname, 'assets', 'templates'),
       engine: 'ejs',
     },
   },

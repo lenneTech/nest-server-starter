@@ -2,7 +2,7 @@ import { ConfigService } from '@lenne.tech/nest-server';
 import { Injectable } from '@nestjs/common';
 import { Meta } from './meta.model';
 import { GraphQLResolveInfo } from 'graphql';
-import * as pack from '../../../../package.json';
+import * as metaData from '../../../meta.json';
 
 /**
  * Meta service
@@ -25,9 +25,9 @@ export class MetaService {
   async get(info?: GraphQLResolveInfo): Promise<Meta> {
     return Meta.map({
       environment: this.configService.config.env,
-      title: pack.description,
-      package: pack.name,
-      version: pack.version,
+      title: metaData.description,
+      package: metaData.name,
+      version: metaData.version,
     });
   }
 }
