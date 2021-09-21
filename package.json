@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "0.0.16",
+  "version": "0.1.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -33,7 +33,7 @@
     "prestart:prod": "rimraf dist && npm run build",
     "preversion": "npm run lint",
     "reinit": "rimraf package-lock.json && rimraf node_modules && npm cache clean --force && npm i && npm run test:e2e",
-    "start": "./node_modules/.bin/grunt",
+    "start": "nodemon",
     "start:debug": "nodemon --config nodemon-debug.json",
     "start:dev": "nodemon",
     "start:nodemon": "ts-node -r tsconfig-paths/register src/main.ts",
@@ -47,10 +47,16 @@
     "test:watch": "jest --watch"
   },
   "engines": {
-    "node": ">= 12.17.0"
+    "node": ">= 14.17.0"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "0.1.6"
+    "@lenne.tech/nest-server": "2.0.0-alpha9",
+    "@nestjs/mongoose": "8.0.1",
+    "mongoose": "5.13.8",
+    "jest": "27.0.3",
+    "ts-jest": "27.0.3",
+    "prettier": "2.3.1",
+    "eslint-config-prettier": "8.1.0"
   },
   "devDependencies": {
     "cpy-cli": "3.1.1"

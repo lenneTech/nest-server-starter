@@ -1,18 +1,18 @@
-import { CorePersistenceModel, CoreUserModel, JSON } from '@lenne.tech/nest-server';
-import { MikroOrmModule } from '@mikro-orm/nestjs';
+import { JSON } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import { AvatarController } from './avatar.controller';
-import { User } from './user.model';
+import { User, UserSchema } from './user.model';
 import { UserResolver } from './user.resolver';
 import { UserService } from './user.service';
+import { MongooseModule } from '@nestjs/mongoose';
 
 /**
  * User module
  */
 @Module({
-  imports: [MikroOrmModule.forFeature([CorePersistenceModel, CoreUserModel, User])],
+  imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
   controllers: [AvatarController],
   providers: [JSON, UserResolver, UserService],
-  exports: [MikroOrmModule, UserResolver, UserService],
+  exports: [MongooseModule, UserResolver, UserService],
 })
 export class UserModule {}

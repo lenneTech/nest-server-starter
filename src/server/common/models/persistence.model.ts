@@ -1,7 +1,8 @@
 import { CorePersistenceModel } from '@lenne.tech/nest-server';
-import { Entity, ManyToOne, Property } from '@mikro-orm/core';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { User } from '../../modules/user/user.model';
+import * as mongoose from 'mongoose';
+import { Prop, Schema } from '@nestjs/mongoose';
 
 /**
  * Metadata for persistent objects
@@ -12,7 +13,7 @@ import { User } from '../../modules/user/user.model';
   description: 'Persistence model which will be saved in DB',
   isAbstract: true,
 })
-@Entity()
+@Schema()
 export abstract class PersistenceModel extends CorePersistenceModel {
   /**
    * User who created the object
@@ -23,7 +24,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'User who created the object',
     nullable: true,
   })
-  @ManyToOne()
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   createdBy?: User = undefined;
 
   /**
@@ -33,7 +34,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'Users who own the object',
     nullable: 'items',
   })
-  @Property()
+  @Prop([String])
   ownerIds: string[] = [];
 
   /**
@@ -45,6 +46,6 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'User who last updated the object',
     nullable: true,
   })
-  @ManyToOne()
+  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   updatedBy: User = undefined;
 }

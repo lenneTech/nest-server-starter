@@ -7,7 +7,6 @@ import {
   ICorePersistenceModel,
   ServiceHelper,
 } from '@lenne.tech/nest-server';
-import { EntityRepository, MikroORM } from '@mikro-orm/core';
 import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import * as fs from 'fs';
 import { GraphQLResolveInfo } from 'graphql';
@@ -15,7 +14,9 @@ import { PubSub } from 'graphql-subscriptions';
 import envConfig from '../../../config.env';
 import { UserCreateInput } from './inputs/user-create.input';
 import { UserInput } from './inputs/user.input';
-import { User } from './user.model';
+import { User, UserDocument } from './user.model';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 
 // Subscription
 const pubSub = new PubSub();
@@ -28,11 +29,6 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   // ===================================================================================================================
   // Properties
   // ===================================================================================================================
-
-  /**
-   * User repository
-   */
-  protected readonly db: EntityRepository<User>;
 
   /**
    * User model
@@ -49,10 +45,9 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   constructor(
     protected readonly configService: ConfigService,
     protected readonly emailService: EmailService,
-    protected readonly orm: MikroORM
+    @InjectModel('User') protected readonly userModel: Model<UserDocument>
   ) {
-    super();
-    this.db = orm.em.getRepository(User);
+    super(userModel);
     this.model = User;
   }
 
@@ -82,14 +77,18 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    * Get users via filter
    */
   find(filterArgs?: FilterArgs, ...args: any[]): Promise<User[]> {
+    // Get filter query
+    const filterQuery = Filter.convertFilterArgsToQuery(filterArgs)[0];
     // Return found users
-    return this.db.find(...Filter.convertFilterArgsToQuery(filterArgs));
+    return this.userModel.find(filterQuery).exec();
   }
 
   /**
    * Set avatar image
    */
   async setAvatar(file: Express.Multer.File, user: User): Promise<string> {
+    const dbUser = await this.userModel.findOne({ id: user.id }).exec();
+
     // Check user
     if (!user) {
       throw new UnauthorizedException();
@@ -110,8 +109,9 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     }
 
     // Update user
-    user.map({ avatar: file.filename });
-    await this.db.flush();
+    dbUser.avatar = file.filename;
+
+    await dbUser.save();
 
     // Return user
     return file.filename;

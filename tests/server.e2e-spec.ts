@@ -128,7 +128,7 @@ describe('ServerModule (e2e)', () => {
       fields: ['id', 'email'],
     });
     expect(res.errors.length).toBeGreaterThanOrEqual(1);
-    expect(res.errors[0].extensions.exception.response.statusCode).toEqual(401);
+    expect(res.errors[0].extensions.response.statusCode).toEqual(401);
     expect(res.errors[0].message).toEqual('Unauthorized');
     expect(res.data).toBe(null);
   });
