@@ -52,15 +52,16 @@
   "dependencies": {
     "@lenne.tech/nest-server": "2.0.0-alpha9",
     "@nestjs/mongoose": "8.0.1",
-    "mongoose": "5.13.8",
+    "mongoose": "5.13.8"
+  },
+  "devDependencies": {
+    "cpy-cli": "3.1.1",
     "jest": "27.0.3",
     "ts-jest": "27.0.3",
     "prettier": "2.3.1",
+    "eslint": "7.22.0",
     "eslint-config-prettier": "8.1.0",
     "typescript": "4.2.4"
-  },
-  "devDependencies": {
-    "cpy-cli": "3.1.1"
   },
   "jest": {
     "collectCoverage": true,
