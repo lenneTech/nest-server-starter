@@ -37,6 +37,9 @@ type User {
   """Username of the user"""
   username: String
 
+  """Verification state of the user"""
+  verified: Boolean
+
   """URL to avatar file of the user"""
   avatar: String
 
@@ -78,7 +81,7 @@ type Meta {
 
 type Query {
   """Get JWT token"""
-  signIn(password: String!, email: String!): Auth!
+  signIn(email: String!, password: String!): Auth!
 
   """Get user with specified ID"""
   getUser(id: String!): User!
@@ -94,7 +97,7 @@ type Query {
     offset: Int = 0
 
     """Alias for offset"""
-    skip: Int = 0
+    skip: Int
 
     """Sorting the returned elements"""
     sort: [SortInput!]
@@ -138,15 +141,11 @@ input FilterInput {
 
 """Combination of multiple filters via logical operator"""
 input CombinedFilterInput {
-  """
-  Logical Operator to combine filters. If set the `filters` must be also set.
-  """
-  logicalOperator: LogicalOperatorEnum
+  """Logical Operator to combine filters"""
+  logicalOperator: LogicalOperatorEnum!
 
-  """
-  Filters to combine via logical operator. If set `logicalOperator` must be also set.
-  """
-  filters: [FilterInput!]
+  """Filters to combine via logical operator"""
+  filters: [FilterInput!]!
 }
 
 """Logical operators to combine filters"""
@@ -205,7 +204,7 @@ type Mutation {
   createUser(input: UserCreateInput!): User!
 
   """Update existing user"""
-  updateUser(id: String!, input: UserInput!): User!
+  updateUser(input: UserInput!, id: String!): User!
 
   """Delete existing user"""
   deleteUser(id: String!): User!

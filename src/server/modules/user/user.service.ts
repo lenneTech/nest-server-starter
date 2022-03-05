@@ -47,7 +47,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     protected readonly emailService: EmailService,
     @InjectModel('User') protected readonly userModel: Model<UserDocument>
   ) {
-    super(userModel);
+    super(userModel, emailService);
     this.model = User;
   }
 
@@ -132,6 +132,6 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    * Prepare output before return
    */
   protected async prepareOutput(user: User, info?: GraphQLResolveInfo) {
-    return ServiceHelper.prepareOutput(user, User, this);
+    return ServiceHelper.prepareOutput(user, User);
   }
 }

@@ -1,4 +1,4 @@
-import { CoreModule } from '@lenne.tech/nest-server';
+import { CoreAuthService, CoreModule } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import envConfig from '../config.env';
 import { AuthModule } from './modules/auth/auth.module';
@@ -16,7 +16,7 @@ import { MetaModule } from './modules/meta/meta.module';
   // Include modules
   imports: [
     // Include CoreModule for standard processes
-    CoreModule.forRoot(envConfig),
+    CoreModule.forRoot(CoreAuthService, AuthModule.forRoot(envConfig.jwt), envConfig),
 
     // Include AuthModule for authorization handling,
     // which will also include UserModule

@@ -25,8 +25,8 @@ export class FileController {
         destination: envConfig.staticAssets.path,
 
         // Generated random file name
-        filename: FileHelper.multerRandomFileName()
-      })
+        filename: FileHelper.multerRandomFileName(),
+      }),
     })
   )
   uploadFile(@UploadedFiles() files, @Body() fields: any) {
