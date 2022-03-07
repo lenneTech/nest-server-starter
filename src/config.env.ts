@@ -237,6 +237,7 @@ const config: { [env: string]: Partial<IServerOptions> } = {
  * default: development
  */
 const envConfig = config[process.env['NODE' + '_ENV'] || 'development'] || config.development;
+console.log('Server starts in mode: ', process.env['NODE' + '_ENV'] || 'development');
 
 /**
  * Export envConfig as default

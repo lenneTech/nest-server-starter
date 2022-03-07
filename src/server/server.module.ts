@@ -28,5 +28,8 @@ import { MetaModule } from './modules/meta/meta.module';
 
   // Include REST controllers
   controllers: [FileController, ServerController],
+
+  // Exports (a.o. for testing)
+  exports: [CoreModule, AuthModule, MetaModule],
 })
 export class ServerModule {}

@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -27,24 +27,26 @@
     "copy:assets": "cpy --parents --cwd=./src  assets/**/* ../dist",
     "copy:meta": "rimraf .dist/meta.json && cpy ./package.json --rename=meta.json ./dist/",
     "format": "prettier --write 'src/**/*.ts'",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "format:check": "prettier --check 'src/**/*.ts'",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix --cache",
     "prepare": "npm run prestart:prod && husky install",
     "prepublishOnly": "npm run format && npm run lint && npm run test:e2e",
     "prestart:prod": "rimraf dist && npm run build",
     "preversion": "npm run lint",
     "reinit": "rimraf package-lock.json && rimraf node_modules && npm cache clean --force && npm i && npm run test:e2e",
     "start": "nodemon",
+    "start:local": "nodemon --host=0.0.0.0",
     "start:debug": "nodemon --config nodemon-debug.json",
     "start:dev": "nodemon",
     "start:nodemon": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:prod": "./node_modules/.bin/grunt productive",
     "stop": "./node_modules/.bin/pm2 delete nest",
-    "test": "jest",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --detectOpenHandles --config jest-e2e.json",
-    "test:e2e-cov": "jest --detectOpenHandles --config jest-e2e.json --coverage",
-    "test:watch": "jest --watch"
+    "test": "NODE_ENV=development jest",
+    "test:cov": "NODE_ENV=development jest --coverage",
+    "test:debug": "NODE_ENV=development node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "NODE_ENV=development jest --detectOpenHandles --config jest-e2e.json",
+    "test:e2e-cov": "NODE_ENV=development jest --detectOpenHandles --config jest-e2e.json --coverage",
+    "test:watch": "NODE_ENV=development jest --watch"
   },
   "engines": {
     "node": ">= 16"
@@ -52,8 +54,6 @@
   "dependencies": {
     "@lenne.tech/nest-server": "3.4.0",
     "@nodepit/migrate-state-store-mongodb": "3.0.0",
-    "@nestjs/mongoose": "9.0.2",
-    "mongoose": "6.2.1",
     "graphql": "16.3.0"
   },
   "devDependencies": {
