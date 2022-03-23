@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "9.0.1",
+  "version": "8.0.2",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -52,7 +52,7 @@
     "node": ">= 16"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "8.0.1",
+    "@lenne.tech/nest-server": "8.0.2",
     "@nodepit/migrate-state-store-mongodb": "3.0.0",
     "graphql": "16.3.0"
   },
