@@ -40,4 +40,4 @@ jobs:
           command: dockerize -wait tcp://localhost:27017 -timeout 1m
 
       # lint and test
-      - run: npm run lint && npm run test:e2e
+      - run: npm run lint && npm run test:e2e -- --runInBand
