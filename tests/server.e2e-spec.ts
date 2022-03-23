@@ -1,12 +1,17 @@
-import { TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import envConfig from '../src/config.env';
 import { ServerModule } from '../src/server/server.module';
+import { TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
+import { MongoClient, ObjectId } from 'mongodb';
 import * as metaData from '../src/meta.json';
 
 describe('ServerModule (e2e)', () => {
   let app;
   let testHelper: TestHelper;
+
+  // database
+  let connection;
+  let db;
 
   // Global vars
   let gId: string;
@@ -27,10 +32,16 @@ describe('ServerModule (e2e)', () => {
         imports: [ServerModule],
       }).compile();
       app = moduleFixture.createNestApplication();
+
       app.setBaseViewsDir(envConfig.templates.path);
       app.setViewEngine(envConfig.templates.engine);
       await app.init();
       testHelper = new TestHelper(app);
+
+      // Get db
+      console.log('MongoDB: Create connection to ' + envConfig.mongoose.uri);
+      connection = await MongoClient.connect(envConfig.mongoose.uri);
+      db = await connection.db();
     } catch (e) {
       console.log('beforeAllError', e);
     }
@@ -40,6 +51,7 @@ describe('ServerModule (e2e)', () => {
    * After all tests are finished
    */
   afterAll(() => {
+    connection.close();
     app.close();
   });
 
@@ -61,22 +73,7 @@ describe('ServerModule (e2e)', () => {
    * Get config without token should fail
    */
   it('get config without token', async () => {
-    await testHelper.rest('/config', { statusCode: 401 });
-  });
-
-  /**
-   * Get meta data with admin role
-   */
-  it('get meta data', async () => {
-    const res: any = await testHelper.graphQl({
-      name: 'getMeta',
-      fields: ['environment', 'title', 'package', 'version'],
-    });
-    expect(res.errors).toBeUndefined();
-    expect(res.environment).toEqual(envConfig.env);
-    expect(res.title).toEqual(metaData.description);
-    expect(res.package).toEqual(metaData.name);
-    expect(res.version).toEqual(metaData.version);
+    const res: any = await testHelper.rest('/config', { statusCode: 401 });
   });
 
   /**
@@ -96,10 +93,70 @@ describe('ServerModule (e2e)', () => {
           firstName: 'Everardo',
         },
       },
-      fields: ['id', 'email'],
+      fields: ['id', 'email', 'roles'],
     });
     expect(res.email).toEqual(gEmail);
+    expect(res.roles).toEqual([]);
     gId = res.id;
+  });
+
+  /**
+   * Verify new user
+   */
+  it('verifyUser', async () => {
+    const user = await db.collection('users').findOne({ _id: new ObjectId(gId) });
+    const res: any = await testHelper.graphQl({
+      arguments: {
+        token: user.verificationToken,
+      },
+      name: 'verifyUser',
+      type: TestGraphQLType.MUTATION,
+    });
+    expect(res).toEqual(true);
+  });
+
+  /**
+   * Request password reset mail
+   */
+  it('requestPasswordResetMail with invalid email', async () => {
+    const res: any = await testHelper.graphQl({
+      arguments: {
+        email: 'invalid' + gEmail,
+      },
+      name: 'requestPasswordResetMail',
+    });
+    expect(res.errors[0].extensions.response.statusCode).toEqual(404);
+    expect(res.errors[0].message).toEqual('Not Found');
+  });
+
+  /**
+   * Request password reset mail
+   */
+  it('requestPasswordResetMail with valid', async () => {
+    const res: any = await testHelper.graphQl({
+      arguments: {
+        email: gEmail,
+      },
+      name: 'requestPasswordResetMail',
+    });
+    expect(res).toEqual(true);
+  });
+
+  /**
+   * Request password reset mail
+   */
+  it('resetPassword', async () => {
+    const user = await db.collection('users').findOne({ _id: new ObjectId(gId) });
+    const res: any = await testHelper.graphQl({
+      arguments: {
+        token: user.passwordResetToken,
+        password: 'new' + gPassword,
+      },
+      name: 'resetPassword',
+      type: TestGraphQLType.MUTATION,
+    });
+    expect(res).toEqual(true);
+    gPassword = 'new' + gPassword;
   });
 
   /**
@@ -151,7 +208,7 @@ describe('ServerModule (e2e)', () => {
    * Get config without admin rights should fail
    */
   it('get config without admin rights should fail', async () => {
-    await testHelper.rest('/config', { token: gToken, statusCode: 401 });
+    const res: any = await testHelper.rest('/config', { token: gToken, statusCode: 401 });
   });
 
   /**
@@ -164,7 +221,6 @@ describe('ServerModule (e2e)', () => {
           id: gId,
           input: {
             firstName: 'Jonny',
-            roles: ['admin'],
           },
         },
         name: 'updateUser',
@@ -176,14 +232,38 @@ describe('ServerModule (e2e)', () => {
     expect(res.id).toEqual(gId);
     expect(res.email).toEqual(gEmail);
     expect(res.firstName).toEqual('Jonny');
-    expect(res.roles[0]).toEqual('admin');
-    expect(res.roles.length).toEqual(1);
+    expect(res.roles.length).toEqual(0);
   });
 
   /**
-   * Get config with admin rights
+   * Update roles as non admin
+   */
+  it('user updates own role failed', async () => {
+    const res: any = await testHelper.graphQl(
+      {
+        arguments: {
+          id: gId,
+          input: {
+            roles: ['member'],
+          },
+        },
+        name: 'updateUser',
+        fields: ['id', 'email', 'firstName', 'roles'],
+        type: TestGraphQLType.MUTATION,
+      },
+      { token: gToken }
+    );
+    expect(res.errors.length).toBeGreaterThanOrEqual(1);
+    expect(res.errors[0].extensions.response.statusCode).toEqual(401);
+    expect(res.errors[0].message).toEqual('Current user is not allowed to set roles');
+    expect(res.data).toBe(null);
+  });
+
+  /**
+   * Get config with token
    */
   it('get config with admin rights', async () => {
+    await db.collection('users').findOneAndUpdate({ _id: new ObjectId(gId) }, { $set: { roles: ['admin'] } });
     const res: any = await testHelper.rest('/config', { token: gToken });
     expect(res.env).toEqual(envConfig.env);
   });
@@ -198,13 +278,40 @@ describe('ServerModule (e2e)', () => {
           id: gId,
         },
         name: 'getUser',
-        fields: ['id', 'email', 'firstName'],
+        fields: ['id', 'email', 'firstName', 'roles'],
       },
       { token: gToken }
     );
     expect(res.id).toEqual(gId);
     expect(res.email).toEqual(gEmail);
     expect(res.firstName).toEqual('Jonny');
+    expect(res.roles[0]).toEqual('admin');
+    expect(res.roles.length).toEqual(1);
+  });
+
+  /**
+   * Update roles as admin
+   */
+  it('user updates roles as admin', async () => {
+    const res: any = await testHelper.graphQl(
+      {
+        arguments: {
+          id: gId,
+          input: {
+            roles: ['member'],
+          },
+        },
+        name: 'updateUser',
+        fields: ['id', 'email', 'firstName', 'roles'],
+        type: TestGraphQLType.MUTATION,
+      },
+      { token: gToken }
+    );
+    expect(res.id).toEqual(gId);
+    expect(res.email).toEqual(gEmail);
+    expect(res.firstName).toEqual('Jonny');
+    expect(res.roles[0]).toEqual('member');
+    expect(res.roles.length).toEqual(1);
   });
 
   /**

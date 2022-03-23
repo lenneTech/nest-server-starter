@@ -7,9 +7,8 @@ import {
   ICorePersistenceModel,
   ServiceHelper,
 } from '@lenne.tech/nest-server';
-import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import * as fs from 'fs';
-import { GraphQLResolveInfo } from 'graphql';
 import { PubSub } from 'graphql-subscriptions';
 import envConfig from '../../../config.env';
 import { UserCreateInput } from './inputs/user-create.input';
@@ -34,7 +33,6 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    * User model
    */
   protected readonly model: ICorePersistenceModel;
-
   // ===================================================================================================================
   // Injections
   // ===================================================================================================================
@@ -45,7 +43,8 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   constructor(
     protected readonly configService: ConfigService,
     protected readonly emailService: EmailService,
-    @InjectModel('User') protected readonly userModel: Model<UserDocument>
+    @InjectModel('User') protected readonly userModel: Model<UserDocument>,
+    @Inject('PUB_SUB') protected readonly pubSub: PubSub
   ) {
     super(userModel, emailService);
     this.model = User;
@@ -58,29 +57,44 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   /**
    * Create new user and send welcome email
    */
-  async create(input: UserCreateInput, currentUser?: User, ...args: any[]): Promise<User> {
-    try {
-      const user = await super.create(input, currentUser);
-      const text = `Welcome ${user.firstName}, this is plain text from server.`;
-      await this.emailService.sendMail(user.email, 'Welcome', {
-        htmlTemplate: 'welcome',
-        templateData: user,
-        text,
-      });
-      return user;
-    } catch (err) {
-      console.log(err);
-    }
+  async create(input: UserCreateInput, currentUser?: User): Promise<User> {
+    const user = await super.create(input, currentUser);
+
+    await this.prepareOutput(user);
+
+    await this.pubSub.publish('userCreated', User.map(user));
+
+    await this.emailService.sendMail(user.email, 'Welcome', {
+      htmlTemplate: 'welcome',
+      templateData: { name: user.username, link: envConfig.email.verificationLink + '/' + user.verificationToken },
+    });
+
+    return user;
   }
 
   /**
    * Get users via filter
    */
   find(filterArgs?: FilterArgs, ...args: any[]): Promise<User[]> {
-    // Get filter query
     const filterQuery = Filter.convertFilterArgsToQuery(filterArgs);
     // Return found users
     return this.userModel.find(filterQuery[0], null, filterQuery[1]).exec();
+  }
+
+  /**
+   * Request password reset mail
+   *
+   * @param email
+   */
+  async sendPasswordResetMail(email: string): Promise<User> {
+    const user = await super.setPasswordResetTokenForEmail(email);
+
+    await this.emailService.sendMail(user.email, 'Password reset', {
+      htmlTemplate: 'password-reset',
+      templateData: { name: user.username, link: envConfig.email.passwordResetLink + '/' + user.passwordResetToken },
+    });
+
+    return user;
   }
 
   /**
@@ -88,9 +102,8 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    */
   async setAvatar(file: Express.Multer.File, user: User): Promise<string> {
     const dbUser = await this.userModel.findOne({ id: user.id }).exec();
-
     // Check user
-    if (!user) {
+    if (!dbUser) {
       throw new UnauthorizedException();
     }
 
@@ -131,7 +144,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   /**
    * Prepare output before return
    */
-  protected async prepareOutput(user: User, info?: GraphQLResolveInfo) {
-    return ServiceHelper.prepareOutput(user, User);
+  protected async prepareOutput(user: User): Promise<User> {
+    return ServiceHelper.prepareOutput(user);
   }
 }
