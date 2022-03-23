@@ -44,7 +44,7 @@
     "test": "NODE_ENV=development jest",
     "test:cov": "NODE_ENV=development jest --coverage",
     "test:debug": "NODE_ENV=development node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "NODE_ENV=development jest --detectOpenHandles --config jest-e2e.json",
+    "test:e2e": "NODE_ENV=development jest --detectOpenHandles --debug --verbose --config jest-e2e.json",
     "test:e2e-cov": "NODE_ENV=development jest --detectOpenHandles --config jest-e2e.json --coverage",
     "test:watch": "NODE_ENV=development jest --watch"
   },
@@ -52,7 +52,7 @@
     "node": ">= 16"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "3.4.0",
+    "@lenne.tech/nest-server": "8.0.1",
     "@nodepit/migrate-state-store-mongodb": "3.0.0",
     "graphql": "16.3.0"
   },
