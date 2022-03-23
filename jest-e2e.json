@@ -7,6 +7,5 @@
   "testTimeout": 5000,
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  },
-  "preset": "@shelf/jest-mongodb"
+  }
 }
