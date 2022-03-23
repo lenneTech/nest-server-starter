@@ -44,7 +44,7 @@
     "test": "NODE_ENV=development jest",
     "test:cov": "NODE_ENV=development jest --coverage",
     "test:debug": "NODE_ENV=development node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "NODE_ENV=development jest --detectOpenHandles --config jest-e2e.json",
+    "test:e2e": "NODE_ENV=development jest --detectOpenHandles --debug --verbose --config jest-e2e.json",
     "test:e2e-cov": "NODE_ENV=development jest --detectOpenHandles --config jest-e2e.json --coverage",
     "test:watch": "NODE_ENV=development jest --watch"
   },
