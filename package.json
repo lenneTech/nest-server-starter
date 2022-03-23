@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "9.0.1",
+  "version": "8.0.2",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -52,12 +52,12 @@
     "node": ">= 16"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "8.0.1",
+    "@lenne.tech/nest-server": "8.0.2",
     "@nodepit/migrate-state-store-mongodb": "3.0.0",
     "graphql": "16.3.0"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^5.16.0",
+    "@typescript-eslint/eslint-plugin": "5.16.0",
     "cpy-cli": "4.1.0",
     "eslint": "8.11.0",
     "eslint-config-prettier": "8.5.0",
