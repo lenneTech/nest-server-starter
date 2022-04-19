@@ -18,10 +18,14 @@ import { MongooseModule } from '@nestjs/mongoose';
     UserResolver,
     UserService,
     {
+      provide: 'USER_CLASS',
+      useValue: User,
+    },
+    {
       provide: 'PUB_SUB',
       useValue: new PubSub(),
     },
   ],
-  exports: [MongooseModule, UserResolver, UserService],
+  exports: [MongooseModule, UserResolver, UserService, 'USER_CLASS'],
 })
 export class UserModule {}

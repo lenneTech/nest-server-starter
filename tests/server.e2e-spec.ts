@@ -50,9 +50,9 @@ describe('ServerModule (e2e)', () => {
   /**
    * After all tests are finished
    */
-  afterAll(() => {
-    connection.close();
-    app.close();
+  afterAll(async () => {
+    await connection.close();
+    await app.close();
   });
 
   // ===================================================================================================================
@@ -126,7 +126,7 @@ describe('ServerModule (e2e)', () => {
       name: 'requestPasswordResetMail',
     });
     expect(res.errors[0].extensions.response.statusCode).toEqual(404);
-    expect(res.errors[0].message).toEqual('Not Found');
+    expect(res.errors[0].message).toEqual('No user found with email: ' + 'invalid' + gEmail);
   });
 
   /**
@@ -193,7 +193,7 @@ describe('ServerModule (e2e)', () => {
   /**
    * Find users
    */
-  it('findUsers', async () => {
+  it('findUsers without rights', async () => {
     const res: any = await testHelper.graphQl(
       {
         name: 'findUsers',
@@ -201,7 +201,10 @@ describe('ServerModule (e2e)', () => {
       },
       { token: gToken }
     );
-    expect(res.length).toBeGreaterThanOrEqual(1);
+    expect(res.errors.length).toBeGreaterThanOrEqual(1);
+    expect(res.errors[0].extensions.response.statusCode).toEqual(401);
+    expect(res.errors[0].message).toEqual('Unauthorized');
+    expect(res.data).toBe(null);
   });
 
   /**
@@ -287,6 +290,20 @@ describe('ServerModule (e2e)', () => {
     expect(res.firstName).toEqual('Jonny');
     expect(res.roles[0]).toEqual('admin');
     expect(res.roles.length).toEqual(1);
+  });
+
+  /**
+   * Find users
+   */
+  it('findUsers', async () => {
+    const res: any = await testHelper.graphQl(
+      {
+        name: 'findUsers',
+        fields: ['id', 'email'],
+      },
+      { token: gToken }
+    );
+    expect(res.length).toBeGreaterThanOrEqual(1);
   });
 
   /**

@@ -28,7 +28,7 @@ export class User extends CoreUserModel implements PersistenceModel {
    *
    * Not set when created by system
    */
-  @Field((type) => User, {
+  @Field(() => User, {
     description: 'ID of the user who created the object',
     nullable: true,
   })
@@ -40,7 +40,7 @@ export class User extends CoreUserModel implements PersistenceModel {
    *
    * Not set when updated by system
    */
-  @Field((type) => User, {
+  @Field(() => User, {
     description: 'ID of the user who last updated the object',
     nullable: true,
   })

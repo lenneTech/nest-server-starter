@@ -1,11 +1,9 @@
 import {
   ConfigService,
+  CoreModelConstructor,
   CoreUserService,
   EmailService,
-  Filter,
-  FilterArgs,
-  ICorePersistenceModel,
-  ServiceHelper,
+  ServiceOptions,
 } from '@lenne.tech/nest-server';
 import { Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import * as fs from 'fs';
@@ -17,22 +15,11 @@ import { User, UserDocument } from './user.model';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 
-// Subscription
-const pubSub = new PubSub();
-
 /**
  * User service
  */
 @Injectable()
 export class UserService extends CoreUserService<User, UserInput, UserCreateInput> {
-  // ===================================================================================================================
-  // Properties
-  // ===================================================================================================================
-
-  /**
-   * User model
-   */
-  protected readonly model: ICorePersistenceModel;
   // ===================================================================================================================
   // Injections
   // ===================================================================================================================
@@ -43,11 +30,11 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   constructor(
     protected readonly configService: ConfigService,
     protected readonly emailService: EmailService,
-    @InjectModel('User') protected readonly userModel: Model<UserDocument>,
+    @Inject('USER_CLASS') protected readonly mainModelConstructor: CoreModelConstructor<User>,
+    @InjectModel('User') protected readonly mainDbModel: Model<UserDocument>,
     @Inject('PUB_SUB') protected readonly pubSub: PubSub
   ) {
-    super(userModel, emailService);
-    this.model = User;
+    super(emailService, mainDbModel, mainModelConstructor);
   }
 
   // ===================================================================================================================
@@ -57,43 +44,39 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   /**
    * Create new user and send welcome email
    */
-  async create(input: UserCreateInput, currentUser?: User): Promise<User> {
-    const user = await super.create(input, currentUser);
+  async create(input: UserCreateInput, serviceOptions?: ServiceOptions): Promise<User> {
+    // Get prepared user
+    const user = await super.create(input, serviceOptions);
 
-    await this.prepareOutput(user);
+    // Publish action
+    if (serviceOptions?.pubSub === undefined || serviceOptions.pubSub) {
+      await this.pubSub.publish('userCreated', User.map(user));
+    }
 
-    await this.pubSub.publish('userCreated', User.map(user));
-
+    // Send email
     await this.emailService.sendMail(user.email, 'Welcome', {
       htmlTemplate: 'welcome',
       templateData: { name: user.username, link: envConfig.email.verificationLink + '/' + user.verificationToken },
     });
 
+    // Return created user
     return user;
   }
 
   /**
-   * Get users via filter
-   */
-  find(filterArgs?: FilterArgs, ...args: any[]): Promise<User[]> {
-    const filterQuery = Filter.convertFilterArgsToQuery(filterArgs);
-    // Return found users
-    return this.userModel.find(filterQuery[0], null, filterQuery[1]).exec();
-  }
-
-  /**
    * Request password reset mail
-   *
-   * @param email
    */
-  async sendPasswordResetMail(email: string): Promise<User> {
-    const user = await super.setPasswordResetTokenForEmail(email);
+  async sendPasswordResetMail(email: string, serviceOptions?: ServiceOptions): Promise<User> {
+    // Set password reset token
+    const user = await super.setPasswordResetTokenForEmail(email, serviceOptions);
 
+    // Send email
     await this.emailService.sendMail(user.email, 'Password reset', {
       htmlTemplate: 'password-reset',
       templateData: { name: user.username, link: envConfig.email.passwordResetLink + '/' + user.passwordResetToken },
     });
 
+    // Return user
     return user;
   }
 
@@ -101,7 +84,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    * Set avatar image
    */
   async setAvatar(file: Express.Multer.File, user: User): Promise<string> {
-    const dbUser = await this.userModel.findOne({ id: user.id }).exec();
+    const dbUser = await this.mainDbModel.findOne({ id: user.id }).exec();
     // Check user
     if (!dbUser) {
       throw new UnauthorizedException();
@@ -128,23 +111,5 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
 
     // Return user
     return file.filename;
-  }
-
-  // ===================================================================================================================
-  // Helper methods
-  // ===================================================================================================================
-
-  /**
-   * Prepare input before save
-   */
-  protected async prepareInput(input: { [key: string]: any }, currentUser: User, options: { create?: boolean } = {}) {
-    return ServiceHelper.prepareInput(input, currentUser, options);
-  }
-
-  /**
-   * Prepare output before return
-   */
-  protected async prepareOutput(user: User): Promise<User> {
-    return ServiceHelper.prepareOutput(user);
   }
 }

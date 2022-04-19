@@ -1,4 +1,4 @@
-import { FileHelper, RESTUser, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { multerOptionsForImageUpload, RESTUser, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Controller } from '@nestjs/common/decorators/core/controller.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -24,7 +24,7 @@ export class AvatarController {
   @UseInterceptors(
     FileInterceptor(
       'file',
-      FileHelper.multerOptionsForImageUpload({
+      multerOptionsForImageUpload({
         destination: envConfig.staticAssets.path + '/avatars',
       })
     )
