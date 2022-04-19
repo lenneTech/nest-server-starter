@@ -23,7 +23,7 @@
     "url": "https://github.com/lenneTech/nest-server-starter/issues"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy:assets && npm run copy:meta",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy:assets && npm run copy:meta && npm run copy:migrations && npm run copy:images",
     "copy:assets": "cpy --parents --cwd=./src  assets/**/* ../dist",
     "copy:meta": "rimraf .dist/meta.json && cpy ./package.json --rename=meta.json ./dist/",
     "copy:migrations": "cp -R ./migrations ./dist/migrations && cp -R ./migrations-utils ./dist/migrations-utils && cp -R ./tsconfig.json ./dist/tsconfig.json",

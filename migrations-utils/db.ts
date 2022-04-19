@@ -1,19 +1,10 @@
 import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
 import * as fs from 'fs';
 import * as path from 'path';
+import { config } from '../src/config.env';
 
-let MONGO_URL;
-if (process.env['NODE' + '_ENV'] === 'production') {
-  MONGO_URL = 'mongodb://overlay_mongo1/2bfit';
-} else if (process.env['NODE' + '_ENV'] === 'preview') {
-  MONGO_URL = 'mongodb://overlay_mongo1/2bfit-preview';
-} else if (process.env['NODE' + '_ENV'] === 'test') {
-  MONGO_URL = 'mongodb://overlay_mongo1/2bfit-test';
-} else if (process.env['NODE' + '_ENV'] === 'develop') {
-  MONGO_URL = 'mongodb://overlay_mongo1/2bfit-develop';
-} else {
-  MONGO_URL = 'mongodb://localhost/2bfit-dev';
-}
+const env = process.env['NODE' + '_ENV'];
+const MONGO_URL = env && config[env] ? config[env].mongoose.uri : config.develop.mongoose.uri;
 
 export const getDb = async () => {
   const client: MongoClient = await MongoClient.connect(MONGO_URL);

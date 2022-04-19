@@ -1,7 +1,8 @@
 # uniTools
 dist
 typedocs
-public
+!public/
+public/*
 !public/images
 schema.gql
 
