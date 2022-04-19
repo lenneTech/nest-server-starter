@@ -1,4 +1,4 @@
-import { FileHelper, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { multerRandomFileName, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Body, Controller, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -25,7 +25,7 @@ export class FileController {
         destination: envConfig.staticAssets.path,
 
         // Generated random file name
-        filename: FileHelper.multerRandomFileName(),
+        filename: multerRandomFileName(),
       }),
     })
   )

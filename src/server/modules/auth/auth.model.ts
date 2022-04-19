@@ -12,8 +12,8 @@ export class Auth extends CoreAuthModel {
   // ===================================================================================================================
 
   /**
-   * Signed in user
+   * Signed-in user
    */
-  @Field((type) => User, { description: 'User who signed in' })
+  @Field(() => User, { description: 'User who signed in' })
   user: User = undefined;
 }
