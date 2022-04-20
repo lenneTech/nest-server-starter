@@ -6,6 +6,52 @@ import { join } from 'path';
  */
 export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
+  // Local environment
+  // ===========================================================================
+  local: {
+    email: {
+      smtp: {
+        auth: {
+          user: 'everardo.hansen7@ethereal.email',
+          pass: 'hP6dNm7eQn7QRTmWH2',
+        },
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+      },
+      defaultSender: {
+        email: 'everardo.hansen7@ethereal.email',
+        name: 'Everardo Hansen',
+      },
+    },
+    env: 'local',
+    graphQl: {
+      driver: {
+        debug: true,
+        introspection: true,
+        playground: true,
+      },
+    },
+    jwt: {
+      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+      // tslint:disable-next-line:max-line-length
+      secret: 'SECRET_OR_PRIVATE_KEY_LOCAL',
+    },
+    mongoose: {
+      uri: 'mongodb://localhost/nest-server-local',
+    },
+    port: 3000,
+    staticAssets: {
+      path: join(__dirname, '..', 'public'),
+      options: { prefix: '/public/' },
+    },
+    templates: {
+      path: join(__dirname, 'assets', 'templates'),
+      engine: 'ejs',
+    },
+  },
+
+  // ===========================================================================
   // Develop environment
   // ===========================================================================
   develop: {
@@ -33,11 +79,12 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     jwt: {
+      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_PREV',
+      secret: 'SECRET_OR_PRIVATE_KEY_DEV',
     },
     mongoose: {
-      uri: 'mongodb://localhost/nest-develop',
+      uri: 'mongodb://overlay_mongo1/nest-server-develop',
     },
     port: 3000,
     staticAssets: {
@@ -78,11 +125,12 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     jwt: {
+      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_PREV',
+      secret: 'SECRET_OR_PRIVATE_KEY_TEST',
     },
     mongoose: {
-      uri: 'mongodb://localhost/nest-test',
+      uri: 'mongodb://overlay_mongo1/nest-server-test',
     },
     port: 3000,
     staticAssets: {
@@ -123,11 +171,12 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     jwt: {
+      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PREV',
     },
     mongoose: {
-      uri: 'mongodb://localhost/nest-preview',
+      uri: 'mongodb://overlay_mongo1/nest-server-preview',
     },
     port: 3000,
     staticAssets: {
@@ -143,7 +192,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   // Productive environment
   // ===========================================================================
-  production: {
+  productive: {
     email: {
       smtp: {
         auth: {
@@ -168,11 +217,12 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     jwt: {
+      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PROD',
     },
     mongoose: {
-      uri: 'mongodb://localhost/nest-prod',
+      uri: 'mongodb://overlay_mongo1/nest-server-prod',
     },
     port: 3000,
     staticAssets: {
@@ -189,10 +239,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
 /**
  * Environment specific config
  *
- * default: development
+ * default: local
  */
-const envConfig = config[process.env['NODE' + '_ENV'] || 'develop'] || config.develop;
-console.log('Server starts in mode: ', process.env['NODE' + '_ENV'] || 'develop');
+const envConfig = config[process.env['NODE' + '_ENV'] || 'local'] || config.local;
+console.log('Server starts in mode: ', envConfig.env);
 
 /**
  * Export envConfig as default

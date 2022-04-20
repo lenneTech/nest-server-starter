@@ -4,7 +4,7 @@ import * as path from 'path';
 import { config } from '../src/config.env';
 
 const env = process.env['NODE' + '_ENV'];
-const MONGO_URL = env && config[env] ? config[env].mongoose.uri : config.develop.mongoose.uri;
+const MONGO_URL = env && config[env] ? config[env].mongoose.uri : config.local.mongoose.uri;
 
 export const getDb = async () => {
   const client: MongoClient = await MongoClient.connect(MONGO_URL);
