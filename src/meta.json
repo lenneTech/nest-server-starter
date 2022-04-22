@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "Nest Server Starter",
   "version": "0.0.1",
-  "description": "This dummy data will be overwritten with data from package.json during the build process"
+  "description": "Nest Server with optimized GraphQL and MongoDB handling"
 }

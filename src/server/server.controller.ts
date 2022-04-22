@@ -10,10 +10,12 @@ export class ServerController {
   @Get()
   @Render('index')
   root() {
+    // meta.json can be overwritten during the build process
     return {
       env: this.configService.get('env'),
       version: metaData.version,
-      title: metaData.description,
+      title: metaData.name,
+      description: metaData.description,
     };
   }
 

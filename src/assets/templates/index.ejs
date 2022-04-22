@@ -1,2 +1,5 @@
 <h1>Welcome to <%=title%></h1>
+<% if(typeof(description) !== "undefined" && description !== ""){ %>
+<p><%=description%></p>
+<% } %>
 <p>The API runs in version <%=version%> in <%=env%> environment.</p>

@@ -64,7 +64,7 @@ describe('ServerModule (e2e)', () => {
    */
   it('get index', async () => {
     const res: any = await testHelper.rest('');
-    expect(res.includes('Welcome to ' + metaData.description)).toBe(true);
+    expect(res.includes('Welcome to ' + metaData.name)).toBe(true);
     expect(res.includes(envConfig.env + ' environment')).toBe(true);
     expect(res.includes('version ' + metaData.version)).toBe(true);
   });
