@@ -1,8 +1,8 @@
 import { CorePersistenceModel } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { User } from '../../modules/user/user.model';
-import * as mongoose from 'mongoose';
-import { Prop, Schema } from '@nestjs/mongoose';
+import { Schema, Types } from 'mongoose';
+import { Prop, Schema as MongooseSchema } from '@nestjs/mongoose';
 
 /**
  * Metadata for persistent objects
@@ -13,25 +13,25 @@ import { Prop, Schema } from '@nestjs/mongoose';
   description: 'Persistence model which will be saved in DB',
   isAbstract: true,
 })
-@Schema()
+@MongooseSchema()
 export abstract class PersistenceModel extends CorePersistenceModel {
   /**
    * User who created the object
    *
    * Not set when created by system
    */
-  @Field(() => User, {
+  @Field((type) => User, {
     description: 'User who created the object',
     nullable: true,
   })
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
-  createdBy?: User = undefined;
+  @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
+  createdBy?: Types.ObjectId | User = undefined;
 
   /**
    * IDs of the Owners
    */
-  @Field(() => [String], {
-    description: 'Users who own the object',
+  @Field((type) => [String], {
+    description: 'IDs of the users who own the object',
     nullable: 'items',
   })
   @Prop([String])
@@ -42,10 +42,10 @@ export abstract class PersistenceModel extends CorePersistenceModel {
    *
    * Not set when updated by system
    */
-  @Field(() => User, {
+  @Field((type) => User, {
     description: 'User who last updated the object',
     nullable: true,
   })
-  @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
-  updatedBy: User = undefined;
+  @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
+  updatedBy: Types.ObjectId | User = undefined;
 }

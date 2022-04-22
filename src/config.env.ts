@@ -242,7 +242,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
  * default: local
  */
 const envConfig = config[process.env['NODE' + '_ENV'] || 'local'] || config.local;
-console.log('Server starts in mode: ', envConfig.env);
+console.log('Server starts in mode:', envConfig.env);
 
 /**
  * Export envConfig as default
