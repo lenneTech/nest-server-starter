@@ -93,10 +93,11 @@ describe('ServerModule (e2e)', () => {
           firstName: 'Everardo',
         },
       },
-      fields: ['id', 'email', 'roles'],
+      fields: ['id', 'email', 'roles', { createdBy: ['id'] }],
     });
     expect(res.email).toEqual(gEmail);
     expect(res.roles).toEqual([]);
+    expect(res.createdBy.id).toEqual(res.id);
     gId = res.id;
   });
 
