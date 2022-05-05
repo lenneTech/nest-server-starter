@@ -1,4 +1,4 @@
-import { check, FilterArgs, GraphQLUser, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { FilterArgs, GraphQLUser, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Inject } from '@nestjs/common';
 import { Args, Info, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { GraphQLResolveInfo } from 'graphql';
@@ -11,7 +11,7 @@ import { UserService } from './user.service';
 /**
  * Resolver to process with user data
  */
-@Resolver(() => User)
+@Resolver((of) => User)
 export class UserResolver {
   /**
    * Import services
@@ -28,16 +28,23 @@ export class UserResolver {
   @Roles(RoleEnum.ADMIN)
   @Query(() => [User], { description: 'Find users (via filter)' })
   async findUsers(@Info() info: GraphQLResolveInfo, @Args() args?: FilterArgs) {
-    return await this.userService.find(args, { fieldSelection: { info, select: 'findUsers' } });
+    return await this.userService.find(args, {
+      fieldSelection: { info, select: 'findUsers' },
+      inputType: FilterArgs,
+    });
   }
 
   /**
    * Get user via ID
    */
-  @Roles(RoleEnum.OWNER, RoleEnum.ADMIN)
+  @Roles(RoleEnum.USER)
   @Query(() => User, { description: 'Get user with specified ID' })
-  async getUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo): Promise<User> {
-    return await this.userService.get(id, { fieldSelection: { info, select: 'getUser' } });
+  async getUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo, @GraphQLUser() user: User): Promise<User> {
+    return await this.userService.get(id, {
+      currentUser: user,
+      fieldSelection: { info, select: 'getUser' },
+      roles: [RoleEnum.OWNER, RoleEnum.ADMIN],
+    });
   }
 
   /**
@@ -69,21 +76,24 @@ export class UserResolver {
     @GraphQLUser() user: User,
     @Info() info: GraphQLResolveInfo
   ): Promise<User> {
-    // Check input
-    // Hint: necessary as long as global CheckInputPipe can't access context for current user
-    // (see https://github.com/nestjs/graphql/issues/325)
-    input = await check(input, user, UserCreateInput);
-
-    return await this.userService.create(input, { currentUser: user, fieldSelection: { info, select: 'createUser' } });
+    return await this.userService.create(input, {
+      currentUser: user,
+      fieldSelection: { info, select: 'createUser' },
+      inputType: UserCreateInput,
+    });
   }
 
   /**
    * Delete existing user
    */
-  @Roles(RoleEnum.ADMIN, RoleEnum.OWNER)
+  @Roles(RoleEnum.USER)
   @Mutation(() => User, { description: 'Delete existing user' })
-  async deleteUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo): Promise<User> {
-    return await this.userService.delete(id, { fieldSelection: { info, select: 'deleteUser' } });
+  async deleteUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo, @GraphQLUser() user: User): Promise<User> {
+    return await this.userService.delete(id, {
+      currentUser: user,
+      fieldSelection: { info, select: 'deleteUser' },
+      roles: [RoleEnum.ADMIN, RoleEnum.OWNER],
+    });
   }
 
   /**
@@ -97,7 +107,7 @@ export class UserResolver {
   /**
    * Update existing user
    */
-  @Roles(RoleEnum.ADMIN, RoleEnum.OWNER)
+  @Roles(RoleEnum.USER)
   @Mutation(() => User, { description: 'Update existing user' })
   async updateUser(
     @Args('input') input: UserInput,
@@ -105,15 +115,12 @@ export class UserResolver {
     @GraphQLUser() user: User,
     @Info() info: GraphQLResolveInfo
   ): Promise<User> {
-    // Check input
-    // Hint: necessary as long as global CheckInputPipe can't access context for current user
-    // (see https://github.com/nestjs/graphql/issues/325)
-    input = await check(input, user, UserInput);
-
     // Update user
     return await this.userService.update(id, input, {
       currentUser: user,
       fieldSelection: { info, select: 'updateUser' },
+      inputType: UserInput,
+      roles: [RoleEnum.ADMIN, RoleEnum.OWNER],
     });
   }
 
