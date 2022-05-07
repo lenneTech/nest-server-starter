@@ -20,7 +20,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
    *
    * Not set when created by system
    */
-  @Field((type) => User, {
+  @Field(() => User, {
     description: 'User who created the object',
     nullable: true,
   })
@@ -28,21 +28,11 @@ export abstract class PersistenceModel extends CorePersistenceModel {
   createdBy?: Types.ObjectId | User = undefined;
 
   /**
-   * IDs of the Owners
-   */
-  @Field((type) => [String], {
-    description: 'IDs of the users who own the object',
-    nullable: 'items',
-  })
-  @Prop([String])
-  ownerIds: string[] = [];
-
-  /**
    * User who last updated the object
    *
    * Not set when updated by system
    */
-  @Field((type) => User, {
+  @Field(() => User, {
     description: 'User who last updated the object',
     nullable: true,
   })

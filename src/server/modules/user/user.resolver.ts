@@ -11,7 +11,7 @@ import { UserService } from './user.service';
 /**
  * Resolver to process with user data
  */
-@Resolver((of) => User)
+@Resolver(() => User)
 export class UserResolver {
   /**
    * Import services

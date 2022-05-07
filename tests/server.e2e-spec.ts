@@ -73,7 +73,7 @@ describe('ServerModule (e2e)', () => {
    * Get config without token should fail
    */
   it('get config without token', async () => {
-    const res: any = await testHelper.rest('/config', { statusCode: 401 });
+    await testHelper.rest('/config', { statusCode: 401 });
   });
 
   /**
@@ -212,7 +212,7 @@ describe('ServerModule (e2e)', () => {
    * Get config without admin rights should fail
    */
   it('get config without admin rights should fail', async () => {
-    const res: any = await testHelper.rest('/config', { token: gToken, statusCode: 401 });
+    await testHelper.rest('/config', { token: gToken, statusCode: 401 });
   });
 
   /**
@@ -259,7 +259,7 @@ describe('ServerModule (e2e)', () => {
     );
     expect(res.errors.length).toBeGreaterThanOrEqual(1);
     expect(res.errors[0].extensions.response.statusCode).toEqual(401);
-    expect(res.errors[0].message).toEqual('Current user is not allowed to set roles');
+    expect(res.errors[0].message).toEqual('The current user has no access rights for roles');
     expect(res.data).toBe(null);
   });
 

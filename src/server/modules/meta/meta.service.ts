@@ -1,7 +1,6 @@
 import { ConfigService } from '@lenne.tech/nest-server';
 import { Injectable } from '@nestjs/common';
 import { Meta } from './meta.model';
-import { GraphQLResolveInfo } from 'graphql';
 import * as metaData from '../../../meta.json';
 
 /**
@@ -22,7 +21,7 @@ export class MetaService {
    * Get Meta via ID
    * Is used by MetaResolver AND ServerController!
    */
-  async get(info?: GraphQLResolveInfo): Promise<Meta> {
+  async get(): Promise<Meta> {
     return Meta.map({
       environment: this.configService.config.env,
       title: metaData.description,
