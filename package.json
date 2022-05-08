@@ -66,7 +66,7 @@
   },
   "dependencies": {
     "@apollo/gateway": "0.50.2",
-    "@lenne.tech/nest-server": "8.5.0",
+    "@lenne.tech/nest-server": "8.6.1",
     "@nestjs/apollo": "10.0.11",
     "@nestjs/common": "8.4.4",
     "@nestjs/core": "8.4.4",
@@ -131,7 +131,7 @@
     "semver": "7.3.7",
     "standard-version": "9.3.2",
     "supertest": "6.2.3",
-    "ts-jest": "28.0.1",
+    "ts-jest": "28.0.2",
     "ts-morph": "14.0.0",
     "ts-node": "10.7.0",
     "tsconfig-paths": "4.0.0",

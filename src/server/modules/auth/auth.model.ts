@@ -3,9 +3,9 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { User } from '../user/user.model';
 
 /**
- * CoreAuthModel model for the response after the sign in
+ * Authentication data
  */
-@ObjectType({ description: 'Auth' })
+@ObjectType({ description: 'Authentication data' })
 export class Auth extends CoreAuthModel {
   // ===================================================================================================================
   // Properties
@@ -16,4 +16,17 @@ export class Auth extends CoreAuthModel {
    */
   @Field(() => User, { description: 'User who signed in' })
   user: User = undefined;
+
+  // ===================================================================================================================
+  // Methods
+  // ===================================================================================================================
+
+  /**
+   * Initialize instance with default values instead of undefined
+   */
+  init() {
+    super.init();
+    // Nothing more to initialize yet
+    return this;
+  }
 }

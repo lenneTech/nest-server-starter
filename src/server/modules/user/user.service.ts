@@ -60,12 +60,6 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
       await this.pubSub.publish('userCreated', User.map(user));
     }
 
-    // Send email
-    await this.emailService.sendMail(user.email, 'Welcome', {
-      htmlTemplate: 'welcome',
-      templateData: { name: user.username, link: envConfig.email.verificationLink + '/' + user.verificationToken },
-    });
-
     // Return created user
     return user;
   }

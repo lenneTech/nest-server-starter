@@ -70,6 +70,7 @@ export class UserResolver {
   /**
    * Create new user
    */
+  @Roles(RoleEnum.ADMIN)
   @Mutation(() => User, { description: 'Create a new user' })
   async createUser(
     @Args('input') input: UserCreateInput,
