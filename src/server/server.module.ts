@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import envConfig from '../config.env';
 import { AuthModule } from './modules/auth/auth.module';
 import { FileController } from './modules/file/file.controller';
+import { FileResolver } from './modules/file/file.resolver';
 import { ServerController } from './server.controller';
 import { MetaModule } from './modules/meta/meta.module';
 
@@ -28,6 +29,9 @@ import { MetaModule } from './modules/meta/meta.module';
 
   // Include REST controllers
   controllers: [FileController, ServerController],
+
+  // Include resolvers, services and other providers
+  providers: [FileResolver],
 
   // Exports (a.o. for testing)
   exports: [CoreModule, AuthModule, MetaModule],

@@ -1,0 +1,22 @@
+introspection:
+  schemaFile: ./schema.gql
+
+servers:
+  - url: https://api.example.com/graphql
+    description: Production Example API Server
+    production: true
+  - url: https://dev-api.example.com/graphql
+    description: Dev Example API Server
+
+info:
+  title: GraphQL API Reference
+  description: Welcome to the GraphQL API Reference
+  version: 8.6.5
+  contact:
+    name: lenne.Tech GmbH
+    url: https://lenne.tech
+    email: info@lenne.tech
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  x-hidePoweredBy: false

@@ -1,11 +1,11 @@
 import { RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PubSub } from 'graphql-subscriptions';
+import { MongoClient, ObjectId } from 'mongodb';
 import envConfig from '../src/config.env';
 import { User } from '../src/server/modules/user/user.model';
 import { UserService } from '../src/server/modules/user/user.service';
 import { ServerModule } from '../src/server/server.module';
-import { MongoClient, ObjectId } from 'mongodb';
 
 describe('Project (e2e)', () => {
   let app;
@@ -144,8 +144,8 @@ describe('Project (e2e)', () => {
    * Delete users
    */
   it('deleteUsers', async () => {
-    // Add admin role to user 2
-    await userService.setRoles(users[1].id, ['admin']);
+    // Add admin role to last user
+    await userService.setRoles(users[users.length - 1].id, ['admin']);
 
     for (const user of users) {
       const res: any = await testHelper.graphQl(
@@ -157,7 +157,7 @@ describe('Project (e2e)', () => {
           },
           fields: ['id'],
         },
-        { token: users[1].token }
+        { token: users[users.length - 1].token }
       );
       expect(res.id).toEqual(user.id);
     }

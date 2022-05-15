@@ -25,6 +25,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'local',
+    execAfterInit: 'npm run docs:bootstrap',
     graphQl: {
       driver: {
         debug: true,
@@ -43,7 +44,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
-      options: { prefix: '/public/' },
+      options: { prefix: '' },
     },
     templates: {
       path: join(__dirname, 'assets', 'templates'),
@@ -71,6 +72,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'develop',
+    execAfterInit: 'npm run docs:bootstrap',
     graphQl: {
       driver: {
         debug: true,
@@ -89,7 +91,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
-      options: { prefix: '/public/' },
+      options: { prefix: '' },
     },
     templates: {
       path: join(__dirname, 'assets', 'templates'),
@@ -117,6 +119,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'test',
+    execAfterInit: 'npm run docs:bootstrap',
     graphQl: {
       driver: {
         debug: true,
@@ -135,7 +138,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
-      options: { prefix: '/public/' },
+      options: { prefix: '' },
     },
     templates: {
       path: join(__dirname, 'assets', 'templates'),
@@ -163,6 +166,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'preview',
+    execAfterInit: 'npm run docs:bootstrap',
     graphQl: {
       driver: {
         debug: true,
@@ -181,7 +185,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
-      options: { prefix: '/public/' },
+      options: { prefix: '' },
     },
     templates: {
       path: join(__dirname, 'assets', 'templates'),
@@ -209,6 +213,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'productive',
+    execAfterInit: 'npm run docs:bootstrap',
     graphQl: {
       driver: {
         debug: false,
@@ -227,7 +232,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
-      options: { prefix: '/public/' },
+      options: { prefix: '' },
     },
     templates: {
       path: join(__dirname, 'assets', 'templates'),
