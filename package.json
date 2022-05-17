@@ -23,6 +23,7 @@
     "url": "https://github.com/lenneTech/nest-server-starter/issues"
   },
   "scripts": {
+    "init": "npm install",
     "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy:assets && npm run copy:meta && npm run copy:migrations && npm run copy:images",
     "copy:assets": "cpy --parents --cwd=./src  assets/**/* ../dist",
     "copy:meta": "rimraf .dist/meta.json && cpy ./package.json --rename=meta.json ./dist/",
@@ -79,6 +80,7 @@
     "@nestjs/mongoose": "9.0.3",
     "@nestjs/passport": "8.2.1",
     "@nestjs/platform-express": "8.4.5",
+    "@nodepit/migrate-state-store-mongodb": "^3.1.0-beta.0",
     "apollo-server-core": "3.7.0",
     "apollo-server-express": "3.7.0",
     "bcrypt": "5.0.1",
@@ -91,6 +93,7 @@
     "json-to-graphql-query": "2.2.4",
     "light-my-request": "4.10.1",
     "lodash": "4.17.21",
+    "migrate": "^1.8.0",
     "mongodb": "4.6.0",
     "mongoose": "6.3.3",
     "multer": "1.4.4",
