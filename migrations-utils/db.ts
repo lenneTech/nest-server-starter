@@ -1,10 +1,9 @@
 import { MongoClient, GridFSBucket, ObjectId } from 'mongodb';
 import * as fs from 'fs';
 import * as path from 'path';
-import { config } from '../src/config.env';
+import config from '../src/config.env';
 
-const env = process.env['NODE' + '_ENV'];
-const MONGO_URL = env && config[env] ? config[env].mongoose.uri : config.local.mongoose.uri;
+const MONGO_URL = config.mongoose.uri;
 
 export const getDb = async () => {
   const client: MongoClient = await MongoClient.connect(MONGO_URL);
