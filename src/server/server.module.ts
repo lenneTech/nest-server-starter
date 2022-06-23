@@ -4,8 +4,9 @@ import envConfig from '../config.env';
 import { AuthModule } from './modules/auth/auth.module';
 import { FileController } from './modules/file/file.controller';
 import { FileResolver } from './modules/file/file.resolver';
-import { ServerController } from './server.controller';
+import { FileService } from './modules/file/file.service';
 import { MetaModule } from './modules/meta/meta.module';
+import { ServerController } from './server.controller';
 
 /**
  * Server module (dynamic)
@@ -31,7 +32,7 @@ import { MetaModule } from './modules/meta/meta.module';
   controllers: [FileController, ServerController],
 
   // Include resolvers, services and other providers
-  providers: [FileResolver],
+  providers: [FileResolver, FileService],
 
   // Exports (a.o. for testing)
   exports: [CoreModule, AuthModule, MetaModule],

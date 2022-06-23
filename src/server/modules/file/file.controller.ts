@@ -1,16 +1,34 @@
-import { multerRandomFileName, RoleEnum, Roles } from '@lenne.tech/nest-server';
-import { Body, Controller, Post, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { multerRandomFileName, RESTUser, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  NotFoundException,
+  Param,
+  Post,
+  Res,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import envConfig from '../../../config.env';
+import { User } from '../user/user.model';
+import { FileService } from './file.service';
 
 /**
- * File controller for
+ * File controller
  */
 @Controller('files')
 export class FileController {
   /**
-   * Upload files
+   * Include services
+   */
+  constructor(protected fileService: FileService) {}
+
+  /**
+   * Upload files via REST as an alternative to uploading via GraphQL (see file.resolver.ts)
    */
   @Roles(RoleEnum.ADMIN)
   @Post('upload')
@@ -29,7 +47,27 @@ export class FileController {
       }),
     })
   )
-  uploadFile(@UploadedFiles() files, @Body() fields: any) {
-    console.log(JSON.stringify({ files, fields }, null, 2));
+  uploadFiles(@UploadedFiles() files, @Body() fields: any) {
+    console.log('Saved file info', JSON.stringify({ files, fields }, null, 2));
+  }
+
+  /**
+   * Download file
+   */
+  @Roles(RoleEnum.ADMIN)
+  @Get(':filename')
+  async getFile(@Param('filename') filename: string, @Res() res, @RESTUser() user: User) {
+    if (!filename) {
+      throw new BadRequestException('Missing filename for download');
+    }
+
+    const file = await this.fileService.getFileInfoByName(filename);
+    if (!file) {
+      throw new NotFoundException('File not found');
+    }
+    const filestream = await this.fileService.getFileStream(file.id);
+    res.header('Content-Type', file.contentType);
+    res.header('Content-Disposition', 'attachment; filename=' + file.filename);
+    return filestream.pipe(res);
   }
 }

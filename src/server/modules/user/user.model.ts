@@ -1,8 +1,8 @@
 import { CoreUserModel } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { PersistenceModel } from '../../common/models/persistence.model';
 import { Prop, Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
-import { Schema, Document } from 'mongoose';
+import { Document, Schema, Types } from 'mongoose';
+import { PersistenceModel } from '../../common/models/persistence.model';
 
 export type UserDocument = User & Document;
 
@@ -24,28 +24,50 @@ export class User extends CoreUserModel implements PersistenceModel {
   avatar: string = undefined;
 
   /**
-   * User who created the object
+   * ID of the user who created the object
    *
    * Not set when created by system
    */
-  @Field(() => User, {
+  @Field(() => String, {
     description: 'ID of the user who created the object',
     nullable: true,
   })
   @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
-  createdBy: User = undefined;
+  createdBy: Types.ObjectId | string = undefined;
 
   /**
-   * User who last updated the object
+   * ID of the user who updated the object
    *
    * Not set when updated by system
    */
-  @Field(() => User, {
-    description: 'ID of the user who last updated the object',
+  @Field(() => String, {
+    description: 'ID of the user who updated the object',
     nullable: true,
   })
   @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
-  updatedBy: User = undefined;
+  updatedBy: Types.ObjectId | string = undefined;
+
+  // ===================================================================================================================
+  // Methods
+  // ===================================================================================================================
+
+  /**
+   * Initialize instance with default values instead of undefined
+   */
+  init() {
+    super.init();
+    // Nothing more to initialize yet
+    return this;
+  }
+
+  /**
+   * Map input
+   */
+  map(input) {
+    super.map(input);
+    // There is nothing to map yet, if something comes up you can use `mapClass` / `mapClassAsync` from ModelHelper
+    return this;
+  }
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

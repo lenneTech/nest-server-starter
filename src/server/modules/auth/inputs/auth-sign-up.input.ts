@@ -4,7 +4,7 @@ import { Field, InputType } from '@nestjs/graphql';
 /**
  * SignUp input
  */
-@InputType({ description: 'Description for AuthSignUpInput' })
+@InputType({ description: 'Sign-up input' })
 export class AuthSignUpInput extends CoreAuthSignUpInput {
   // ===================================================================================================================
   // Properties

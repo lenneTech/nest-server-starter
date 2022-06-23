@@ -14,7 +14,7 @@ export class AvatarController {
   /**
    * Import services
    */
-  constructor(private readonly usersService: UserService) {}
+  constructor(protected readonly usersService: UserService) {}
 
   /**
    * Upload files

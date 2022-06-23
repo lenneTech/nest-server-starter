@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { CoreModel } from '@lenne.tech/nest-server';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 /**
  * Meta model
@@ -33,4 +33,26 @@ export class Meta extends CoreModel {
    */
   @Field({ description: 'Version of API' })
   version: string = undefined;
+
+  // ===================================================================================================================
+  // Methods
+  // ===================================================================================================================
+
+  /**
+   * Initialize instance with default values instead of undefined
+   */
+  init() {
+    super.init();
+    // Nothing more to initialize yet
+    return this;
+  }
+
+  /**
+   * Map input
+   */
+  map(input) {
+    super.map(input);
+    // There is nothing to map yet, if something comes up you can use `mapClass` / `mapClassAsync` from ModelHelper
+    return this;
+  }
 }

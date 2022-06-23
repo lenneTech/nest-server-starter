@@ -8,7 +8,7 @@ import { AuthSignUpInput } from './inputs/auth-sign-up.input';
 /**
  * Authentication resolver for the sign in
  */
-@Resolver((of) => Auth)
+@Resolver(() => Auth)
 export class AuthResolver {
   /**
    * Integrate services

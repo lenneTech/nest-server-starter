@@ -1,9 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import envConfig from '../src/config.env';
-import { ServerModule } from '../src/server/server.module';
 import { TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
+import { Test, TestingModule } from '@nestjs/testing';
 import { MongoClient, ObjectId } from 'mongodb';
+import envConfig from '../src/config.env';
 import * as metaData from '../src/meta.json';
+import { ServerModule } from '../src/server/server.module';
 
 describe('ServerModule (e2e)', () => {
   const port = 3030;
@@ -97,11 +97,11 @@ describe('ServerModule (e2e)', () => {
           firstName: 'Everardo',
         },
       },
-      fields: [{ user: ['id', 'email', 'roles', { createdBy: ['id'] }] }],
+      fields: [{ user: ['id', 'email', 'roles', 'createdBy'] }],
     });
     expect(res.user.email).toEqual(gEmail);
     expect(res.user.roles).toEqual([]);
-    expect(res.user.createdBy.id).toEqual(res.user.id);
+    expect(res.user.createdBy).toEqual(res.user.id);
     gId = res.user.id;
   });
 

@@ -1,12 +1,12 @@
 import { EmailService, JwtPayload, prepareServiceOptions, ServiceOptions } from '@lenne.tech/nest-server';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import envConfig from '../../../config.env';
-import { Auth } from './auth.model';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import envConfig from '../../../config.env';
+import { UserService } from '../user/user.service';
+import { Auth } from './auth.model';
 import { AuthSignInInput } from './inputs/auth-sign-in.input';
 import { AuthSignUpInput } from './inputs/auth-sign-up.input';
-import { UserService } from '../user/user.service';
 
 @Injectable()
 export class AuthService {

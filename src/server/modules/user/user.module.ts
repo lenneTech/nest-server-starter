@@ -1,11 +1,11 @@
 import { JSON } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { PubSub } from 'graphql-subscriptions';
 import { AvatarController } from './avatar.controller';
 import { User, UserSchema } from './user.model';
 import { UserResolver } from './user.resolver';
 import { UserService } from './user.service';
-import { MongooseModule } from '@nestjs/mongoose';
 
 /**
  * User module
