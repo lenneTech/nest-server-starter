@@ -1,4 +1,4 @@
-import { CoreAuthModel } from '@lenne.tech/nest-server';
+import { CoreAuthModel, mapClasses } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { User } from '../user/user.model';
 
@@ -35,7 +35,6 @@ export class Auth extends CoreAuthModel {
    */
   map(input) {
     super.map(input);
-    // There is nothing to map yet, if something comes up you can use `mapClass` / `mapClassAsync` from ModelHelper
-    return this;
+    return mapClasses(input, { user: User }, this);
   }
 }
