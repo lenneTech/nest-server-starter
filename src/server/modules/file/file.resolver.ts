@@ -1,7 +1,8 @@
-import { FileInfo, FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { createWriteStream } from 'fs';
 import * as GraphQLUpload from 'graphql-upload/GraphQLUpload.js';
+import { FileInfo } from './file-info.model';
 import { FileService } from './file.service';
 
 /**
@@ -46,9 +47,6 @@ export class FileResolver {
   @Roles(RoleEnum.ADMIN)
   @Mutation(() => FileInfo)
   async uploadFile(@Args({ name: 'file', type: () => GraphQLUpload }) file: FileUpload) {
-    const { filename, mimetype, encoding, createReadStream } = file;
-
-    // Save file in DB
     return await this.fileService.createFile(file);
   }
 

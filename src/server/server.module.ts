@@ -2,9 +2,7 @@ import { CoreAuthService, CoreModule } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import envConfig from '../config.env';
 import { AuthModule } from './modules/auth/auth.module';
-import { FileController } from './modules/file/file.controller';
-import { FileResolver } from './modules/file/file.resolver';
-import { FileService } from './modules/file/file.service';
+import { FileModule } from './modules/file/file.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { ServerController } from './server.controller';
 
@@ -26,15 +24,15 @@ import { ServerController } from './server.controller';
 
     // Include MetaModule to offer information about the server
     MetaModule,
+
+    // Include FileModule for file handling
+    FileModule,
   ],
 
   // Include REST controllers
-  controllers: [FileController, ServerController],
+  controllers: [ServerController],
 
-  // Include resolvers, services and other providers
-  providers: [FileResolver, FileService],
-
-  // Exports (a.o. for testing)
-  exports: [CoreModule, AuthModule, MetaModule],
+  // Export modules for reuse in other modules
+  exports: [CoreModule, AuthModule, MetaModule, FileModule],
 })
 export class ServerModule {}

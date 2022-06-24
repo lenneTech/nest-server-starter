@@ -1,4 +1,4 @@
-import { FileInfo, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
+import { RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as fs from 'fs';
 import { PubSub } from 'graphql-subscriptions';
@@ -6,6 +6,7 @@ import { VariableType } from 'json-to-graphql-query';
 import { MongoClient, ObjectId } from 'mongodb';
 import * as path from 'path';
 import envConfig from '../src/config.env';
+import { FileInfo } from '../src/server/modules/file/file-info.model';
 import { User } from '../src/server/modules/user/user.model';
 import { UserService } from '../src/server/modules/user/user.service';
 import { ServerModule } from '../src/server/server.module';
