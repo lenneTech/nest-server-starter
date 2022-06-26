@@ -1,6 +1,8 @@
 import { CoreAuthService, CoreModule } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import envConfig from '../config.env';
+import { CronJobs } from './common/services/cron-jobs.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { FileModule } from './modules/file/file.module';
 import { MetaModule } from './modules/meta/meta.module';
@@ -18,6 +20,9 @@ import { ServerController } from './server.controller';
     // Include CoreModule for standard processes
     CoreModule.forRoot(CoreAuthService, AuthModule.forRoot(envConfig.jwt), envConfig),
 
+    // Include cron job handling
+    ScheduleModule.forRoot(),
+
     // Include AuthModule for authorization handling,
     // which will also include UserModule
     AuthModule.forRoot(envConfig.jwt),
@@ -28,6 +33,9 @@ import { ServerController } from './server.controller';
     // Include FileModule for file handling
     FileModule,
   ],
+
+  // Include services
+  providers: [CronJobs],
 
   // Include REST controllers
   controllers: [ServerController],

@@ -1,4 +1,5 @@
 import { IServerOptions } from '@lenne.tech/nest-server';
+import { CronExpression } from '@nestjs/schedule';
 import { join } from 'path';
 
 /**
@@ -9,6 +10,13 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Local environment
   // ===========================================================================
   local: {
+    cronJobs: {
+      sayHello: {
+        cronTime: CronExpression.EVERY_5_MINUTES,
+        timeZone: 'Europe/Berlin',
+        runOnInit: false,
+      },
+    },
     email: {
       smtp: {
         auth: {
