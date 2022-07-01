@@ -86,6 +86,7 @@ for (const dep of ['dependencies', 'devDependencies']) {
   packageJson[dep] = Object.fromEntries(Object.entries(packageJson[dep]).sort((a, b) => a[0].localeCompare(b[0])));
 }
 if (!counter) {
+  execSync('cd ' + __dirname + '/.. && npm i', { stdio: 'inherit' });
   console.log('Everything is up-to-date for ' + npmPackage + ' version ' + version);
   getVersionHint();
   process.exit(0);
