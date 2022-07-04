@@ -50,6 +50,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://localhost/nest-server-local',
     },
     port: 3000,
+    sha256: true,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
@@ -97,6 +98,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-develop',
     },
     port: 3000,
+    sha256: true,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
@@ -144,6 +146,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-test',
     },
     port: 3000,
+    sha256: true,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
@@ -191,6 +194,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-preview',
     },
     port: 3000,
+    sha256: true,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
@@ -238,6 +242,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-prod',
     },
     port: 3000,
+    sha256: true,
     staticAssets: {
       path: join(__dirname, '..', 'public'),
       options: { prefix: '' },

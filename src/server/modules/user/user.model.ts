@@ -1,7 +1,7 @@
 import { CoreUserModel } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Prop, Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema, Types } from 'mongoose';
+import { Document, Schema } from 'mongoose';
 import { PersistenceModel } from '../../common/models/persistence.model';
 
 export type UserDocument = User & Document;
@@ -33,7 +33,7 @@ export class User extends CoreUserModel implements PersistenceModel {
     nullable: true,
   })
   @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
-  createdBy: Types.ObjectId | string = undefined;
+  createdBy: string = undefined;
 
   /**
    * ID of the user who updated the object
@@ -41,11 +41,11 @@ export class User extends CoreUserModel implements PersistenceModel {
    * Not set when updated by system
    */
   @Field(() => String, {
-    description: 'ID of the user who updated the object',
+    description: 'ID of the user who last updated the object',
     nullable: true,
   })
   @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
-  updatedBy: Types.ObjectId | string = undefined;
+  updatedBy: string = undefined;
 
   // ===================================================================================================================
   // Methods

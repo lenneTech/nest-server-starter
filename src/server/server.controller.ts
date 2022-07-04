@@ -27,6 +27,6 @@ export class ServerController {
   @Get('config')
   @Roles(RoleEnum.ADMIN)
   config() {
-    return this.configService.config;
+    return this.configService.configFastButReadOnly;
   }
 }

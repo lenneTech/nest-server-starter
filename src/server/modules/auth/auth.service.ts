@@ -1,24 +1,35 @@
-import { EmailService, JwtPayload, prepareServiceOptions, ServiceOptions } from '@lenne.tech/nest-server';
+import {
+  ConfigService,
+  EmailService,
+  JwtPayload,
+  prepareServiceOptions,
+  RoleEnum,
+  Roles,
+  ServiceOptions,
+} from '@lenne.tech/nest-server';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import envConfig from '../../../config.env';
+import { sha256 } from 'js-sha256';
 import { UserService } from '../user/user.service';
 import { Auth } from './auth.model';
 import { AuthSignInInput } from './inputs/auth-sign-in.input';
 import { AuthSignUpInput } from './inputs/auth-sign-up.input';
 
 @Injectable()
+@Roles(RoleEnum.ADMIN)
 export class AuthService {
   constructor(
     protected readonly jwtService: JwtService,
     protected readonly emailService: EmailService,
-    protected readonly userService: UserService
+    protected readonly userService: UserService,
+    protected readonly configService: ConfigService
   ) {}
 
   /**
    * Sign in for user
    */
+  @Roles(RoleEnum.S_EVERYONE)
   async signIn(input: AuthSignInInput, serviceOptions?: ServiceOptions): Promise<Auth> {
     // Prepare service options
     const serviceOptionsForUserService = prepareServiceOptions(serviceOptions, {
@@ -31,12 +42,13 @@ export class AuthService {
 
     // Get and check user
     const user = await this.userService.getViaEmail(input.email, serviceOptionsForUserService);
-    if (!user) {
-      throw new UnauthorizedException();
-    }
-
-    // Check password
-    if (!(await bcrypt.compare(input.password, user.password))) {
+    if (
+      !user ||
+      !(
+        (await bcrypt.compare(input.password, user.password)) ||
+        (await bcrypt.compare(sha256(input.password), user.password))
+      )
+    ) {
       throw new UnauthorizedException();
     }
 
@@ -51,6 +63,7 @@ export class AuthService {
   /**
    * Register a new user Account
    */
+  @Roles(RoleEnum.S_EVERYONE)
   async signUp(input: AuthSignUpInput, serviceOptions?: ServiceOptions): Promise<Auth> {
     // Prepare service options
     const serviceOptionsForUserService = prepareServiceOptions(serviceOptions, {
@@ -67,7 +80,10 @@ export class AuthService {
     // Send email
     await this.emailService.sendMail(user.email, 'Welcome', {
       htmlTemplate: 'welcome',
-      templateData: { name: user.username, link: envConfig.email.verificationLink + '/' + user.verificationToken },
+      templateData: {
+        name: user.username,
+        link: this.configService.configFastButReadOnly.email.verificationLink + '/' + user.verificationToken,
+      },
     });
 
     // Create JWT and return sign-in data

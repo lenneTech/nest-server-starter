@@ -5,8 +5,8 @@ import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
 import { MongoClient, ObjectId } from 'mongodb';
 import * as path from 'path';
-import envConfig from '../src/config.env';
 import { FileInfo } from '../src/server/modules/file/file-info.model';
+import envConfig from '../src/config.env';
 import { User } from '../src/server/modules/user/user.model';
 import { UserService } from '../src/server/modules/user/user.service';
 import { ServerModule } from '../src/server/server.module';
@@ -49,13 +49,13 @@ describe('Project (e2e)', () => {
       app.setViewEngine(envConfig.templates.engine);
       await app.init();
       testHelper = new TestHelper(app);
-      userService = moduleFixture.get<UserService>(UserService);
+      userService = moduleFixture.get(UserService);
 
       // Connection to database
       connection = await MongoClient.connect(envConfig.mongoose.uri);
       db = await connection.db();
     } catch (e) {
-      console.log('beforeAllError', e);
+      console.error('beforeAllError', e);
     }
   });
 
@@ -177,12 +177,7 @@ describe('Project (e2e)', () => {
   });
 
   it('downloadFile', async () => {
-    let res: any;
-    try {
-      res = await testHelper.download('/files/' + fileInfo.filename, users[0].token);
-    } catch (err) {
-      console.error('Fehler', err);
-    }
+    const res = await testHelper.download('/files/' + fileInfo.filename, users[0].token);
     expect(res.statusCode).toEqual(200);
     expect(res.data).toEqual(fileContent);
   });
@@ -245,13 +240,6 @@ describe('Project (e2e)', () => {
     await fs.promises.unlink(local2);
     await fs.promises.unlink(remote1);
     await fs.promises.unlink(remote2);
-  });
-
-  /**
-   * Test
-   */
-  it('test', async () => {
-    console.log('Implement test here');
   });
 
   // ===================================================================================================================

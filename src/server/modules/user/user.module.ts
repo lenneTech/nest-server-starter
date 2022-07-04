@@ -1,4 +1,4 @@
-import { JSON } from '@lenne.tech/nest-server';
+import { ConfigService, JSON } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PubSub } from 'graphql-subscriptions';
@@ -16,6 +16,7 @@ import { UserService } from './user.service';
   providers: [
     JSON,
     UserResolver,
+    ConfigService,
     UserService,
     {
       provide: 'USER_CLASS',
