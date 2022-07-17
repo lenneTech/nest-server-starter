@@ -1,4 +1,4 @@
-import { IServerOptions } from '@lenne.tech/nest-server';
+import { IServerOptions, merge } from '@lenne.tech/nest-server';
 import { CronExpression } from '@nestjs/schedule';
 import { join } from 'path';
 
@@ -20,16 +20,16 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'everardo.hansen7@ethereal.email',
-          pass: 'hP6dNm7eQn7QRTmWH2',
+          user: 'thalia.gerhold24@ethereal.email',
+          pass: 'G98EMVGcGKC7bmKahF',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'everardo.hansen7@ethereal.email',
-        name: 'Everardo Hansen',
+        email: 'thalia.gerhold24@ethereal.email',
+        name: 'Thalia Gerhold',
       },
     },
     env: 'local',
@@ -46,6 +46,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_LOCAL',
     },
+    loadLocalConfig: false,
     mongoose: {
       uri: 'mongodb://localhost/nest-server-local',
     },
@@ -68,16 +69,16 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'everardo.hansen7@ethereal.email',
-          pass: 'hP6dNm7eQn7QRTmWH2',
+          user: 'thalia.gerhold24@ethereal.email',
+          pass: 'G98EMVGcGKC7bmKahF',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'everardo.hansen7@ethereal.email',
-        name: 'Everardo Hansen',
+        email: 'thalia.gerhold24@ethereal.email',
+        name: 'Thalia Gerhold',
       },
     },
     env: 'develop',
@@ -94,6 +95,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_DEV',
     },
+    loadLocalConfig: false,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-develop',
     },
@@ -116,16 +118,16 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'everardo.hansen7@ethereal.email',
-          pass: 'hP6dNm7eQn7QRTmWH2',
+          user: 'thalia.gerhold24@ethereal.email',
+          pass: 'G98EMVGcGKC7bmKahF',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'everardo.hansen7@ethereal.email',
-        name: 'Everardo Hansen',
+        email: 'thalia.gerhold24@ethereal.email',
+        name: 'Thalia Gerhold',
       },
     },
     env: 'test',
@@ -142,6 +144,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_TEST',
     },
+    loadLocalConfig: false,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-test',
     },
@@ -164,16 +167,16 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'everardo.hansen7@ethereal.email',
-          pass: 'hP6dNm7eQn7QRTmWH2',
+          user: 'thalia.gerhold24@ethereal.email',
+          pass: 'G98EMVGcGKC7bmKahF',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'everardo.hansen7@ethereal.email',
-        name: 'Everardo Hansen',
+        email: 'thalia.gerhold24@ethereal.email',
+        name: 'Thalia Gerhold',
       },
     },
     env: 'preview',
@@ -190,6 +193,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PREV',
     },
+    loadLocalConfig: false,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-preview',
     },
@@ -212,16 +216,16 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'everardo.hansen7@ethereal.email',
-          pass: 'hP6dNm7eQn7QRTmWH2',
+          user: 'thalia.gerhold24@ethereal.email',
+          pass: 'G98EMVGcGKC7bmKahF',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'everardo.hansen7@ethereal.email',
-        name: 'Everardo Hansen',
+        email: 'thalia.gerhold24@ethereal.email',
+        name: 'Thalia Gerhold',
       },
     },
     env: 'productive',
@@ -238,6 +242,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PROD',
     },
+    loadLocalConfig: false,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-prod',
     },
@@ -262,6 +267,29 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
 const env = process.env['NODE' + '_ENV'] || 'local';
 const envConfig = config[env] || config.local;
 console.log('Configured for: ' + envConfig.env + (env !== envConfig.env ? ' (requested: ' + env + ')' : ''));
+
+// Merge with localConfig (e.g. config.json)
+if (envConfig.loadLocalConfig) {
+  let localConfig;
+  if (typeof envConfig.loadLocalConfig === 'string') {
+    localConfig = require(envConfig.loadLocalConfig);
+    merge(envConfig, localConfig);
+  } else {
+    try {
+      // get config from src directory
+      localConfig = require(__dirname + '/config.json');
+      merge(envConfig, localConfig);
+    } catch {
+      try {
+        // if not found try to find in project directory
+        localConfig = require(__dirname + '/../config.json');
+        merge(envConfig, localConfig);
+      } catch (e) {
+        // No config.json found => nothing to do
+      }
+    }
+  }
+}
 
 /**
  * Export envConfig as default
