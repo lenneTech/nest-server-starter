@@ -5,6 +5,7 @@ import { GraphQLResolveInfo } from 'graphql';
 import { PubSub } from 'graphql-subscriptions';
 import { UserCreateInput } from './inputs/user-create.input';
 import { UserInput } from './inputs/user.input';
+import { FindAndCountUsersResult } from './outputs/find-and-count-users-result.output';
 import { User } from './user.model';
 import { UserService } from './user.service';
 
@@ -22,6 +23,18 @@ export class UserResolver {
   // ===========================================================================
   // Queries
   // ===========================================================================
+
+  /**
+   * Get users and total count (via filter)
+   */
+  @Roles(RoleEnum.ADMIN)
+  @Query(() => FindAndCountUsersResult, { description: 'Find users (via filter)' })
+  async findAndCountUsers(@Info() info: GraphQLResolveInfo, @Args() args?: FilterArgs) {
+    return await this.userService.findAndCount(args, {
+      fieldSelection: { info, select: 'findAndCountUsers' },
+      inputType: FilterArgs,
+    });
+  }
 
   /**
    * Get users (via filter)
