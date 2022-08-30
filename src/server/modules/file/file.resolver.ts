@@ -1,5 +1,6 @@
 import { FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import * as fs from 'fs';
 import { createWriteStream } from 'fs';
 import * as GraphQLUpload from 'graphql-upload/GraphQLUpload.js';
 import { FileInfo } from './file-info.model';
@@ -61,6 +62,7 @@ export class FileResolver {
     const promises: Promise<any>[] = [];
     for (const file of files) {
       const { filename, mimetype, encoding, createReadStream } = await file;
+      await fs.promises.mkdir('./uploads', { recursive: true });
       promises.push(
         new Promise((resolve, reject) =>
           createReadStream()
