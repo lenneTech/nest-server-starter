@@ -1,7 +1,6 @@
 # General
 dist
 typedocs
-uploads
 public
 !public/assets
 !public/images
