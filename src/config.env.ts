@@ -20,15 +20,15 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'thalia.gerhold24@ethereal.email',
-          pass: 'G98EMVGcGKC7bmKahF',
+          user: 'cade72@ethereal.email',
+          pass: 'jpvTwGYeSajEqDvRKT',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'thalia.gerhold24@ethereal.email',
+        email: 'cade72@ethereal.email',
         name: 'Thalia Gerhold',
       },
     },
@@ -69,15 +69,15 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'thalia.gerhold24@ethereal.email',
-          pass: 'G98EMVGcGKC7bmKahF',
+          user: 'cade72@ethereal.email',
+          pass: 'jpvTwGYeSajEqDvRKT',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'thalia.gerhold24@ethereal.email',
+        email: 'cade72@ethereal.email',
         name: 'Thalia Gerhold',
       },
     },
@@ -118,15 +118,15 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'thalia.gerhold24@ethereal.email',
-          pass: 'G98EMVGcGKC7bmKahF',
+          user: 'cade72@ethereal.email',
+          pass: 'jpvTwGYeSajEqDvRKT',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'thalia.gerhold24@ethereal.email',
+        email: 'cade72@ethereal.email',
         name: 'Thalia Gerhold',
       },
     },
@@ -167,15 +167,15 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'thalia.gerhold24@ethereal.email',
-          pass: 'G98EMVGcGKC7bmKahF',
+          user: 'cade72@ethereal.email',
+          pass: 'jpvTwGYeSajEqDvRKT',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'thalia.gerhold24@ethereal.email',
+        email: 'cade72@ethereal.email',
         name: 'Thalia Gerhold',
       },
     },
@@ -216,15 +216,15 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     email: {
       smtp: {
         auth: {
-          user: 'thalia.gerhold24@ethereal.email',
-          pass: 'G98EMVGcGKC7bmKahF',
+          user: 'cade72@ethereal.email',
+          pass: 'jpvTwGYeSajEqDvRKT',
         },
         host: 'smtp.ethereal.email',
         port: 587,
         secure: false,
       },
       defaultSender: {
-        email: 'thalia.gerhold24@ethereal.email',
+        email: 'cade72@ethereal.email',
         name: 'Thalia Gerhold',
       },
     },
