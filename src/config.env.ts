@@ -10,6 +10,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Local environment
   // ===========================================================================
   local: {
+    automaticObjectIdFiltering: true,
     cronJobs: {
       sayHello: {
         cronTime: CronExpression.EVERY_5_MINUTES,
@@ -66,6 +67,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Develop environment
   // ===========================================================================
   develop: {
+    automaticObjectIdFiltering: true,
     email: {
       smtp: {
         auth: {
@@ -115,6 +117,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Test environment
   // ===========================================================================
   test: {
+    automaticObjectIdFiltering: true,
     email: {
       smtp: {
         auth: {
@@ -164,6 +167,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Preview environment
   // ===========================================================================
   preview: {
+    automaticObjectIdFiltering: true,
     email: {
       smtp: {
         auth: {
@@ -213,6 +217,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Productive environment
   // ===========================================================================
   productive: {
+    automaticObjectIdFiltering: true,
     email: {
       smtp: {
         auth: {

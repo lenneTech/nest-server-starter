@@ -11,7 +11,7 @@ servers:
 info:
   title: GraphQL API Reference
   description: Welcome to the GraphQL API Reference
-  version: 9.0.6
+  version: 9.0.11
   contact:
     name: lenne.Tech GmbH
     url: https://lenne.tech
