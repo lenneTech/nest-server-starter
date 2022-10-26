@@ -35,6 +35,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     env: 'local',
     execAfterInit: 'npm run docs:bootstrap',
+    filter: {
+      maxLimit: null,
+    },
     graphQl: {
       driver: {
         debug: true,
@@ -85,6 +88,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     env: 'develop',
     execAfterInit: 'npm run docs:bootstrap',
+    filter: {
+      maxLimit: null,
+    },
     graphQl: {
       driver: {
         debug: true,
@@ -135,6 +141,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     env: 'test',
     execAfterInit: 'npm run docs:bootstrap',
+    filter: {
+      maxLimit: null,
+    },
     graphQl: {
       driver: {
         debug: true,
@@ -185,6 +194,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     env: 'preview',
     execAfterInit: 'npm run docs:bootstrap',
+    filter: {
+      maxLimit: null,
+    },
     graphQl: {
       driver: {
         debug: true,
@@ -235,6 +247,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     env: 'productive',
     execAfterInit: 'npm run docs:bootstrap',
+    filter: {
+      maxLimit: null,
+    },
     graphQl: {
       driver: {
         debug: false,

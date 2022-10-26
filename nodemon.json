@@ -1,6 +1,7 @@
 {
-  "watch": ["src"],
+  "exec": "ts-node -r tsconfig-paths/register src/main.ts",
   "ext": "ts",
   "ignore": ["src/**/*.spec.ts"],
-  "exec": "ts-node -r tsconfig-paths/register src/main.ts"
+  "ignoreRoot": [".git"],
+  "watch": ["src", "node_modules/@lenne.tech/nest-server"]
 }
