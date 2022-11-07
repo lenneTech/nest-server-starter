@@ -1,4 +1,3 @@
-import { JSON } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import { MetaResolver } from './meta.resolver';
 import { MetaService } from './meta.service';
@@ -9,7 +8,7 @@ import { MetaService } from './meta.service';
 @Module({
   imports: [],
   controllers: [],
-  providers: [MetaResolver, MetaService, JSON],
+  providers: [MetaResolver, MetaService],
   exports: [MetaResolver, MetaService],
 })
 export class MetaModule {}

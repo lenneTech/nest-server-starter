@@ -1,4 +1,4 @@
-import { ConfigService, JSON } from '@lenne.tech/nest-server';
+import { ConfigService } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PubSub } from 'graphql-subscriptions';
@@ -14,7 +14,6 @@ import { UserService } from './user.service';
   imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
   controllers: [AvatarController],
   providers: [
-    JSON,
     UserResolver,
     ConfigService,
     UserService,

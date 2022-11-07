@@ -1,4 +1,4 @@
-import { CoreAuthService, CoreModule } from '@lenne.tech/nest-server';
+import { Any, CoreAuthService, CoreModule, DateScalar, JSON } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import envConfig from '../config.env';
@@ -34,8 +34,8 @@ import { ServerController } from './server.controller';
     FileModule,
   ],
 
-  // Include services
-  providers: [CronJobs],
+  // Include services and scalars
+  providers: [Any, CronJobs, DateScalar, JSON],
 
   // Include REST controllers
   controllers: [ServerController],
