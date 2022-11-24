@@ -24,7 +24,8 @@
   },
   "scripts": {
     "init": "npm install",
-    "build": "rimraf dist && tsc -p tsconfig.build.json && npm run docs:ci && npm run copy",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy",
+    "build:docs": "rimraf dist && tsc -p tsconfig.build.json && npm run docs:ci && npm run copy",
     "copy": "npm run copy:assets && npm run copy:config && npm run copy:extras && npm run copy:meta && npm run copy:migrations && npm run copy:public && npm run copy:scripts && npm run copy:spectaql",
     "copy:assets": "cpy ./src/assets  assets/**/* ./dist/",
     "copy:config": "cpy ./src/config.env.ts ./dist/",
