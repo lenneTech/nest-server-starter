@@ -226,9 +226,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   },
 
   // ===========================================================================
-  // Productive environment
+  // Production environment
   // ===========================================================================
-  productive: {
+  production: {
     automaticObjectIdFiltering: true,
     email: {
       smtp: {
@@ -245,7 +245,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         name: 'Nest Server Starter Productive',
       },
     },
-    env: 'productive',
+    env: 'production',
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,

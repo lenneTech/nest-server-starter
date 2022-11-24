@@ -61,7 +61,7 @@
     "start:debug": "nodemon --config nodemon-debug.json",
     "start:dev": "nodemon",
     "start:nodemon": "ts-node -r tsconfig-paths/register src/main.ts",
-    "start:prod": "./node_modules/.bin/grunt productive",
+    "start:prod": "./node_modules/.bin/grunt production",
     "stop": "./node_modules/.bin/pm2 delete nest",
     "test": "npm run test:e2e",
     "test:cov": "NODE_ENV=local jest --coverage --forceExit",
