@@ -32,7 +32,7 @@
     "copy:extras": "cpy ./extras ./dist/",
     "copy:meta": "rimraf .dist/meta.json && cpy ./package.json --rename=meta.json ./dist/",
     "copy:migrations": "cpy ./migrations ./dist/ && cpy ./migrations-utils ./dist/ && cpy ./tsconfig.json ./dist/",
-    "copy:public": "cpy ./public ./dist/",
+    "copy:public": "cpy ./public ./dist/ || true",
     "copy:scripts": "cpy ./scripts ./dist/",
     "copy:spectaql": "cpy ./spectaql.yml ./dist/",
     "docs": "npm run docs:ci && open ./public/index.html",
