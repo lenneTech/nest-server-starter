@@ -18,5 +18,6 @@ module.exports = {
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-unused-vars': 'off',
     '@typescript-eslint/no-inferrable-types': 'off',
+    'no-console': ['error', { allow: ['info', 'debug', 'warn', 'error'] }],
   },
 };

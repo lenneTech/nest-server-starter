@@ -11,6 +11,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   local: {
     automaticObjectIdFiltering: true,
+    compression: true,
+    cookies: false,
     cronJobs: {
       sayHello: {
         cronTime: CronExpression.EVERY_5_MINUTES,
@@ -44,13 +46,26 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
+      maxComplexity: 20,
     },
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_LOCAL',
+      signInOptions: {
+        expiresIn: '15m',
+      },
+      refresh: {
+        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // tslint:disable-next-line:max-line-length
+        secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH',
+        signInOptions: {
+          expiresIn: '7d',
+        },
+      },
     },
     loadLocalConfig: false,
+    logExceptions: true,
     mongoose: {
       uri: 'mongodb://127.0.0.1/nest-server-local',
     },
@@ -71,6 +86,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   develop: {
     automaticObjectIdFiltering: true,
+    compression: true,
+    cookies: false,
     email: {
       smtp: {
         auth: {
@@ -97,13 +114,26 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
+      maxComplexity: 20,
     },
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_DEV',
+      signInOptions: {
+        expiresIn: '15m',
+      },
+      refresh: {
+        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // tslint:disable-next-line:max-line-length
+        secret: 'SECRET_OR_PRIVATE_KEY_DEV_REFRESH',
+        signInOptions: {
+          expiresIn: '7d',
+        },
+      },
     },
     loadLocalConfig: false,
+    logExceptions: true,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-develop',
     },
@@ -124,6 +154,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   test: {
     automaticObjectIdFiltering: true,
+    compression: true,
+    cookies: false,
     email: {
       smtp: {
         auth: {
@@ -150,13 +182,26 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
+      maxComplexity: 20,
     },
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_TEST',
+      signInOptions: {
+        expiresIn: '15m',
+      },
+      refresh: {
+        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // tslint:disable-next-line:max-line-length
+        secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH',
+        signInOptions: {
+          expiresIn: '7d',
+        },
+      },
     },
     loadLocalConfig: false,
+    logExceptions: true,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-test',
     },
@@ -177,6 +222,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   preview: {
     automaticObjectIdFiltering: true,
+    compression: true,
+    cookies: false,
     email: {
       smtp: {
         auth: {
@@ -203,13 +250,26 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
+      maxComplexity: 20,
     },
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PREV',
+      signInOptions: {
+        expiresIn: '15m',
+      },
+      refresh: {
+        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // tslint:disable-next-line:max-line-length
+        secret: 'SECRET_OR_PRIVATE_KEY_PREV_REFRESH',
+        signInOptions: {
+          expiresIn: '7d',
+        },
+      },
     },
     loadLocalConfig: false,
+    logExceptions: true,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-preview',
     },
@@ -230,6 +290,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   production: {
     automaticObjectIdFiltering: true,
+    compression: true,
+    cookies: false,
     email: {
       smtp: {
         auth: {
@@ -256,13 +318,26 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: false,
       },
+      maxComplexity: 20,
     },
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PROD',
+      signInOptions: {
+        expiresIn: '15m',
+      },
+      refresh: {
+        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // tslint:disable-next-line:max-line-length
+        secret: 'SECRET_OR_PRIVATE_KEY_PROD_REFRESH',
+        signInOptions: {
+          expiresIn: '7d',
+        },
+      },
     },
     loadLocalConfig: false,
+    logExceptions: true,
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-prod',
     },
@@ -286,7 +361,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
  */
 const env = process.env['NODE' + '_ENV'] || 'local';
 const envConfig = config[env] || config.local;
-console.log('Configured for: ' + envConfig.env + (env !== envConfig.env ? ' (requested: ' + env + ')' : ''));
+console.info('Configured for: ' + envConfig.env + (env !== envConfig.env ? ' (requested: ' + env + ')' : ''));
 
 // Merge with localConfig (e.g. config.json)
 if (envConfig.loadLocalConfig) {

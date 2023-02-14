@@ -1,5 +1,6 @@
-import { Any, CoreAuthService, CoreModule, DateScalar, JSON } from '@lenne.tech/nest-server';
+import { Any, CheckSecurityInterceptor, CoreAuthService, CoreModule, DateScalar, JSON } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import envConfig from '../config.env';
 import { CronJobs } from './common/services/cron-jobs.service';
@@ -35,7 +36,16 @@ import { ServerController } from './server.controller';
   ],
 
   // Include services and scalars
-  providers: [Any, CronJobs, DateScalar, JSON],
+  providers: [
+    Any,
+    CronJobs,
+    DateScalar,
+    JSON,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: CheckSecurityInterceptor,
+    },
+  ],
 
   // Include REST controllers
   controllers: [ServerController],
