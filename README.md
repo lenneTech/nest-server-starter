@@ -8,8 +8,7 @@ In combination with Angular (see [lenne.Tech Angular example](https://github.com
 incl. [ng-base](https://github.com/lenneTech/ng-base/tree/main/projects/ng-base/README.md)) the Nest Server is an ideal
 basis for your next project.
 
-[![License](https://img.shields.io/github/license/lenneTech/nest-server-starter)](/LICENSE) [![CircleCI](https://circleci.com/gh/lenneTech/nest-server-starter/tree/master.svg?style=shield)](https://circleci.com/gh/lenneTech/nest-server-starter/tree/master)
-[![Dependency Status](https://david-dm.org/lenneTech/nest-server-starter.svg)](https://david-dm.org/lenneTech/nest-server-starter) [![devDependency Status](https://david-dm.org/lenneTech/nest-server-starter/dev-status.svg)](https://david-dm.org/lenneTech/nest-server-starter?type=dev)
+[![License](https://img.shields.io/github/license/lenneTech/nest-server-starter)](/LICENSE)
 
 ## Requirements
 
