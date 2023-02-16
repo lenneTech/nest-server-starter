@@ -4,6 +4,7 @@ import { join } from 'path';
 
 /**
  * Configuration for the different environments
+ * See: https://github.com/lenneTech/nest-server/blob/main/src/core/common/interfaces/server-options.interface.ts
  */
 export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
@@ -56,6 +57,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         expiresIn: '15m',
       },
       refresh: {
+        renewal: true,
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH',
@@ -124,6 +126,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         expiresIn: '15m',
       },
       refresh: {
+        renewal: true,
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_DEV_REFRESH',
@@ -192,6 +195,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         expiresIn: '15m',
       },
       refresh: {
+        renewal: true,
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH',
@@ -260,6 +264,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         expiresIn: '15m',
       },
       refresh: {
+        renewal: true,
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_PREV_REFRESH',
@@ -328,6 +333,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         expiresIn: '15m',
       },
       refresh: {
+        renewal: true,
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_PROD_REFRESH',
