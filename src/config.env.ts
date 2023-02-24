@@ -49,6 +49,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
@@ -118,6 +119,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
@@ -187,6 +189,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
@@ -256,6 +259,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
@@ -325,6 +329,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
