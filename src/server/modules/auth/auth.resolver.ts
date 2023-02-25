@@ -1,7 +1,6 @@
-import { ConfigService, CoreAuthResolver } from '@lenne.tech/nest-server';
-import { Args, Context, Info, Mutation, Resolver } from '@nestjs/graphql';
+import { ConfigService, CoreAuthResolver, GraphQLServiceOptions, ServiceOptions } from '@lenne.tech/nest-server';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { Response as ResponseType } from 'express';
-import { GraphQLResolveInfo } from 'graphql';
 import { Auth } from './auth.model';
 import { AuthService } from './auth.service';
 import { AuthSignInInput } from './inputs/auth-sign-in.input';
@@ -27,12 +26,12 @@ export class AuthResolver extends CoreAuthResolver {
    */
   @Mutation(() => Auth, { description: 'Sign in and get JWT token' })
   override async signIn(
-    @Info() info: GraphQLResolveInfo,
+    @GraphQLServiceOptions({ gqlPath: 'signIn.user' }) serviceOptions: ServiceOptions,
     @Context() ctx: { res: ResponseType },
     @Args('input') input: AuthSignInInput
   ): Promise<Auth> {
     const result = await this.authService.signIn(input, {
-      fieldSelection: { info, select: 'signIn' },
+      ...serviceOptions,
       inputType: AuthSignInInput,
     });
     return this.processCookies(ctx, result);
@@ -45,13 +44,11 @@ export class AuthResolver extends CoreAuthResolver {
     description: 'Sign up user and get JWT token',
   })
   override async signUp(
-    @Info() info: GraphQLResolveInfo,
+    @GraphQLServiceOptions({ gqlPath: 'signUp.user' }) serviceOptions: ServiceOptions,
     @Context() ctx: { res: ResponseType },
     @Args('input') input: AuthSignUpInput
   ): Promise<Auth> {
-    const result = await this.authService.signUp(input, {
-      fieldSelection: { info, select: 'signUp' },
-    });
+    const result = await this.authService.signUp(input, serviceOptions);
     return this.processCookies(ctx, result);
   }
 }

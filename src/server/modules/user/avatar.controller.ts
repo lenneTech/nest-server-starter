@@ -1,4 +1,4 @@
-import { multerOptionsForImageUpload, RESTUser, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { CurrentUser, multerOptionsForImageUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Controller } from '@nestjs/common/decorators/core/controller.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -29,7 +29,7 @@ export class AvatarController {
       })
     )
   )
-  uploadFile(@UploadedFile() file: Express.Multer.File, @RESTUser() user: User): Promise<string> {
+  uploadFile(@UploadedFile() file: Express.Multer.File, @CurrentUser() user: User): Promise<string> {
     return this.usersService.setAvatar(file, user);
   }
 }
