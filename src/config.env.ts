@@ -43,7 +43,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     graphQl: {
       driver: {
-        debug: true,
         introspection: true,
         playground: true,
       },
@@ -113,7 +112,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     graphQl: {
       driver: {
-        debug: true,
         introspection: true,
         playground: true,
       },
@@ -183,7 +181,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     graphQl: {
       driver: {
-        debug: true,
         introspection: true,
         playground: true,
       },
@@ -253,7 +250,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     graphQl: {
       driver: {
-        debug: true,
         introspection: true,
         playground: true,
       },
@@ -323,7 +319,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     graphQl: {
       driver: {
-        debug: false,
         introspection: true,
         playground: false,
       },
