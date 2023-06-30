@@ -39,7 +39,7 @@ export class AuthService extends CoreAuthService {
       htmlTemplate: 'welcome',
       templateData: {
         name: user.username,
-        link: this.configService.configFastButReadOnly.email.verificationLink + '/' + user.verificationToken,
+        link: `${this.configService.configFastButReadOnly.email.verificationLink}/${user.verificationToken}`,
       },
     });
 

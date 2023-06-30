@@ -1,6 +1,6 @@
+import { join } from 'path';
 import { IServerOptions, merge } from '@lenne.tech/nest-server';
 import { CronExpression } from '@nestjs/schedule';
-import { join } from 'path';
 
 /**
  * Configuration for the different environments
@@ -367,24 +367,29 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
  */
 const env = process.env['NODE' + '_ENV'] || 'local';
 const envConfig = config[env] || config.local;
-console.info('Configured for: ' + envConfig.env + (env !== envConfig.env ? ' (requested: ' + env + ')' : ''));
-
+console.info(`Configured for: ${envConfig.env}${env !== envConfig.env ? ` (requested: ${env})` : ''}`);
 // Merge with localConfig (e.g. config.json)
 if (envConfig.loadLocalConfig) {
   let localConfig;
   if (typeof envConfig.loadLocalConfig === 'string') {
-    localConfig = require(envConfig.loadLocalConfig);
-    merge(envConfig, localConfig);
+    import(envConfig.loadLocalConfig).then((loadedConfig) => {
+      localConfig = loadedConfig.default || loadedConfig;
+      merge(envConfig, localConfig);
+    });
   } else {
     try {
       // get config from src directory
-      localConfig = require(__dirname + '/config.json');
-      merge(envConfig, localConfig);
+      import(join(__dirname, 'config.json')).then((loadedConfig) => {
+        localConfig = loadedConfig.default || loadedConfig;
+        merge(envConfig, localConfig);
+      });
     } catch {
       try {
         // if not found try to find in project directory
-        localConfig = require(__dirname + '/../config.json');
-        merge(envConfig, localConfig);
+        import(join(__dirname, '..', 'config.json')).then((loadedConfig) => {
+          localConfig = loadedConfig.default || loadedConfig;
+          merge(envConfig, localConfig);
+        });
       } catch (e) {
         // No config.json found => nothing to do
       }
