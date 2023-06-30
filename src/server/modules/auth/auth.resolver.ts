@@ -16,7 +16,7 @@ export class AuthResolver extends CoreAuthResolver {
    */
   constructor(
     protected override readonly authService: AuthService,
-    protected override readonly configService: ConfigService
+    protected override readonly configService: ConfigService,
   ) {
     super(authService, configService);
   }
@@ -28,7 +28,7 @@ export class AuthResolver extends CoreAuthResolver {
   override async signIn(
     @GraphQLServiceOptions({ gqlPath: 'signIn.user' }) serviceOptions: ServiceOptions,
     @Context() ctx: { res: ResponseType },
-    @Args('input') input: AuthSignInInput
+    @Args('input') input: AuthSignInInput,
   ): Promise<Auth> {
     const result = await this.authService.signIn(input, {
       ...serviceOptions,
@@ -46,7 +46,7 @@ export class AuthResolver extends CoreAuthResolver {
   override async signUp(
     @GraphQLServiceOptions({ gqlPath: 'signUp.user' }) serviceOptions: ServiceOptions,
     @Context() ctx: { res: ResponseType },
-    @Args('input') input: AuthSignUpInput
+    @Args('input') input: AuthSignUpInput,
   ): Promise<Auth> {
     const result = await this.authService.signUp(input, serviceOptions);
     return this.processCookies(ctx, result);

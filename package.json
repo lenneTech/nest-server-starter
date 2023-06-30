@@ -124,6 +124,7 @@
     "rxjs": "7.8.0"
   },
   "devDependencies": {
+    "@lenne.tech/eslint-config-ts": "0.0.6",
     "@nestjs/testing": "9.3.12",
     "@types/compression": "1.7.2",
     "@types/cookie-parser": "1.4.3",
@@ -137,12 +138,9 @@
     "@types/nodemailer": "6.4.7",
     "@types/passport": "1.0.12",
     "@types/supertest": "2.0.12",
-    "@typescript-eslint/eslint-plugin": "5.57.0",
-    "@typescript-eslint/parser": "5.57.0",
     "coffeescript": "2.7.0",
     "cpy-cli": "4.2.0",
     "eslint": "8.36.0",
-    "eslint-config-prettier": "8.8.0",
     "find-file-up": "2.0.1",
     "grunt": "1.6.1",
     "grunt-bg-shell": "2.3.3",
