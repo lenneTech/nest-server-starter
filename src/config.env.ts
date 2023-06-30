@@ -376,21 +376,24 @@ if (envConfig.loadLocalConfig) {
       localConfig = loadedConfig.default || loadedConfig;
       merge(envConfig, localConfig);
     });
-  } else {
+  }
+ else {
     try {
       // get config from src directory
       import(join(__dirname, 'config.json')).then((loadedConfig) => {
         localConfig = loadedConfig.default || loadedConfig;
         merge(envConfig, localConfig);
       });
-    } catch {
+    }
+ catch {
       try {
         // if not found try to find in project directory
         import(join(__dirname, '..', 'config.json')).then((loadedConfig) => {
           localConfig = loadedConfig.default || loadedConfig;
           merge(envConfig, localConfig);
         });
-      } catch (e) {
+      }
+ catch (e) {
         // No config.json found => nothing to do
       }
     }

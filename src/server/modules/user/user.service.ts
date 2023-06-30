@@ -31,7 +31,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     protected override readonly emailService: EmailService,
     @Inject('USER_CLASS') protected override readonly mainModelConstructor: CoreModelConstructor<User>,
     @InjectModel('User') protected override readonly mainDbModel: Model<UserDocument>,
-    @Inject('PUB_SUB') protected readonly pubSub: PubSub
+    @Inject('PUB_SUB') protected readonly pubSub: PubSub,
   ) {
     super(configService, emailService, mainDbModel, mainModelConstructor);
   }

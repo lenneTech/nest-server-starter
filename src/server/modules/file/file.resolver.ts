@@ -68,8 +68,8 @@ export class FileResolver {
           createReadStream()
             .pipe(createWriteStream(`./uploads/${filename}`))
             .on('finish', () => resolve(true))
-            .on('error', (error) => reject(error))
-        )
+            .on('error', error => reject(error)),
+        ),
       );
     }
     await Promise.allSettled(promises);

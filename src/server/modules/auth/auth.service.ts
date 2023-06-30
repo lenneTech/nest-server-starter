@@ -13,7 +13,7 @@ export class AuthService extends CoreAuthService {
     protected override readonly configService: ConfigService,
     protected readonly emailService: EmailService,
     protected override readonly jwtService: JwtService,
-    protected override readonly userService: UserService
+    protected override readonly userService: UserService,
   ) {
     super(userService, jwtService, configService);
   }

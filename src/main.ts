@@ -14,7 +14,7 @@ async function bootstrap() {
   // Create a new server based on express
   const server = await NestFactory.create<NestExpressApplication>(
     // Include server module, with all necessary modules for the project
-    ServerModule
+    ServerModule,
   );
 
   // Log exceptions
