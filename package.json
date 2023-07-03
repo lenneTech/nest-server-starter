@@ -79,6 +79,7 @@
   },
   "dependencies": {
     "@apollo/gateway": "2.4.0",
+    "@apollo/server": "4.7.1",
     "@lenne.tech/nest-server": "9.4.1",
     "@nestjs/apollo": "11.0.4",
     "@nestjs/common": "9.3.12",
