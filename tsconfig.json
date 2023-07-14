@@ -15,7 +15,8 @@
     "baseUrl": "./",
     "incremental": true,
     "resolveJsonModule": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "noImplicitOverride": true
   },
   "exclude": ["node_modules", "dist"]
 }

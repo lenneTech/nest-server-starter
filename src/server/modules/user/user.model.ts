@@ -1,6 +1,6 @@
-import { CoreUserModel } from '@lenne.tech/nest-server';
+import { CoreUserModel, RoleEnum } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Prop, Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
+import { Schema as MongooseSchema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema } from 'mongoose';
 import { PersistenceModel } from '../../common/models/persistence.model';
 
@@ -54,7 +54,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   /**
    * Initialize instance with default values instead of undefined
    */
-  init() {
+  override init() {
     super.init();
     // Nothing more to initialize yet
     return this;
@@ -63,10 +63,38 @@ export class User extends CoreUserModel implements PersistenceModel {
   /**
    * Map input
    */
-  map(input) {
+  override map(input) {
     super.map(input);
     // There is nothing to map yet. Non-primitive variables should always be mapped.
     // If something comes up, you can use `mapClasses` / `mapClassesAsync` from ModelHelper.
+    return this;
+  }
+
+  /**
+   * Verification of the user's rights to access the properties of this object
+   */
+  override securityCheck(user: User, force?: boolean) {
+    if (force || (user && (user.id === this.id || user.hasRole(RoleEnum.ADMIN)))) {
+      return this;
+    }
+
+    // Remove (values of) properties
+    if (!user || user.id !== this.id) {
+      this.roles = [];
+      this.username = null;
+      this.verified = null;
+      this.verifiedAt = null;
+
+      // PersistenceModel and CorePersistenceModel
+      this.createdAt = null;
+      this.createdBy = null;
+      this.labels = null;
+      this.tags = null;
+      this.updatedAt = null;
+      this.updatedBy = null;
+    }
+
+    // Return prepared user
     return this;
   }
 }

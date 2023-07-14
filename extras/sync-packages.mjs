@@ -72,7 +72,7 @@ console.log('Add or update packages');
 let counter = 0;
 for (const dep of ['dependencies', 'devDependencies']) {
   // console.log(dep, meta['versions'][version][dep]);
-  if (!meta['versions'][version][dep]) {
+  if (!meta['versions']?.[version]?.[dep]) {
     continue;
   }
   for (const [pack, ver] of Object.entries(meta['versions'][version][dep])) {

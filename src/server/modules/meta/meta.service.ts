@@ -1,7 +1,7 @@
 import { ConfigService } from '@lenne.tech/nest-server';
 import { Injectable } from '@nestjs/common';
+import metaData = require('../../../meta.json');
 import { Meta } from './meta.model';
-import * as metaData from '../../../meta.json';
 
 /**
  * Meta service

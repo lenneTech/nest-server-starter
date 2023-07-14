@@ -1,6 +1,6 @@
 import { CorePersistenceModel } from '@lenne.tech/nest-server';
 import { Types } from 'mongoose';
-import * as mongoose from 'mongoose';
+import mongoose = require('mongoose');
 import { Prop } from '@nestjs/mongoose';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { User } from '../../modules/user/user.model';
@@ -50,7 +50,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
   /**
    * Initialize instance with default values instead of undefined
    */
-  init() {
+  override init() {
     super.init();
     // Nothing more to initialize yet
     return this;
@@ -59,7 +59,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
   /**
    * Map input
    */
-  map(input) {
+  override map(input) {
     super.map(input);
     // There is nothing to map yet. Non-primitive variables should always be mapped.
     // If something comes up, you can use `mapClasses` / `mapClassesAsync` from ModelHelper.

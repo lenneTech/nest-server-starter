@@ -1,7 +1,6 @@
-import { FilterArgs, GraphQLUser, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { FilterArgs, GraphQLServiceOptions, RoleEnum, Roles, ServiceOptions } from '@lenne.tech/nest-server';
 import { Inject } from '@nestjs/common';
-import { Args, Info, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
-import { GraphQLResolveInfo } from 'graphql';
+import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { PubSub } from 'graphql-subscriptions';
 import { UserCreateInput } from './inputs/user-create.input';
 import { UserInput } from './inputs/user.input';
@@ -29,9 +28,12 @@ export class UserResolver {
    */
   @Roles(RoleEnum.ADMIN)
   @Query(() => FindAndCountUsersResult, { description: 'Find users (via filter)' })
-  async findAndCountUsers(@Info() info: GraphQLResolveInfo, @Args() args?: FilterArgs) {
+  async findAndCountUsers(
+    @GraphQLServiceOptions({ gqlPath: 'findAndCountUsers.items' }) serviceOptions: ServiceOptions,
+    @Args() args?: FilterArgs,
+  ) {
     return await this.userService.findAndCount(args, {
-      fieldSelection: { info, select: 'findAndCountUsers' },
+      ...serviceOptions,
       inputType: FilterArgs,
     });
   }
@@ -41,9 +43,9 @@ export class UserResolver {
    */
   @Roles(RoleEnum.ADMIN)
   @Query(() => [User], { description: 'Find users (via filter)' })
-  async findUsers(@Info() info: GraphQLResolveInfo, @Args() args?: FilterArgs) {
+  async findUsers(@GraphQLServiceOptions() serviceOptions: ServiceOptions, @Args() args?: FilterArgs) {
     return await this.userService.find(args, {
-      fieldSelection: { info, select: 'findUsers' },
+      ...serviceOptions,
       inputType: FilterArgs,
     });
   }
@@ -53,11 +55,10 @@ export class UserResolver {
    */
   @Roles(RoleEnum.S_USER)
   @Query(() => User, { description: 'Get user with specified ID' })
-  async getUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo, @GraphQLUser() user: User): Promise<User> {
+  async getUser(@GraphQLServiceOptions() serviceOptions: ServiceOptions, @Args('id') id: string): Promise<User> {
     return await this.userService.get(id, {
-      currentUser: user,
-      fieldSelection: { info, select: 'getUser' },
-      roles: [RoleEnum.ADMIN, RoleEnum.S_CREATOR],
+      ...serviceOptions,
+      roles: [RoleEnum.ADMIN, RoleEnum.S_CREATOR, RoleEnum.S_SELF],
     });
   }
 
@@ -89,13 +90,11 @@ export class UserResolver {
   @Roles(RoleEnum.ADMIN)
   @Mutation(() => User, { description: 'Create a new user' })
   async createUser(
+    @GraphQLServiceOptions() serviceOptions: ServiceOptions,
     @Args('input') input: UserCreateInput,
-    @GraphQLUser() user: User,
-    @Info() info: GraphQLResolveInfo
   ): Promise<User> {
     return await this.userService.create(input, {
-      currentUser: user,
-      fieldSelection: { info, select: 'createUser' },
+      ...serviceOptions,
       inputType: UserCreateInput,
     });
   }
@@ -105,11 +104,10 @@ export class UserResolver {
    */
   @Roles(RoleEnum.S_USER)
   @Mutation(() => User, { description: 'Delete existing user' })
-  async deleteUser(@Args('id') id: string, @Info() info: GraphQLResolveInfo, @GraphQLUser() user: User): Promise<User> {
+  async deleteUser(@GraphQLServiceOptions() serviceOptions: ServiceOptions, @Args('id') id: string): Promise<User> {
     return await this.userService.delete(id, {
-      currentUser: user,
-      fieldSelection: { info, select: 'deleteUser' },
-      roles: [RoleEnum.ADMIN, RoleEnum.S_CREATOR],
+      ...serviceOptions,
+      roles: [RoleEnum.ADMIN, RoleEnum.S_CREATOR, RoleEnum.S_SELF],
     });
   }
 
@@ -128,17 +126,15 @@ export class UserResolver {
   @Roles(RoleEnum.S_USER)
   @Mutation(() => User, { description: 'Update existing user' })
   async updateUser(
+    @GraphQLServiceOptions() serviceOptions: ServiceOptions,
     @Args('input') input: UserInput,
     @Args('id') id: string,
-    @GraphQLUser() user: User,
-    @Info() info: GraphQLResolveInfo
   ): Promise<User> {
     // Update user
     return await this.userService.update(id, input, {
-      currentUser: user,
-      fieldSelection: { info, select: 'updateUser' },
+      ...serviceOptions,
       inputType: UserInput,
-      roles: [RoleEnum.ADMIN, RoleEnum.S_CREATOR],
+      roles: [RoleEnum.ADMIN, RoleEnum.S_CREATOR, RoleEnum.S_SELF],
     });
   }
 
@@ -162,7 +158,7 @@ export class UserResolver {
     filter(this: UserResolver, payload, variables, context) {
       return context?.user?.hasRole?.(RoleEnum.ADMIN);
     },
-    resolve: (user) => user,
+    resolve: user => user,
   })
   async userCreated() {
     return this.pubSub.asyncIterator('userCreated');

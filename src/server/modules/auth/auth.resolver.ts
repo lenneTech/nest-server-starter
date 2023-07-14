@@ -1,5 +1,6 @@
-import { Args, Info, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { GraphQLResolveInfo } from 'graphql';
+import { ConfigService, CoreAuthResolver, GraphQLServiceOptions, ServiceOptions } from '@lenne.tech/nest-server';
+import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
+import { Response as ResponseType } from 'express';
 import { Auth } from './auth.model';
 import { AuthService } from './auth.service';
 import { AuthSignInInput } from './inputs/auth-sign-in.input';
@@ -9,21 +10,31 @@ import { AuthSignUpInput } from './inputs/auth-sign-up.input';
  * Authentication resolver for the sign in
  */
 @Resolver(() => Auth)
-export class AuthResolver {
+export class AuthResolver extends CoreAuthResolver {
   /**
    * Integrate services
    */
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    protected override readonly authService: AuthService,
+    protected override readonly configService: ConfigService,
+  ) {
+    super(authService, configService);
+  }
 
   /**
    * SignIn for User
    */
-  @Query(() => Auth, { description: 'Sign in and get JWT token' })
-  async signIn(@Info() info: GraphQLResolveInfo, @Args('input') input: AuthSignInInput): Promise<Auth> {
-    return this.authService.signIn(input, {
-      fieldSelection: { info, select: 'signIn' },
+  @Mutation(() => Auth, { description: 'Sign in and get JWT token' })
+  override async signIn(
+    @GraphQLServiceOptions({ gqlPath: 'signIn.user' }) serviceOptions: ServiceOptions,
+    @Context() ctx: { res: ResponseType },
+    @Args('input') input: AuthSignInInput,
+  ): Promise<Auth> {
+    const result = await this.authService.signIn(input, {
+      ...serviceOptions,
       inputType: AuthSignInInput,
     });
+    return this.processCookies(ctx, result);
   }
 
   /**
@@ -32,9 +43,12 @@ export class AuthResolver {
   @Mutation(() => Auth, {
     description: 'Sign up user and get JWT token',
   })
-  async signUp(@Info() info: GraphQLResolveInfo, @Args('input') input: AuthSignUpInput): Promise<Auth> {
-    return this.authService.signUp(input, {
-      fieldSelection: { info, select: 'signUp' },
-    });
+  override async signUp(
+    @GraphQLServiceOptions({ gqlPath: 'signUp.user' }) serviceOptions: ServiceOptions,
+    @Context() ctx: { res: ResponseType },
+    @Args('input') input: AuthSignUpInput,
+  ): Promise<Auth> {
+    const result = await this.authService.signUp(input, serviceOptions);
+    return this.processCookies(ctx, result);
   }
 }

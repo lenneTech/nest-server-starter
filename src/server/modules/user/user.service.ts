@@ -1,3 +1,4 @@
+import fs = require('fs');
 import {
   ConfigService,
   CoreModelConstructor,
@@ -7,7 +8,6 @@ import {
 } from '@lenne.tech/nest-server';
 import { Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import * as fs from 'fs';
 import { PubSub } from 'graphql-subscriptions';
 import { Model } from 'mongoose';
 import { UserCreateInput } from './inputs/user-create.input';
@@ -27,13 +27,13 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
    * Constructor for injecting services
    */
   constructor(
-    protected readonly configService: ConfigService,
-    protected readonly emailService: EmailService,
-    @Inject('USER_CLASS') protected readonly mainModelConstructor: CoreModelConstructor<User>,
-    @InjectModel('User') protected readonly mainDbModel: Model<UserDocument>,
-    @Inject('PUB_SUB') protected readonly pubSub: PubSub
+    protected override readonly configService: ConfigService,
+    protected override readonly emailService: EmailService,
+    @Inject('USER_CLASS') protected override readonly mainModelConstructor: CoreModelConstructor<User>,
+    @InjectModel('User') protected override readonly mainDbModel: Model<UserDocument>,
+    @Inject('PUB_SUB') protected readonly pubSub: PubSub,
   ) {
-    super(emailService, mainDbModel, mainModelConstructor);
+    super(configService, emailService, mainDbModel, mainModelConstructor);
   }
 
   // ===================================================================================================================
@@ -43,7 +43,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
   /**
    * Create new user and send welcome email
    */
-  async create(input: UserCreateInput, serviceOptions?: ServiceOptions): Promise<User> {
+  override async create(input: UserCreateInput, serviceOptions?: ServiceOptions): Promise<User> {
     // Get prepared user
     let user = await super.create(input, serviceOptions);
 
@@ -75,7 +75,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
       htmlTemplate: 'password-reset',
       templateData: {
         name: user.username,
-        link: this.configService.configFastButReadOnly.email.passwordResetLink + '/' + user.passwordResetToken,
+        link: `${this.configService.configFastButReadOnly.email.passwordResetLink}/${user.passwordResetToken}`,
       },
     });
 
@@ -100,7 +100,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
 
     // Remove old avatar image
     if (user.avatar) {
-      fs.unlink(this.configService.configFastButReadOnly.staticAssets.path + '/avatars/' + user.avatar, (err) => {
+      fs.unlink(`${this.configService.configFastButReadOnly.staticAssets.path}/avatars/${user.avatar}`, (err) => {
         if (err) {
           console.error(err);
         }

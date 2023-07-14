@@ -3,6 +3,7 @@ import { DynamicModule, Module } from '@nestjs/common';
 import { JwtModuleOptions } from '@nestjs/jwt';
 import { UserModule } from '../user/user.module';
 import { UserService } from '../user/user.service';
+import { AuthController } from './auth.controller';
 import { AuthResolver } from './auth.resolver';
 import { AuthService } from './auth.service';
 
@@ -27,8 +28,8 @@ export class AuthModule {
           },
         }),
       ],
-      providers: [AuthResolver, AuthService, EmailService],
-      exports: [AuthResolver, CoreAuthModule],
+      providers: [AuthController, AuthResolver, AuthService, EmailService],
+      exports: [AuthController, AuthResolver, CoreAuthModule],
     };
   }
 }
