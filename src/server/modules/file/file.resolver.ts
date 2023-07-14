@@ -1,8 +1,8 @@
-import * as fs from 'fs';
+import fs = require('fs');
 import { createWriteStream } from 'fs';
 import { FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import * as GraphQLUpload from 'graphql-upload/GraphQLUpload.js';
+import GraphQLUpload = require('graphql-upload/GraphQLUpload.js');
 import { FileInfo } from './file-info.model';
 import { FileService } from './file.service';
 

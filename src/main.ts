@@ -2,8 +2,8 @@ import { exec } from 'child_process';
 import { HttpExceptionLogFilter } from '@lenne.tech/nest-server';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import * as compression from 'compression';
-import * as cookieParser from 'cookie-parser';
+import compression = require('compression');
+import cookieParser = require('cookie-parser');
 import envConfig from './config.env';
 import { ServerModule } from './server/server.module';
 

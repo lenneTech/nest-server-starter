@@ -1,3 +1,6 @@
 {
-  "extends": "@lenne.tech/ts"
+  "extends": "@lenne.tech/ts",
+  "rules": {
+    "@typescript-eslint/no-require-imports": "off"
+  }
 }
