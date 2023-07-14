@@ -15,7 +15,7 @@ export class Auth extends CoreAuthModel {
    * Signed-in user
    */
   @Field(() => User, { description: 'User who signed in' })
-  user: User = undefined;
+  override user: User = undefined;
 
   // ===================================================================================================================
   // Methods

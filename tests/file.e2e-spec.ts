@@ -1,10 +1,10 @@
-import { RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
+import { HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
-import * as fs from 'fs';
+import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
 import { MongoClient, ObjectId } from 'mongodb';
-import * as path from 'path';
+import path = require('path');
 import envConfig from '../src/config.env';
 import { FileInfo } from '../src/server/modules/file/file-info.model';
 import { User } from '../src/server/modules/user/user.model';
@@ -12,6 +12,11 @@ import { UserService } from '../src/server/modules/user/user.service';
 import { ServerModule } from '../src/server/server.module';
 
 describe('Project (e2e)', () => {
+  // To enable debugging, include these flags in the options of the request you want to debug
+  const log = true;
+  const logError = true;
+
+  // Testenvironment properties
   let app;
   let testHelper: TestHelper;
 
@@ -33,6 +38,10 @@ describe('Project (e2e)', () => {
    * Before all tests
    */
   beforeAll(async () => {
+    // Indicates that cookies are enabled
+    if (envConfig.cookies) {
+      console.error('NOTE: Cookie handling is enabled. The tests with tokens will fail!');
+    }
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [ServerModule],
@@ -45,6 +54,7 @@ describe('Project (e2e)', () => {
         ],
       }).compile();
       app = moduleFixture.createNestApplication();
+      app.useGlobalFilters(new HttpExceptionLogFilter());
       app.setBaseViewsDir(envConfig.templates.path);
       app.setViewEngine(envConfig.templates.engine);
       await app.init();
@@ -108,6 +118,7 @@ describe('Project (e2e)', () => {
     for (const user of users) {
       const res: any = await testHelper.graphQl({
         name: 'signIn',
+        type: TestGraphQLType.MUTATION,
         arguments: {
           input: {
             email: user.email,
@@ -170,7 +181,7 @@ describe('Project (e2e)', () => {
         arguments: { filename: fileInfo.filename },
         fields: ['id', 'filename'],
       },
-      { token: users[0].token, logError: true }
+      { token: users[0].token }
     );
     expect(res.id).toEqual(fileInfo.id);
     expect(res.filename).toEqual(fileInfo.filename);
@@ -286,7 +297,7 @@ describe('Project (e2e)', () => {
   });
 
   it('getGraphQLFileInfo', async () => {
-    const res = await testHelper.rest('/files/info/' + fileInfo.id, { log: true, token: users[0].token });
+    const res = await testHelper.rest('/files/info/' + fileInfo.id, { token: users[0].token });
     expect(res).toEqual(null);
   });
 

@@ -20,10 +20,10 @@ export class CronJobs extends CoreCronJobs {
   // ===================================================================================================================
 
   protected sayHello() {
-    console.log(
-      'Hello :)\n' +
-        'Remove this cron job by removing the corresponding configuration from config.env.ts ' +
-        'or the service from the provider configuration in the ServerModule'
+    console.info(
+      'Hello :)\n'
+        + 'Remove this cron job by removing the corresponding configuration from config.env.ts '
+        + 'or the service from the provider configuration in the ServerModule',
     );
   }
 }
