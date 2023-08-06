@@ -83,6 +83,14 @@ $ npm run start:prod
 $ npm run test:e2e
 ```
 
+## Documentation
+The API and developer documentation can automatically be generated.
+
+```bash
+# generate and serve documentation
+$ npm run docs
+```
+
 ## Planned enhancements:
 
 - Documentation of extensions and auxiliary classes

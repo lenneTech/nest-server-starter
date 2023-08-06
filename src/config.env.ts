@@ -48,6 +48,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    healthCheck: {
+      enabled: true,
+      configs: {
+        database: {
+          enabled: true,
+        },
+      },
+    },
     ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
@@ -69,6 +77,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     loadLocalConfig: false,
     logExceptions: true,
     mongoose: {
+      modelDocumentation: true,
       uri: 'mongodb://127.0.0.1/nest-server-local',
     },
     port: 3000,
@@ -116,6 +125,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         playground: true,
       },
       maxComplexity: 20,
+    },
+    healthCheck: {
+      enabled: true,
+      configs: {
+        database: {
+          enabled: true,
+        },
+      },
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
@@ -186,6 +203,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    healthCheck: {
+      enabled: true,
+      configs: {
+        database: {
+          enabled: true,
+        },
+      },
+    },
     ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
@@ -254,6 +279,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         playground: true,
       },
       maxComplexity: 20,
+    },
+    healthCheck: {
+      enabled: true,
+      configs: {
+        database: {
+          enabled: true,
+        },
+      },
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
@@ -324,6 +357,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       maxComplexity: 20,
     },
+    healthCheck: {
+      enabled: true,
+      configs: {
+        database: {
+          enabled: true,
+        },
+      },
+    },
     ignoreSelectionsForPopulate: true,
     jwt: {
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
@@ -375,28 +416,23 @@ if (envConfig.loadLocalConfig) {
     import(envConfig.loadLocalConfig).then((loadedConfig) => {
       localConfig = loadedConfig.default || loadedConfig;
       merge(envConfig, localConfig);
+    }).catch(() => {
+      console.info(`Configuration ${envConfig.loadLocalConfig} not found!`);
     });
-  }
- else {
-    try {
-      // get config from src directory
-      import(join(__dirname, 'config.json')).then((loadedConfig) => {
+  } else {
+    // get config from src directory
+    import(join(__dirname, 'config.json')).then((loadedConfig) => {
+      localConfig = loadedConfig.default || loadedConfig;
+      merge(envConfig, localConfig);
+    }).catch(() => {
+      // if not found try to find in project directory
+      import(join(__dirname, '..', 'config.json')).then((loadedConfig) => {
         localConfig = loadedConfig.default || loadedConfig;
         merge(envConfig, localConfig);
+      }).catch(() => {
+        console.info('No local config.json found!');
       });
-    }
- catch {
-      try {
-        // if not found try to find in project directory
-        import(join(__dirname, '..', 'config.json')).then((loadedConfig) => {
-          localConfig = loadedConfig.default || loadedConfig;
-          merge(envConfig, localConfig);
-        });
-      }
- catch (e) {
-        // No config.json found => nothing to do
-      }
-    }
+    });
   }
 }
 

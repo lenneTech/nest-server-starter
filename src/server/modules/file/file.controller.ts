@@ -46,8 +46,7 @@ export class FileController {
     let file;
     try {
       file = await this.fileService.getFileInfo(id);
-    }
- catch (e) {
+    } catch (e) {
       console.error(e);
     }
 

@@ -11,10 +11,10 @@ import { ServerModule } from '../src/server/server.module';
 
 describe('ServerModule (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
-  const log = true;
-  const logError = true;
+  const log = true; // eslint-disable-line unused-imports/no-unused-vars
+  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
 
-  // Testenvironment properties
+  // Test environment properties
   const port = 3030;
   let app;
   let testHelper: TestHelper;
@@ -86,6 +86,16 @@ describe('ServerModule (e2e)', () => {
   // ===================================================================================================================
   // Tests
   // ===================================================================================================================
+
+  /**
+   * Health check
+   */
+  it('health check', async () => {
+    if (envConfig.healthCheck?.enabled) {
+      const res: any = await testHelper.rest('/health-check');
+      expect(res.status).toBe('ok');
+    }
+  });
 
   /**
    * Get index

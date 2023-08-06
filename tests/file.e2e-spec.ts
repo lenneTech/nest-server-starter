@@ -13,10 +13,10 @@ import { ServerModule } from '../src/server/server.module';
 
 describe('Project (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
-  const log = true;
-  const logError = true;
+  const log = true; // eslint-disable-line unused-imports/no-unused-vars
+  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
 
-  // Testenvironment properties
+  // Test environment properties
   let app;
   let testHelper: TestHelper;
 
