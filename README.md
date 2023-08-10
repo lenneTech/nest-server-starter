@@ -8,6 +8,12 @@ In combination with Angular (see [lenne.Tech Angular example](https://github.com
 incl. [ng-base](https://github.com/lenneTech/ng-base/tree/main/projects/ng-base/README.md)) the Nest Server is an ideal
 basis for your next project.
 
+For efficient handling we recommend using the [lenne.Tech CLI](https://github.com/lenneTech/cli) 
+to initialize a new project and create modules and module elements.
+
+This starter is regularly updated to the latest version of the Nest server. This makes it ideal for viewing the changes 
+and applying them to your own project (see [Update Notes](update)).
+
 [![License](https://img.shields.io/github/license/lenneTech/nest-server-starter)](/LICENSE)
 
 ## Requirements
@@ -83,6 +89,35 @@ $ npm run start:prod
 $ npm run test:e2e
 ```
 
+Configuration for testing:
+```
+Node interpreter: /user/local/bin/node
+Jest package: FULL_PATH_TO_PROJECT_DIR/node_modules/jest
+Working directory: FULL_PATH_TO_PROJECT_DIR
+Jest options: --config jest-e2e.json --forceExit
+```
+see [E2E-Tests.run.xml](.run/E2E-Tests.run.xml)
+
+## Debugging
+
+Configuration for debugging is:
+```
+Node interpreter: /user/local/bin/node
+Node parameters: node_modules/@nestjs/cli/bin/nest.js start --debug --watch
+Working directory: FULL_PATH_TO_PROJECT_DIR
+JavaScript file: src/main.ts
+```
+see [Debug.run.xml](.run/Debug.run.xml)
+
+
+## Test & debug the NestServer package in this project
+Use [yalc](https://github.com/wclr/yalc) to include the NestJS server in the project.
+
+1. clone [NestServer](https://github.com/lenneTech/nest-server): `git clone https://github.com/lenneTech/nest-server.git`
+2. go to the nest-server folder (`cd nest-server`), install the packages via `npm i` and start the nest server in watch & yalc mode: `npm run watch`
+3. link the nest server live package to this project via `npm run link:nest-server` and start the server: `npm start`
+4. unlink the nest-server live package and use the normal package again when you are done: `npm run unlink:nest-server`
+
 ## Documentation
 The API and developer documentation can automatically be generated.
 
@@ -91,10 +126,21 @@ The API and developer documentation can automatically be generated.
 $ npm run docs
 ```
 
+## Update
+An update to a new Nest Sever version can be done as follows:
+
+1. set the new Nest Server version in the package.json under `{dependencies: {"@lenne.tech/nest-server": "NEW_VERSON" }}`.
+2. run `npm run update`
+3. adjust project according to changes in git history from nest server
+4. run tests via `npm run tests:e2e`, build via `npm run build` and start the server with `npm start` to check if everything is working
+
+Since this starter is regularly updated, it is ideal as a template for the changes to be made in your own project. 
+Simply compare the current version in the Git history of this starter with the version that was previously used in 
+the project and adapt your own project accordingly.
+
 ## Planned enhancements:
 
 - Documentation of extensions and auxiliary classes
-- CLI functionalities for the efficient creation of new modules and module elements
 
 ## Thanks
 
