@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "10.0.5",
+  "version": "10.0.7",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -82,7 +82,7 @@
   "dependencies": {
     "@apollo/gateway": "2.5.1",
     "@apollo/server": "4.7.5",
-    "@lenne.tech/nest-server": "10.0.6",
+    "@lenne.tech/nest-server": "10.0.7",
     "@nestjs/apollo": "12.0.7",
     "@nestjs/common": "10.1.3",
     "@nestjs/core": "10.1.3",
