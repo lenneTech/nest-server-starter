@@ -17,6 +17,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     cronJobs: {
       sayHello: {
         cronTime: CronExpression.EVERY_5_MINUTES,
+        disabled: true,
         timeZone: 'Europe/Berlin',
         runOnInit: false,
       },
@@ -58,6 +59,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
+      // Each secret should be unique and not reused in other environments,
+      // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_LOCAL',
@@ -66,7 +69,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       refresh: {
         renewal: true,
+        // Each secret should be unique and not reused in other environments,
+        // also the JWT secret should be different from the Refresh secret!
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH',
         signInOptions: {
@@ -136,6 +142,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
+      // Each secret should be unique and not reused in other environments,
+      // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_DEV',
@@ -144,7 +152,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       refresh: {
         renewal: true,
+        // Each secret should be unique and not reused in other environments,
+        // also the JWT secret should be different from the Refresh secret!
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_DEV_REFRESH',
         signInOptions: {
@@ -213,6 +224,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
+      // Each secret should be unique and not reused in other environments,
+      // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_TEST',
@@ -221,7 +234,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       refresh: {
         renewal: true,
+        // Each secret should be unique and not reused in other environments,
+        // also the JWT secret should be different from the Refresh secret!
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH',
         signInOptions: {
@@ -290,6 +306,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
+      // Each secret should be unique and not reused in other environments,
+      // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PREV',
@@ -298,7 +316,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
       refresh: {
         renewal: true,
+        // Each secret should be unique and not reused in other environments,
+        // also the JWT secret should be different from the Refresh secret!
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_PREV_REFRESH',
         signInOptions: {
@@ -367,7 +388,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
+      // Each secret should be unique and not reused in other environments,
+      // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+      // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
       // tslint:disable-next-line:max-line-length
       secret: 'SECRET_OR_PRIVATE_KEY_PROD',
       signInOptions: {
