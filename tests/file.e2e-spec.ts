@@ -1,10 +1,10 @@
+import fs = require('fs');
+import path = require('path');
 import { HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
-import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
 import { MongoClient, ObjectId } from 'mongodb';
-import path = require('path');
 import envConfig from '../src/config.env';
 import { FileInfo } from '../src/server/modules/file/file-info.model';
 import { User } from '../src/server/modules/user/user.model';
@@ -90,9 +90,9 @@ describe('Project (e2e)', () => {
       const random = Math.random().toString(36).substring(7);
       const input = {
         password: random,
-        email: random + '@testusers.com',
-        firstName: 'Test' + random,
-        lastName: 'User' + random,
+        email: `${random}@testusers.com`,
+        firstName: `Test${random}`,
+        lastName: `User${random}`,
       };
 
       // Sign up user
@@ -147,7 +147,7 @@ describe('Project (e2e)', () => {
   // ===================================================================================================================
 
   it('uploadFileViaGraphQL', async () => {
-    const filename = Math.random().toString(36).substring(7) + '.txt';
+    const filename = `${Math.random().toString(36).substring(7)}.txt`;
     fileContent = 'Hello GraphQL';
 
     // Set paths
@@ -163,7 +163,7 @@ describe('Project (e2e)', () => {
         arguments: { file: new VariableType('file') },
         fields: ['id', 'filename'],
       },
-      { variables: { file: { type: 'attachment', value: local } }, token: users[0].token }
+      { variables: { file: { type: 'attachment', value: local } }, token: users[0].token },
     );
     expect(res.id.length).toBeGreaterThan(0);
     expect(res.filename).toEqual(filename);
@@ -181,14 +181,14 @@ describe('Project (e2e)', () => {
         arguments: { filename: fileInfo.filename },
         fields: ['id', 'filename'],
       },
-      { token: users[0].token }
+      { token: users[0].token },
     );
     expect(res.id).toEqual(fileInfo.id);
     expect(res.filename).toEqual(fileInfo.filename);
   });
 
   it('downloadGraphQLFile', async () => {
-    const res = await testHelper.download('/files/' + fileInfo.id, users[0].token);
+    const res = await testHelper.download(`/files/${fileInfo.id}`, users[0].token);
     expect(res.statusCode).toEqual(200);
     expect(res.data).toEqual(fileContent);
   });
@@ -201,7 +201,7 @@ describe('Project (e2e)', () => {
         arguments: { filename: fileInfo.filename },
         fields: ['id'],
       },
-      { token: users[0].token }
+      { token: users[0].token },
     );
     expect(res.id).toEqual(fileInfo.id);
   });
@@ -214,7 +214,7 @@ describe('Project (e2e)', () => {
         arguments: { filename: fileInfo.filename },
         fields: ['id', 'filename'],
       },
-      { token: users[0].token }
+      { token: users[0].token },
     );
     expect(res).toEqual(null);
   });
@@ -236,7 +236,7 @@ describe('Project (e2e)', () => {
         variables: { files: '[Upload!]!' },
         arguments: { files: new VariableType('files') },
       },
-      { variables: { files: { type: 'attachment', value: [local1, local2] } }, token: users[0].token }
+      { variables: { files: { type: 'attachment', value: [local1, local2] } }, token: users[0].token },
     );
     expect(res).toEqual(true);
 
@@ -258,7 +258,7 @@ describe('Project (e2e)', () => {
   // ===================================================================================================================
 
   it('uploadFileViaREST', async () => {
-    const filename = Math.random().toString(36).substring(7) + '.txt';
+    const filename = `${Math.random().toString(36).substring(7)}.txt`;
     fileContent = 'Hello REST';
 
     // Set paths
@@ -280,24 +280,24 @@ describe('Project (e2e)', () => {
   });
 
   it('getFileInfoForRESTFile', async () => {
-    const res = await testHelper.rest('/files/info/' + fileInfo.id, { token: users[0].token });
+    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { token: users[0].token });
     expect(res.id).toEqual(fileInfo.id);
     expect(res.filename).toEqual(fileInfo.filename);
   });
 
-  it('downloadGraphQLFile', async () => {
-    const res = await testHelper.download('/files/' + fileInfo.id, users[0].token);
+  it('downloadRESTFile', async () => {
+    const res = await testHelper.download(`/files/${fileInfo.id}`, users[0].token);
     expect(res.statusCode).toEqual(200);
     expect(res.data).toEqual(fileContent);
   });
 
-  it('deleteGraphQLFile', async () => {
-    const res = await testHelper.rest('/files/' + fileInfo.id, { method: 'DELETE', token: users[0].token });
+  it('deleteRESTFile', async () => {
+    const res = await testHelper.rest(`/files/${fileInfo.id}`, { method: 'DELETE', token: users[0].token });
     expect(res.id).toEqual(fileInfo.id);
   });
 
-  it('getGraphQLFileInfo', async () => {
-    const res = await testHelper.rest('/files/info/' + fileInfo.id, { token: users[0].token });
+  it('getRESTFileInfo', async () => {
+    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { token: users[0].token });
     expect(res).toEqual(null);
   });
 
@@ -322,7 +322,7 @@ describe('Project (e2e)', () => {
           },
           fields: ['id'],
         },
-        { token: users[users.length - 1].token }
+        { token: users[users.length - 1].token },
       );
       expect(res.id).toEqual(user.id);
     }
