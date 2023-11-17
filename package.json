@@ -95,7 +95,7 @@
     "@nestjs/platform-express": "10.2.7",
     "@nestjs/schedule": "3.0.4",
     "@nestjs/terminus": "10.1.1",
-    "@nodepit/migrate-state-store-mongodb": "5.0.0",
+    "@nodepit/migrate-state-store-mongodb": "5.1.0",
     "apollo-server-core": "3.12.1",
     "apollo-server-express": "3.11.1",
     "bcrypt": "5.1.1",
