@@ -165,12 +165,16 @@ describe('Project (e2e)', () => {
       },
       { variables: { file: { type: 'attachment', value: local } }, token: users[0].token },
     );
+
+    // Remove file
+    await fs.promises.unlink(local);
+
+    // Test response
     expect(res.id.length).toBeGreaterThan(0);
     expect(res.filename).toEqual(filename);
-    fileInfo = res;
 
-    // Remove files
-    await fs.promises.unlink(local);
+    // Set file info
+    fileInfo = res;
   });
 
   it('getFileInfoForGraphQLFile', async () => {
@@ -238,6 +242,12 @@ describe('Project (e2e)', () => {
       },
       { variables: { files: { type: 'attachment', value: [local1, local2] } }, token: users[0].token },
     );
+
+    // Remove local files
+    await fs.promises.unlink(local1);
+    await fs.promises.unlink(local2);
+
+    // Test response
     expect(res).toEqual(true);
 
     // Check uploaded files
@@ -246,9 +256,7 @@ describe('Project (e2e)', () => {
     const stat2 = await fs.promises.stat(remote2);
     expect(!!stat2).toEqual(true);
 
-    // Remove files
-    await fs.promises.unlink(local1);
-    await fs.promises.unlink(local2);
+    // Remove remote files
     await fs.promises.unlink(remote1);
     await fs.promises.unlink(remote2);
   });
@@ -271,12 +279,16 @@ describe('Project (e2e)', () => {
       token: users[0].token,
       attachments: { file: local },
     });
+
+    // Remove file
+    await fs.promises.unlink(local);
+
+    // Test response
     expect(res.id.length).toBeGreaterThan(0);
     expect(res.filename).toEqual(filename);
-    fileInfo = res;
 
-    // Remove files
-    await fs.promises.unlink(local);
+    // Set file info
+    fileInfo = res;
   });
 
   it('getFileInfoForRESTFile', async () => {
