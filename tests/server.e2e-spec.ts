@@ -1,9 +1,9 @@
 import {
   ComparisonOperatorEnum,
+  ConfigService,
   HttpExceptionLogFilter,
   TestGraphQLType,
-  TestHelper,
-  getPlain,
+  TestHelper, getPlain,
 } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PubSub } from 'graphql-subscriptions';
@@ -31,6 +31,10 @@ describe('ServerModule (e2e)', () => {
 
   // Services
   let userService: UserService;
+  let configService: ConfigService;
+
+  // Original data
+  let oTempTokenPeriod: number;
 
   // Global vars
   let gId: string;
@@ -38,6 +42,7 @@ describe('ServerModule (e2e)', () => {
   let gPassword: string;
   let gToken: string;
   let gRefreshToken: string;
+  let gLastRefreshRequestTime: number;
 
   // ===================================================================================================================
   // Preparations
@@ -70,6 +75,8 @@ describe('ServerModule (e2e)', () => {
       await app.init();
       testHelper = new TestHelper(app, `ws://127.0.0.1:${port}/graphql`);
       userService = moduleFixture.get(UserService);
+      configService = moduleFixture.get(ConfigService);
+      oTempTokenPeriod = envConfig.jwt.sameTokenIdPeriod;
       await app.listen(port, '127.0.0.1'); // app.listen is required by subscriptions
 
       // Connection to database
@@ -249,6 +256,7 @@ describe('ServerModule (e2e)', () => {
    * Get refresh token with refresh token
    */
   it('getRefreshTokenWithRefreshToken', async () => {
+    gLastRefreshRequestTime = Date.now();
     const res: any = await testHelper.graphQl(
       {
         name: 'refreshToken',
@@ -268,17 +276,69 @@ describe('ServerModule (e2e)', () => {
   });
 
   /**
-   * Find users without token
+   * Get refresh token with refresh token again to check the temporary tokenId
    */
-  it('findUsers without token', async () => {
-    const res: any = await testHelper.graphQl({
-      name: 'findUsers',
-      fields: ['id', 'email'],
-    });
-    expect(res.errors.length).toBeGreaterThanOrEqual(1);
-    expect(res.errors[0].extensions.originalError.statusCode).toEqual(401);
-    expect(res.errors[0].message).toEqual('Unauthorized');
-    expect(res.data).toBe(null);
+  it('getRefreshTokenWithRefreshTokenAgain', async () => {
+    const res: any = await testHelper.graphQl(
+      {
+        name: 'refreshToken',
+        type: TestGraphQLType.MUTATION,
+        fields: ['token', 'refreshToken', { user: ['id', 'email'] }],
+      },
+      { token: gRefreshToken },
+    );
+    expect(res.user.id).toEqual(gId);
+    expect(res.user.email).toEqual(gEmail);
+    expect(res.token.length).toBeGreaterThan(0);
+    expect(res.refreshToken.length).toBeGreaterThan(0);
+    expect(res.token.length).not.toEqual(gToken);
+    expect(res.refreshToken.length).not.toEqual(gRefreshToken);
+    if (envConfig.jwt.sameTokenIdPeriod) {
+      const timeBetween = Date.now() - gLastRefreshRequestTime;
+      console.debug(`tempToken used | config: ${envConfig.jwt.sameTokenIdPeriod}, timeBetween: ${timeBetween}, rest: ${envConfig.jwt.sameTokenIdPeriod - timeBetween}`);
+      expect(gLastRefreshRequestTime).toBeGreaterThanOrEqual(Date.now() - envConfig.jwt.sameTokenIdPeriod);
+      expect(testHelper.parseJwt(res.token).tokenId).toEqual(testHelper.parseJwt(gToken).tokenId);
+    } else {
+      console.debug('tempToken not used');
+      expect(testHelper.parseJwt(res.token).tokenId).not.toEqual(testHelper.parseJwt(gToken).tokenId);
+    }
+    gToken = res.token;
+    gRefreshToken = res.refreshToken;
+  });
+
+  /**
+   * Get refresh token with refresh token again to check the temporary tokenId with other config
+   */
+  it('getRefreshTokenWithRefreshTokenOtherConfig', async () => {
+    const sameTokenIdPeriod = oTempTokenPeriod ? 0 : 200;
+    configService.setProperty('jwt.sameTokenIdPeriod', sameTokenIdPeriod);
+    expect(configService.getFastButReadOnly('jwt.sameTokenIdPeriod')).toEqual(sameTokenIdPeriod);
+    expect(configService.getFastButReadOnly('jwt.sameTokenIdPeriod')).not.toEqual(oTempTokenPeriod);
+    const res: any = await testHelper.graphQl(
+      {
+        name: 'refreshToken',
+        type: TestGraphQLType.MUTATION,
+        fields: ['token', 'refreshToken', { user: ['id', 'email'] }],
+      },
+      { token: gRefreshToken },
+    );
+    expect(res.user.id).toEqual(gId);
+    expect(res.user.email).toEqual(gEmail);
+    expect(res.token.length).toBeGreaterThan(0);
+    expect(res.refreshToken.length).toBeGreaterThan(0);
+    expect(res.token.length).not.toEqual(gToken);
+    expect(res.refreshToken.length).not.toEqual(gRefreshToken);
+    if (sameTokenIdPeriod) {
+      const timeBetween = Date.now() - gLastRefreshRequestTime;
+      console.debug(`tempToken2 used | config: ${sameTokenIdPeriod}, timeBetween: ${timeBetween}, rest: ${sameTokenIdPeriod - timeBetween}`);
+      expect(testHelper.parseJwt(res.token).tokenId).toEqual(testHelper.parseJwt(gToken).tokenId);
+    } else {
+      console.debug('tempToken2 not used');
+      expect(testHelper.parseJwt(res.token).tokenId).not.toEqual(testHelper.parseJwt(gToken).tokenId);
+    }
+    configService.setProperty('jwt.sameTokenIdPeriod', oTempTokenPeriod);
+    gToken = res.token;
+    gRefreshToken = res.refreshToken;
   });
 
   /**
