@@ -1,6 +1,6 @@
 {
   "arrowParens": "always",
-  "plugins": ["./extras/prettier-imports"],
+  "plugins": ["./extras/prettier-imports.js"],
   "printWidth": 120,
   "semi": true,
   "singleQuote": true

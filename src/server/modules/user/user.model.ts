@@ -2,6 +2,7 @@ import { CoreUserModel, RoleEnum } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Schema as MongooseSchema, Prop, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema } from 'mongoose';
+
 import { PersistenceModel } from '../../common/models/persistence.model';
 
 export type UserDocument = User & Document;
@@ -32,7 +33,7 @@ export class User extends CoreUserModel implements PersistenceModel {
     description: 'ID of the user who created the object',
     nullable: true,
   })
-  @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
+  @Prop({ ref: 'User', type: Schema.Types.ObjectId })
   createdBy: string = undefined;
 
   /**
@@ -44,7 +45,7 @@ export class User extends CoreUserModel implements PersistenceModel {
     description: 'ID of the user who last updated the object',
     nullable: true,
   })
-  @Prop({ type: Schema.Types.ObjectId, ref: 'User' })
+  @Prop({ ref: 'User', type: Schema.Types.ObjectId })
   updatedBy: string = undefined;
 
   // ===================================================================================================================

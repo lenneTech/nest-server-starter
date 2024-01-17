@@ -1,7 +1,9 @@
 import { ConfigService, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Controller, Get, Render } from '@nestjs/common';
-import metaData = require('../meta.json');
+
 import { MetaService } from './modules/meta/meta.service';
+
+import metaData = require('../meta.json');
 
 @Controller()
 export class ServerController {
@@ -12,10 +14,10 @@ export class ServerController {
   root() {
     // meta.json can be overwritten during the build process
     return {
-      env: this.configService.get('env'),
-      version: metaData.version,
-      title: metaData.name,
       description: metaData.description,
+      env: this.configService.get('env'),
+      title: metaData.name,
+      version: metaData.version,
     };
   }
 

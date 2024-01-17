@@ -2,8 +2,9 @@ import { FilterArgs, GraphQLServiceOptions, RoleEnum, Roles, ServiceOptions } fr
 import { Inject } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { PubSub } from 'graphql-subscriptions';
-import { UserCreateInput } from './inputs/user-create.input';
+
 import { UserInput } from './inputs/user.input';
+import { UserCreateInput } from './inputs/user-create.input';
 import { FindAndCountUsersResult } from './outputs/find-and-count-users-result.output';
 import { User } from './user.model';
 import { UserService } from './user.service';

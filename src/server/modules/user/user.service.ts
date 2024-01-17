@@ -1,4 +1,3 @@
-import fs = require('fs');
 import {
   ConfigService,
   CoreModelConstructor,
@@ -10,9 +9,12 @@ import { Inject, Injectable, UnauthorizedException, UnprocessableEntityException
 import { InjectModel } from '@nestjs/mongoose';
 import { PubSub } from 'graphql-subscriptions';
 import { Model } from 'mongoose';
-import { UserCreateInput } from './inputs/user-create.input';
+
 import { UserInput } from './inputs/user.input';
+import { UserCreateInput } from './inputs/user-create.input';
 import { User, UserDocument } from './user.model';
+
+import fs = require('fs');
 
 /**
  * User service
@@ -74,8 +76,8 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     await this.emailService.sendMail(user.email, 'Password reset', {
       htmlTemplate: 'password-reset',
       templateData: {
-        name: user.username,
         link: `${this.configService.configFastButReadOnly.email.passwordResetLink}/${user.passwordResetToken}`,
+        name: user.username,
       },
     });
 

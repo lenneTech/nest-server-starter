@@ -1,7 +1,9 @@
 import { ConfigService } from '@lenne.tech/nest-server';
 import { Injectable } from '@nestjs/common';
-import metaData = require('../../../meta.json');
+
 import { Meta } from './meta.model';
+
+import metaData = require('../../../meta.json');
 
 /**
  * Meta service
@@ -24,8 +26,8 @@ export class MetaService {
   async get(): Promise<Meta> {
     return Meta.map({
       environment: this.configService.config.env,
-      title: metaData.description,
       package: metaData.name,
+      title: metaData.description,
       version: metaData.version,
     });
   }

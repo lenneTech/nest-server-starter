@@ -1,5 +1,6 @@
 import { CoreAuthModel, mapClasses } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
+
 import { User } from '../user/user.model';
 
 /**

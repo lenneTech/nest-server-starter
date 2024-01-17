@@ -1,6 +1,7 @@
 import { ConfigService, CoreAuthService, EmailService, RoleEnum, Roles, ServiceOptions } from '@lenne.tech/nest-server';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+
 import { UserService } from '../user/user.service';
 import { Auth } from './auth.model';
 import { AuthSignInInput } from './inputs/auth-sign-in.input';
@@ -38,8 +39,8 @@ export class AuthService extends CoreAuthService {
     await this.emailService.sendMail(user.email, 'Welcome', {
       htmlTemplate: 'welcome',
       templateData: {
-        name: user.username,
         link: `${this.configService.configFastButReadOnly.email.verificationLink}/${user.verificationToken}`,
+        name: user.username,
       },
     });
 

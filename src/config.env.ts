@@ -1,6 +1,6 @@
-import { join } from 'path';
 import { IServerOptions, merge } from '@lenne.tech/nest-server';
 import { CronExpression } from '@nestjs/schedule';
+import { join } from 'path';
 
 /**
  * Configuration for the different environments
@@ -10,116 +10,23 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   // Local environment
   // ===========================================================================
-  local: {
-    automaticObjectIdFiltering: true,
-    compression: true,
-    cookies: false,
-    cronJobs: {
-      sayHello: {
-        cronTime: CronExpression.EVERY_5_MINUTES,
-        disabled: true,
-        timeZone: 'Europe/Berlin',
-        runOnInit: false,
-      },
-    },
-    email: {
-      smtp: {
-        auth: {
-          user: 'cade72@ethereal.email',
-          pass: 'jpvTwGYeSajEqDvRKT',
-        },
-        host: 'mailhog.lenne.tech',
-        port: 1025,
-        secure: false,
-      },
-      defaultSender: {
-        email: 'cade72@ethereal.email',
-        name: 'Nest Server Starter Local',
-      },
-    },
-    env: 'local',
-    execAfterInit: 'npm run docs:bootstrap',
-    filter: {
-      maxLimit: null,
-    },
-    graphQl: {
-      driver: {
-        introspection: true,
-        playground: true,
-      },
-      maxComplexity: 20,
-    },
-    healthCheck: {
-      enabled: true,
-      configs: {
-        database: {
-          enabled: true,
-        },
-      },
-    },
-    hostname: '127.0.0.1',
-    ignoreSelectionsForPopulate: true,
-    jwt: {
-      // Each secret should be unique and not reused in other environments,
-      // also the JWT secret should be different from the Refresh secret!
-      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-      // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_LOCAL',
-      signInOptions: {
-        expiresIn: '15m',
-      },
-      refresh: {
-        renewal: true,
-        // Each secret should be unique and not reused in other environments,
-        // also the JWT secret should be different from the Refresh secret!
-        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
-        // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH',
-        signInOptions: {
-          expiresIn: '7d',
-        },
-      },
-      sameTokenIdPeriod: 2000,
-    },
-    loadLocalConfig: false,
-    logExceptions: true,
-    mongoose: {
-      modelDocumentation: true,
-      uri: 'mongodb://127.0.0.1/nest-server-local',
-    },
-    port: 3000,
-    sha256: true,
-    staticAssets: {
-      path: join(__dirname, '..', 'public'),
-      options: { prefix: '' },
-    },
-    templates: {
-      path: join(__dirname, 'assets', 'templates'),
-      engine: 'ejs',
-    },
-  },
-
-  // ===========================================================================
-  // Develop environment
-  // ===========================================================================
   develop: {
     automaticObjectIdFiltering: true,
     compression: true,
     cookies: false,
     email: {
+      defaultSender: {
+        email: 'cade72@ethereal.email',
+        name: 'Nest Server Starter Develop',
+      },
       smtp: {
         auth: {
-          user: 'cade72@ethereal.email',
           pass: 'jpvTwGYeSajEqDvRKT',
+          user: 'cade72@ethereal.email',
         },
         host: 'mailhog.lenne.tech',
         port: 1025,
         secure: false,
-      },
-      defaultSender: {
-        email: 'cade72@ethereal.email',
-        name: 'Nest Server Starter Develop',
       },
     },
     env: 'develop',
@@ -135,23 +42,18 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       maxComplexity: 20,
     },
     healthCheck: {
-      enabled: true,
       configs: {
         database: {
           enabled: true,
         },
       },
+      enabled: true,
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
       // Each secret should be unique and not reused in other environments,
       // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-      // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_DEV',
-      signInOptions: {
-        expiresIn: '15m',
-      },
       refresh: {
         renewal: true,
         // Each secret should be unique and not reused in other environments,
@@ -165,6 +67,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         },
       },
       sameTokenIdPeriod: 2000,
+      // tslint:disable-next-line:max-line-length
+      secret: 'SECRET_OR_PRIVATE_KEY_DEV',
+      signInOptions: {
+        expiresIn: '15m',
+      },
     },
     loadLocalConfig: false,
     logExceptions: true,
@@ -174,38 +81,46 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     sha256: true,
     staticAssets: {
-      path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
+      path: join(__dirname, '..', 'public'),
     },
     templates: {
-      path: join(__dirname, 'assets', 'templates'),
       engine: 'ejs',
+      path: join(__dirname, 'assets', 'templates'),
     },
   },
 
   // ===========================================================================
-  // Test environment
+  // Develop environment
   // ===========================================================================
-  test: {
+  local: {
     automaticObjectIdFiltering: true,
     compression: true,
     cookies: false,
+    cronJobs: {
+      sayHello: {
+        cronTime: CronExpression.EVERY_5_MINUTES,
+        disabled: true,
+        runOnInit: false,
+        timeZone: 'Europe/Berlin',
+      },
+    },
     email: {
+      defaultSender: {
+        email: 'cade72@ethereal.email',
+        name: 'Nest Server Starter Local',
+      },
       smtp: {
         auth: {
-          user: 'cade72@ethereal.email',
           pass: 'jpvTwGYeSajEqDvRKT',
+          user: 'cade72@ethereal.email',
         },
         host: 'mailhog.lenne.tech',
         port: 1025,
         secure: false,
       },
-      defaultSender: {
-        email: 'cade72@ethereal.email',
-        name: 'Nest Server Starter Test',
-      },
     },
-    env: 'test',
+    env: 'local',
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,
@@ -218,23 +133,19 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       maxComplexity: 20,
     },
     healthCheck: {
-      enabled: true,
       configs: {
         database: {
           enabled: true,
         },
       },
+      enabled: true,
     },
+    hostname: '127.0.0.1',
     ignoreSelectionsForPopulate: true,
     jwt: {
       // Each secret should be unique and not reused in other environments,
       // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-      // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_TEST',
-      signInOptions: {
-        expiresIn: '15m',
-      },
       refresh: {
         renewal: true,
         // Each secret should be unique and not reused in other environments,
@@ -242,50 +153,56 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH',
+        secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH',
         signInOptions: {
           expiresIn: '7d',
         },
       },
       sameTokenIdPeriod: 2000,
+      // tslint:disable-next-line:max-line-length
+      secret: 'SECRET_OR_PRIVATE_KEY_LOCAL',
+      signInOptions: {
+        expiresIn: '15m',
+      },
     },
     loadLocalConfig: false,
     logExceptions: true,
     mongoose: {
-      uri: 'mongodb://overlay_mongo1/nest-server-test',
+      modelDocumentation: true,
+      uri: 'mongodb://127.0.0.1/nest-server-local',
     },
     port: 3000,
     sha256: true,
     staticAssets: {
-      path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
+      path: join(__dirname, '..', 'public'),
     },
     templates: {
-      path: join(__dirname, 'assets', 'templates'),
       engine: 'ejs',
+      path: join(__dirname, 'assets', 'templates'),
     },
   },
 
   // ===========================================================================
-  // Preview environment
+  // Test environment
   // ===========================================================================
   preview: {
     automaticObjectIdFiltering: true,
     compression: true,
     cookies: false,
     email: {
+      defaultSender: {
+        email: 'cade72@ethereal.email',
+        name: 'Nest Server Starter Preview',
+      },
       smtp: {
         auth: {
-          user: 'cade72@ethereal.email',
           pass: 'jpvTwGYeSajEqDvRKT',
+          user: 'cade72@ethereal.email',
         },
         host: 'mailhog.lenne.tech',
         port: 1025,
         secure: false,
-      },
-      defaultSender: {
-        email: 'cade72@ethereal.email',
-        name: 'Nest Server Starter Preview',
       },
     },
     env: 'preview',
@@ -301,23 +218,18 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       maxComplexity: 20,
     },
     healthCheck: {
-      enabled: true,
       configs: {
         database: {
           enabled: true,
         },
       },
+      enabled: true,
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
       // Each secret should be unique and not reused in other environments,
       // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-      // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_PREV',
-      signInOptions: {
-        expiresIn: '15m',
-      },
       refresh: {
         renewal: true,
         // Each secret should be unique and not reused in other environments,
@@ -331,6 +243,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         },
       },
       sameTokenIdPeriod: 2000,
+      // tslint:disable-next-line:max-line-length
+      secret: 'SECRET_OR_PRIVATE_KEY_PREV',
+      signInOptions: {
+        expiresIn: '15m',
+      },
     },
     loadLocalConfig: false,
     logExceptions: true,
@@ -340,35 +257,35 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     sha256: true,
     staticAssets: {
-      path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
+      path: join(__dirname, '..', 'public'),
     },
     templates: {
-      path: join(__dirname, 'assets', 'templates'),
       engine: 'ejs',
+      path: join(__dirname, 'assets', 'templates'),
     },
   },
 
   // ===========================================================================
-  // Production environment
+  // Preview environment
   // ===========================================================================
   production: {
     automaticObjectIdFiltering: true,
     compression: true,
     cookies: false,
     email: {
+      defaultSender: {
+        email: 'cade72@ethereal.email',
+        name: 'Nest Server Starter Productive',
+      },
       smtp: {
         auth: {
-          user: 'cade72@ethereal.email',
           pass: 'jpvTwGYeSajEqDvRKT',
+          user: 'cade72@ethereal.email',
         },
         host: 'mailhog.lenne.tech',
         port: 1025,
         secure: false,
-      },
-      defaultSender: {
-        email: 'cade72@ethereal.email',
-        name: 'Nest Server Starter Productive',
       },
     },
     env: 'production',
@@ -384,12 +301,12 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       maxComplexity: 20,
     },
     healthCheck: {
-      enabled: true,
       configs: {
         database: {
           enabled: true,
         },
       },
+      enabled: true,
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
@@ -397,11 +314,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       // also the JWT secret should be different from the Refresh secret!
       // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
-      // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_PROD',
-      signInOptions: {
-        expiresIn: '15m',
-      },
       refresh: {
         renewal: true,
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
@@ -412,6 +324,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         },
       },
       sameTokenIdPeriod: 2000,
+      // tslint:disable-next-line:max-line-length
+      secret: 'SECRET_OR_PRIVATE_KEY_PROD',
+      signInOptions: {
+        expiresIn: '15m',
+      },
     },
     loadLocalConfig: false,
     logExceptions: true,
@@ -421,12 +338,95 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     port: 3000,
     sha256: true,
     staticAssets: {
-      path: join(__dirname, '..', 'public'),
       options: { prefix: '' },
+      path: join(__dirname, '..', 'public'),
     },
     templates: {
-      path: join(__dirname, 'assets', 'templates'),
       engine: 'ejs',
+      path: join(__dirname, 'assets', 'templates'),
+    },
+  },
+
+  // ===========================================================================
+  // Production environment
+  // ===========================================================================
+  test: {
+    automaticObjectIdFiltering: true,
+    compression: true,
+    cookies: false,
+    email: {
+      defaultSender: {
+        email: 'cade72@ethereal.email',
+        name: 'Nest Server Starter Test',
+      },
+      smtp: {
+        auth: {
+          pass: 'jpvTwGYeSajEqDvRKT',
+          user: 'cade72@ethereal.email',
+        },
+        host: 'mailhog.lenne.tech',
+        port: 1025,
+        secure: false,
+      },
+    },
+    env: 'test',
+    execAfterInit: 'npm run docs:bootstrap',
+    filter: {
+      maxLimit: null,
+    },
+    graphQl: {
+      driver: {
+        introspection: true,
+        playground: true,
+      },
+      maxComplexity: 20,
+    },
+    healthCheck: {
+      configs: {
+        database: {
+          enabled: true,
+        },
+      },
+      enabled: true,
+    },
+    ignoreSelectionsForPopulate: true,
+    jwt: {
+      // Each secret should be unique and not reused in other environments,
+      // also the JWT secret should be different from the Refresh secret!
+      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+      refresh: {
+        renewal: true,
+        // Each secret should be unique and not reused in other environments,
+        // also the JWT secret should be different from the Refresh secret!
+        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
+        // tslint:disable-next-line:max-line-length
+        secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH',
+        signInOptions: {
+          expiresIn: '7d',
+        },
+      },
+      sameTokenIdPeriod: 2000,
+      // tslint:disable-next-line:max-line-length
+      secret: 'SECRET_OR_PRIVATE_KEY_TEST',
+      signInOptions: {
+        expiresIn: '15m',
+      },
+    },
+    loadLocalConfig: false,
+    logExceptions: true,
+    mongoose: {
+      uri: 'mongodb://overlay_mongo1/nest-server-test',
+    },
+    port: 3000,
+    sha256: true,
+    staticAssets: {
+      options: { prefix: '' },
+      path: join(__dirname, '..', 'public'),
+    },
+    templates: {
+      engine: 'ejs',
+      path: join(__dirname, 'assets', 'templates'),
     },
   },
 };

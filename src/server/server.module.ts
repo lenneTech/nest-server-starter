@@ -2,6 +2,7 @@ import { Any, CheckSecurityInterceptor, CoreAuthService, CoreModule, DateScalar,
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+
 import envConfig from '../config.env';
 import { CronJobs } from './common/services/cron-jobs.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -16,6 +17,12 @@ import { ServerController } from './server.controller';
  * for the project API
  */
 @Module({
+  // Include REST controllers
+  controllers: [ServerController],
+
+  // Export modules for reuse in other modules
+  exports: [CoreModule, AuthModule, MetaModule, FileModule],
+
   // Include modules
   imports: [
     // Include CoreModule for standard processes
@@ -46,11 +53,5 @@ import { ServerController } from './server.controller';
       useClass: CheckSecurityInterceptor,
     },
   ],
-
-  // Include REST controllers
-  controllers: [ServerController],
-
-  // Export modules for reuse in other modules
-  exports: [CoreModule, AuthModule, MetaModule, FileModule],
 })
 export class ServerModule {}
