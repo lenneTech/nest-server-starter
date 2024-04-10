@@ -168,7 +168,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     loadLocalConfig: false,
     logExceptions: true,
     mongoose: {
-      modelDocumentation: true,
+      modelDocumentation: false,
       uri: 'mongodb://127.0.0.1/nest-server-local',
     },
     port: 3000,
