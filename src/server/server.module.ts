@@ -1,6 +1,5 @@
-import { Any, CheckSecurityInterceptor, CoreAuthService, CoreModule, DateScalar, JSON } from '@lenne.tech/nest-server';
+import { Any, CoreAuthService, CoreModule, DateScalar, JSON } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import envConfig from '../config.env';
@@ -48,10 +47,6 @@ import { ServerController } from './server.controller';
     CronJobs,
     DateScalar,
     JSON,
-    {
-      provide: APP_INTERCEPTOR,
-      useClass: CheckSecurityInterceptor,
-    },
   ],
 })
 export class ServerModule {}

@@ -5,7 +5,7 @@ import { Document, Schema } from 'mongoose';
 
 import { PersistenceModel } from '../../common/models/persistence.model';
 
-export type UserDocument = User & Document;
+export type UserDocument = Document & User;
 
 /**
  * User model

@@ -79,6 +79,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-develop',
     },
     port: 3000,
+    security: {
+      checkResponseInterceptor: true,
+      checkSecurityInterceptor: true,
+      mapAndValidatePipe: true,
+    },
     sha256: true,
     staticAssets: {
       options: { prefix: '' },
@@ -172,6 +177,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://127.0.0.1/nest-server-local',
     },
     port: 3000,
+    security: {
+      checkResponseInterceptor: true,
+      checkSecurityInterceptor: true,
+      mapAndValidatePipe: true,
+    },
     sha256: true,
     staticAssets: {
       options: { prefix: '' },
@@ -255,6 +265,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-preview',
     },
     port: 3000,
+    security: {
+      checkResponseInterceptor: true,
+      checkSecurityInterceptor: true,
+      mapAndValidatePipe: true,
+    },
     sha256: true,
     staticAssets: {
       options: { prefix: '' },
@@ -336,6 +351,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-prod',
     },
     port: 3000,
+    security: {
+      checkResponseInterceptor: true,
+      checkSecurityInterceptor: true,
+      mapAndValidatePipe: true,
+    },
     sha256: true,
     staticAssets: {
       options: { prefix: '' },
@@ -419,6 +439,11 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       uri: 'mongodb://overlay_mongo1/nest-server-test',
     },
     port: 3000,
+    security: {
+      checkResponseInterceptor: true,
+      checkSecurityInterceptor: true,
+      mapAndValidatePipe: true,
+    },
     sha256: true,
     staticAssets: {
       options: { prefix: '' },
