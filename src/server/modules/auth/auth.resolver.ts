@@ -1,4 +1,10 @@
-import { ConfigService, CoreAuthResolver, GraphQLServiceOptions, ServiceOptions } from '@lenne.tech/nest-server';
+import {
+  ConfigService,
+  CoreAuthResolver,
+  GraphQLServiceOptions,
+  RoleEnum, Roles,
+  ServiceOptions,
+} from '@lenne.tech/nest-server';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
 import { Response as ResponseType } from 'express';
 
@@ -10,6 +16,7 @@ import { AuthSignUpInput } from './inputs/auth-sign-up.input';
 /**
  * Authentication resolver for the sign in
  */
+@Roles(RoleEnum.ADMIN)
 @Resolver(() => Auth)
 export class AuthResolver extends CoreAuthResolver {
   /**
@@ -25,6 +32,7 @@ export class AuthResolver extends CoreAuthResolver {
   /**
    * SignIn for User
    */
+  @Roles(RoleEnum.S_EVERYONE)
   @Mutation(() => Auth, { description: 'Sign in and get JWT token' })
   override async signIn(
     @GraphQLServiceOptions({ gqlPath: 'signIn.user' }) serviceOptions: ServiceOptions,
@@ -41,6 +49,7 @@ export class AuthResolver extends CoreAuthResolver {
   /**
    * Sign up for user
    */
+  @Roles(RoleEnum.S_EVERYONE)
   @Mutation(() => Auth, {
     description: 'Sign up user and get JWT token',
   })

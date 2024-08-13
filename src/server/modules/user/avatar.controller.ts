@@ -10,6 +10,7 @@ import { UserService } from './user.service';
 /**
  * Controller for avatar
  */
+@Roles(RoleEnum.ADMIN)
 @Controller('avatar')
 export class AvatarController {
   /**

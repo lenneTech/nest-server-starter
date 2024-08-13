@@ -1,4 +1,4 @@
-import { CorePersistenceModel } from '@lenne.tech/nest-server';
+import { CorePersistenceModel, Restricted, RoleEnum } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Prop } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
@@ -12,6 +12,7 @@ import mongoose = require('mongoose');
  *
  * The models are a combination of MikroORM Entities and TypeGraphQL Types
  */
+@Restricted(RoleEnum.ADMIN)
 @ObjectType({
   description: 'Persistence model which will be saved in DB',
   isAbstract: true,
@@ -26,6 +27,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
    *
    * Not set when created by system
    */
+  @Restricted(RoleEnum.ADMIN)
   @Field(() => User, {
     description: 'ID of the user who created the object',
     nullable: true,
@@ -38,6 +40,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
    *
    * Not set when updated by system
    */
+  @Restricted(RoleEnum.ADMIN)
   @Field(() => User, {
     description: 'ID of the user who updated the object',
     nullable: true,
