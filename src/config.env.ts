@@ -39,7 +39,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
-      maxComplexity: 20,
+      maxComplexity: 1000,
     },
     healthCheck: {
       configs: {
@@ -142,7 +142,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
-      maxComplexity: 20,
+      maxComplexity: 1000,
     },
     healthCheck: {
       configs: {
@@ -239,7 +239,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
-      maxComplexity: 20,
+      maxComplexity: 1000,
     },
     healthCheck: {
       configs: {
@@ -334,7 +334,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: false,
       },
-      maxComplexity: 20,
+      maxComplexity: 1000,
     },
     healthCheck: {
       configs: {
@@ -427,7 +427,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         introspection: true,
         playground: true,
       },
-      maxComplexity: 20,
+      maxComplexity: 1000,
     },
     healthCheck: {
       configs: {
