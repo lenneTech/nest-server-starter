@@ -8,7 +8,7 @@ import { join } from 'path';
  */
 export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
-  // Local environment
+  // Develop environment
   // ===========================================================================
   develop: {
     automaticObjectIdFiltering: true,
@@ -103,7 +103,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   },
 
   // ===========================================================================
-  // Develop environment
+  // Local environment
   // ===========================================================================
   local: {
     automaticObjectIdFiltering: true,
@@ -208,7 +208,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   },
 
   // ===========================================================================
-  // Test environment
+  // Preview environment
   // ===========================================================================
   preview: {
     automaticObjectIdFiltering: true,
@@ -303,7 +303,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   },
 
   // ===========================================================================
-  // Preview environment
+  // Production environment
   // ===========================================================================
   production: {
     automaticObjectIdFiltering: true,
@@ -396,7 +396,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   },
 
   // ===========================================================================
-  // Production environment
+  // Test environment
   // ===========================================================================
   test: {
     automaticObjectIdFiltering: true,

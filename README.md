@@ -118,6 +118,32 @@ Use [yalc](https://github.com/wclr/yalc) to include the NestJS server in the pro
 3. link the nest server live package to this project via `npm run link:nest-server` and start the server: `npm start`
 4. unlink the nest-server live package and use the normal package again when you are done: `npm run unlink:nest-server`
 
+## Deployment with deploy.party
+
+This project is prepared for deployment with deploy.party.
+
+Example configuration for deploy.party (productive):
+
+| Key                  | Value                                              |
+|----------------------|----------------------------------------------------|
+| Source               | GitLab                                             |  
+| Repository           | my-repo                                            |
+| Branch               | main                                               |
+| Registry             | localhost                                          |
+| Name                 | api                                                |
+| URL                  | api.my-domain.com                                  |
+| Type                 | Node                                               |
+| Base image           | node:20                                            |
+| Custom image command | RUN apt-get install -y tzdata curl                 |
+|                      | ENV TZ Europe/Berlin                               |
+| Base directory       | ./projects/api                                     |
+| Install command      | npm install                                        |
+| Build command        | npm run build                                      |
+| Start command        | npm run dp:prod                                    |
+| Healthcheck command  | curl --fail http://localhost:3000/meta \|\| exit 1 |
+| Port                 | 3000                                               |
+| Enable SSL           | true                                               |
+
 ## Documentation
 The API and developer documentation can automatically be generated.
 
