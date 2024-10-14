@@ -5,8 +5,6 @@ import { join } from 'path';
 /**
  * Configuration for the different environments
  * See: https://github.com/lenneTech/nest-server/blob/main/src/core/common/interfaces/server-options.interface.ts
- *
- * Set all SECRET_OR_PRIVATE_KEYs at once via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server setConfigSecrets
  */
 export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
@@ -62,15 +60,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     hostname: '127.0.0.1',
     ignoreSelectionsForPopulate: true,
     jwt: {
-      // Each secret should be unique and not reused in other environments,
-      // also the JWT secret should be different from the Refresh secret!
-      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       refresh: {
         renewal: true,
-        // Each secret should be unique and not reused in other environments,
-        // also the JWT secret should be different from the Refresh secret!
-        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_CI_REFRESH',
         signInOptions: {
@@ -158,15 +149,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
-      // Each secret should be unique and not reused in other environments,
-      // also the JWT secret should be different from the Refresh secret!
-      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       refresh: {
         renewal: true,
-        // Each secret should be unique and not reused in other environments,
-        // also the JWT secret should be different from the Refresh secret!
-        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_DEV_REFRESH',
         signInOptions: {
@@ -262,15 +246,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     hostname: '127.0.0.1',
     ignoreSelectionsForPopulate: true,
     jwt: {
-      // Each secret should be unique and not reused in other environments,
-      // also the JWT secret should be different from the Refresh secret!
-      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       refresh: {
         renewal: true,
-        // Each secret should be unique and not reused in other environments,
-        // also the JWT secret should be different from the Refresh secret!
-        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH',
         signInOptions: {
@@ -358,13 +335,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
-      // Each secret should be unique and not reused in other environments,
-      // also the JWT secret should be different from the Refresh secret!
-      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-      // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
       refresh: {
         renewal: true,
-        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_PROD_REFRESH',
         signInOptions: {
@@ -451,15 +423,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     },
     ignoreSelectionsForPopulate: true,
     jwt: {
-      // Each secret should be unique and not reused in other environments,
-      // also the JWT secret should be different from the Refresh secret!
-      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
       refresh: {
         renewal: true,
-        // Each secret should be unique and not reused in other environments,
-        // also the JWT secret should be different from the Refresh secret!
-        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
-        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
         secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH',
         signInOptions: {
