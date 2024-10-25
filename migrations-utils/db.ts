@@ -21,6 +21,9 @@ export const uploadFile = async (
   relativePath,
   options?: { bucketName?: string; filename?: string },
 ): Promise<ObjectId> => {
+  if (!relativePath) {
+    return relativePath;
+  }
   const { bucketName, filename } = {
     bucketName: 'fs',
     filename: relativePath.split('/')[relativePath.split('/').length - 1],
