@@ -162,6 +162,6 @@ export class UserResolver {
     resolve: user => user,
   })
   async userCreated() {
-    return this.pubSub.asyncIterator('userCreated');
+    return this.pubSub.asyncIterableIterator('userCreated');
   }
 }
