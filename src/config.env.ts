@@ -97,10 +97,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         debug: false,
         ignoreUndefined: true,
         mergeRoles: true,
+        noteCheckedObjects: true,
         removeUndefinedFromResultArray: true,
         throwError: false,
       },
-      checkSecurityInterceptor: true,
+      checkSecurityInterceptor: {
+        debug: false,
+        noteCheckedObjects: true,
+      },
       mapAndValidatePipe: true,
     },
     sha256: true,
@@ -192,10 +196,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         debug: false,
         ignoreUndefined: true,
         mergeRoles: true,
+        noteCheckedObjects: true,
         removeUndefinedFromResultArray: true,
         throwError: false,
       },
-      checkSecurityInterceptor: true,
+      checkSecurityInterceptor: {
+        debug: false,
+        noteCheckedObjects: true,
+      },
       mapAndValidatePipe: true,
     },
     sha256: true,
@@ -297,10 +305,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         debug: false,
         ignoreUndefined: true,
         mergeRoles: true,
+        noteCheckedObjects: true,
         removeUndefinedFromResultArray: true,
         throwError: false,
       },
-      checkSecurityInterceptor: true,
+      checkSecurityInterceptor: {
+        debug: false,
+        noteCheckedObjects: true,
+      },
       mapAndValidatePipe: true,
     },
     sha256: true,
@@ -390,10 +402,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         debug: false,
         ignoreUndefined: true,
         mergeRoles: true,
+        noteCheckedObjects: true,
         removeUndefinedFromResultArray: true,
         throwError: false,
       },
-      checkSecurityInterceptor: true,
+      checkSecurityInterceptor: {
+        debug: false,
+        noteCheckedObjects: true,
+      },
       mapAndValidatePipe: true,
     },
     sha256: true,
@@ -485,10 +501,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         debug: false,
         ignoreUndefined: true,
         mergeRoles: true,
+        noteCheckedObjects: true,
         removeUndefinedFromResultArray: true,
         throwError: false,
       },
-      checkSecurityInterceptor: true,
+      checkSecurityInterceptor: {
+        debug: false,
+        noteCheckedObjects: true,
+      },
       mapAndValidatePipe: true,
     },
     sha256: true,
@@ -516,31 +536,31 @@ if (envConfig.loadLocalConfig) {
   let localConfig;
   if (typeof envConfig.loadLocalConfig === 'string') {
     import(envConfig.loadLocalConfig)
-      .then((loadedConfig) => {
-        localConfig = loadedConfig.default || loadedConfig;
-        merge(envConfig, localConfig);
-      })
-      .catch(() => {
-        console.info(`Configuration ${envConfig.loadLocalConfig} not found!`);
-      });
+    .then((loadedConfig) => {
+      localConfig = loadedConfig.default || loadedConfig;
+      merge(envConfig, localConfig);
+    })
+    .catch(() => {
+      console.info(`Configuration ${envConfig.loadLocalConfig} not found!`);
+    });
   } else {
     // get config from src directory
     import(join(__dirname, 'config.json'))
+    .then((loadedConfig) => {
+      localConfig = loadedConfig.default || loadedConfig;
+      merge(envConfig, localConfig);
+    })
+    .catch(() => {
+      // if not found try to find in project directory
+      import(join(__dirname, '..', 'config.json'))
       .then((loadedConfig) => {
         localConfig = loadedConfig.default || loadedConfig;
         merge(envConfig, localConfig);
       })
       .catch(() => {
-        // if not found try to find in project directory
-        import(join(__dirname, '..', 'config.json'))
-          .then((loadedConfig) => {
-            localConfig = loadedConfig.default || loadedConfig;
-            merge(envConfig, localConfig);
-          })
-          .catch(() => {
-            console.info('No local config.json found!');
-          });
+        console.info('No local config.json found!');
       });
+    });
   }
 }
 
