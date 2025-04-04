@@ -5,9 +5,9 @@ import { Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
 /**
  * File info model
  */
-@Restricted(RoleEnum.ADMIN)
-@ObjectType({ description: 'Information about file' })
 @MongooseSchema({ collection: 'fs.files' })
+@ObjectType({ description: 'Information about file' })
+@Restricted(RoleEnum.ADMIN)
 export class FileInfo extends CoreFileInfo {}
 
 /**

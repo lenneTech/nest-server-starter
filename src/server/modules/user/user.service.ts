@@ -10,8 +10,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { PubSub } from 'graphql-subscriptions';
 import { Model } from 'mongoose';
 
-import { UserInput } from './inputs/user.input';
 import { UserCreateInput } from './inputs/user-create.input';
+import { UserInput } from './inputs/user.input';
 import { User, UserDocument } from './user.model';
 
 import fs = require('fs');

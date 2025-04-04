@@ -7,8 +7,8 @@ import { MetaService } from './meta.service';
 /**
  * Resolver to process with metadata
  */
-@Roles(RoleEnum.ADMIN)
 @Resolver(() => Meta)
+@Roles(RoleEnum.ADMIN)
 export class MetaResolver {
   /**
    * Import services
@@ -22,8 +22,8 @@ export class MetaResolver {
   /**
    * Get Meta via ID
    */
-  @Roles(RoleEnum.S_EVERYONE)
   @Query(() => Meta, { description: 'Get Meta' })
+  @Roles(RoleEnum.S_EVERYONE)
   async getMeta(): Promise<Meta> {
     return await this.metaService.get();
   }

@@ -4,8 +4,8 @@ import { Field, ObjectType } from '@nestjs/graphql';
 /**
  * Meta model
  */
-@Restricted(RoleEnum.ADMIN)
 @ObjectType({ description: 'Metadata of API' })
+@Restricted(RoleEnum.ADMIN)
 export class Meta extends CoreModel {
   // ===================================================================================================================
   // Properties
@@ -14,29 +14,29 @@ export class Meta extends CoreModel {
   /**
    * Environment of API
    */
-  @Restricted(RoleEnum.S_EVERYONE)
   @Field({ description: 'Environment of API' })
+  @Restricted(RoleEnum.S_EVERYONE)
   environment: string = undefined;
 
   /**
    * Name of API
    */
-  @Restricted(RoleEnum.S_EVERYONE)
   @Field({ description: 'Title of API' })
+  @Restricted(RoleEnum.S_EVERYONE)
   title: string = undefined;
 
   /**
    * Package title of API
    */
-  @Restricted(RoleEnum.S_EVERYONE)
   @Field({ description: 'Package name of API' })
+  @Restricted(RoleEnum.S_EVERYONE)
   package: string = undefined;
 
   /**
    * Version of API
    */
-  @Restricted(RoleEnum.S_EVERYONE)
   @Field({ description: 'Version of API' })
+  @Restricted(RoleEnum.S_EVERYONE)
   version: string = undefined;
 
   // ===================================================================================================================

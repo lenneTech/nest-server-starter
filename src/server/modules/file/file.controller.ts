@@ -18,8 +18,8 @@ import { FileService } from './file.service';
 /**
  * File controller for
  */
-@Roles(RoleEnum.ADMIN)
 @Controller('files')
+@Roles(RoleEnum.ADMIN)
 export class FileController {
   /**
    * Import services
@@ -29,8 +29,8 @@ export class FileController {
   /**
    * Upload file
    */
-  @Roles(RoleEnum.ADMIN)
   @Post('upload')
+  @Roles(RoleEnum.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
   uploadFile(@UploadedFile() file: Express.Multer.File): any {
     return file;
@@ -39,8 +39,8 @@ export class FileController {
   /**
    * Download file
    */
-  @Roles(RoleEnum.ADMIN)
   @Get(':id')
+  @Roles(RoleEnum.ADMIN)
   async getFile(@Param('id') id: string, @Res() res) {
     if (!id) {
       throw new UnprocessableEntityException();
@@ -66,8 +66,8 @@ export class FileController {
   /**
    * Get file information
    */
-  @Roles(RoleEnum.ADMIN)
   @Get('info/:id')
+  @Roles(RoleEnum.ADMIN)
   async getFileInfo(@Param('id') id: string) {
     return await this.fileService.getFileInfo(id);
   }
@@ -75,8 +75,8 @@ export class FileController {
   /**
    * Delete file
    */
-  @Roles(RoleEnum.ADMIN)
   @Delete(':id')
+  @Roles(RoleEnum.ADMIN)
   async deleteFile(@Param('id') id: string) {
     if (!id) {
       throw new UnprocessableEntityException();

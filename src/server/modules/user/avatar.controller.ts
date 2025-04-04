@@ -1,4 +1,4 @@
-import { CurrentUser, RoleEnum, Roles, multerOptionsForImageUpload } from '@lenne.tech/nest-server';
+import { CurrentUser, multerOptionsForImageUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Controller } from '@nestjs/common/decorators/core/controller.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -10,8 +10,8 @@ import { UserService } from './user.service';
 /**
  * Controller for avatar
  */
-@Roles(RoleEnum.ADMIN)
 @Controller('avatar')
+@Roles(RoleEnum.ADMIN)
 export class AvatarController {
   /**
    * Import services
@@ -21,8 +21,8 @@ export class AvatarController {
   /**
    * Upload files
    */
-  @Roles(RoleEnum.S_USER)
   @Post('upload')
+  @Roles(RoleEnum.S_USER)
   @UseInterceptors(
     FileInterceptor(
       'file',

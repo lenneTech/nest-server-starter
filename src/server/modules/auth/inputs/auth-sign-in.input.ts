@@ -4,8 +4,8 @@ import { InputType } from '@nestjs/graphql';
 /**
  * SignIn input
  */
-@Restricted(RoleEnum.ADMIN)
 @InputType({ description: 'Sign-in input' })
+@Restricted(RoleEnum.ADMIN)
 export class AuthSignInInput extends CoreAuthSignInInput {
   // Extend UserInput here
 }

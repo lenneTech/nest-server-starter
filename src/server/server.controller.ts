@@ -5,14 +5,14 @@ import { MetaService } from './modules/meta/meta.service';
 
 import metaData = require('../meta.json');
 
-@Roles(RoleEnum.ADMIN)
 @Controller()
+@Roles(RoleEnum.ADMIN)
 export class ServerController {
   constructor(protected configService: ConfigService, protected metaService: MetaService) {}
 
-  @Roles(RoleEnum.S_EVERYONE)
   @Get()
   @Render('index')
+  @Roles(RoleEnum.S_EVERYONE)
   root() {
     // meta.json can be overwritten during the build process
     return {
@@ -23,8 +23,8 @@ export class ServerController {
     };
   }
 
-  @Roles(RoleEnum.S_EVERYONE)
   @Get('meta')
+  @Roles(RoleEnum.S_EVERYONE)
   meta() {
     return this.metaService.get();
   }

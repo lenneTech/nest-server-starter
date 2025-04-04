@@ -3,8 +3,8 @@ import { Controller } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 
-@Roles(RoleEnum.ADMIN)
 @Controller('auth')
+@Roles(RoleEnum.ADMIN)
 export class AuthController extends CoreAuthController {
   /**
    * Import project services

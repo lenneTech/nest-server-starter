@@ -1,4 +1,4 @@
-import { IServerOptions, getEnvironmentConfig } from '@lenne.tech/nest-server';
+import { getEnvironmentConfig, IServerOptions } from '@lenne.tech/nest-server';
 import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
