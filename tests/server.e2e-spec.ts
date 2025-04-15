@@ -1,9 +1,9 @@
 import {
   ComparisonOperatorEnum,
   ConfigService,
+  getPlain,
   HttpExceptionLogFilter,
-  TestGraphQLType,
-  TestHelper, getPlain,
+  TestGraphQLType, TestHelper,
 } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PubSub } from 'graphql-subscriptions';
@@ -19,8 +19,8 @@ import metaData = require('../src/meta.json');
 
 describe('ServerModule (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
-  const log = true; // eslint-disable-line unused-imports/no-unused-vars
-  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
+  const log = true;
+  const logError = true;
 
   // Test environment properties
   const port = 3030;
@@ -229,6 +229,66 @@ describe('ServerModule (e2e)', () => {
     });
     expect(res).toEqual(true);
     gPassword = `new${gPassword}`;
+  });
+
+  /**
+   * Test if swagger error-structure mirrors the actual error structure
+   */
+  it('Try sign in without input', async () => {
+    const res: any = await testHelper.rest('/auth/signin', { log, logError, method: 'POST', statusCode: 400 });
+    expect(res).toMatchObject({
+      message: 'Missing input',
+      name: 'BadRequestException',
+      response: {
+        error: 'Bad Request',
+        message: 'Missing input',
+        statusCode: 400,
+      },
+      status: 400,
+    });
+  });
+
+  /**
+   * Test if swagger error-structure mirrors the actual error structure
+   */
+  it('Validates common-error structure', async () => {
+    const res: any = await testHelper.rest('/auth/signin', { method: 'POST', payload: {}, statusCode: 400 });
+
+    // Test for generic object equality
+    expect(res).toMatchObject({
+      message: expect.any(String),
+      name: expect.any(String),
+      options: expect.any(Object),
+      response: {
+        email: {
+          isEmail: expect.any(String),
+          isNotEmpty: expect.any(String),
+        },
+        password: {
+          isNotEmpty: expect.any(String),
+          isString: expect.any(String),
+        },
+      },
+      status: expect.any(Number),
+    });
+
+    // Test for concrete values
+    expect(res).toMatchObject({
+      message: 'Bad Request Exception',
+      name: 'BadRequestException',
+      options: {},
+      response: {
+        email: {
+          isEmail: 'email must be an email',
+          isNotEmpty: 'email should not be empty',
+        },
+        password: {
+          isNotEmpty: 'password should not be empty',
+          isString: 'password must be a string',
+        },
+      },
+      status: 400,
+    });
   });
 
   /**
