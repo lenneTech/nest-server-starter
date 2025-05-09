@@ -1,12 +1,11 @@
 import { FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { createWriteStream } from 'fs';
+import fs = require('fs');
+import GraphQLUpload = require('graphql-upload/GraphQLUpload.js');
 
 import { FileInfo } from './file-info.model';
 import { FileService } from './file.service';
-
-import fs = require('fs');
-import GraphQLUpload = require('graphql-upload/GraphQLUpload.js');
 
 /**
  * File resolver

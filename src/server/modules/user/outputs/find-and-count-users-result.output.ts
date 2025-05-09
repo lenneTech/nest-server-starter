@@ -1,5 +1,5 @@
-import { Restricted, RoleEnum } from '@lenne.tech/nest-server';
-import { Field, ObjectType } from '@nestjs/graphql';
+import { Restricted, RoleEnum, UnifiedField } from '@lenne.tech/nest-server';
+import { ObjectType } from '@nestjs/graphql';
 
 import { User } from '../user.model';
 
@@ -7,11 +7,16 @@ import { User } from '../user.model';
 @Restricted(RoleEnum.ADMIN)
 export class FindAndCountUsersResult {
 
-  @Field(() => [User], { description: 'Found users' })
-  @Restricted(RoleEnum.S_EVERYONE)
+  @UnifiedField({
+    array: true,
+    description: 'Found users',
+    type: () => User,
+  })
   items: User[];
 
-  @Field({ description: 'Total count (skip/offset and limit/take are ignored in the count)' })
-  @Restricted(RoleEnum.S_EVERYONE)
+  @UnifiedField({
+    description: 'Total count (skip/offset and limit/take are ignored in the count)',
+    isOptional: false,
+  })
   totalCount: number;
 }

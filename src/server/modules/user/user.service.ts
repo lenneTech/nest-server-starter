@@ -7,14 +7,13 @@ import {
 } from '@lenne.tech/nest-server';
 import { Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
 import { Model } from 'mongoose';
 
 import { UserCreateInput } from './inputs/user-create.input';
 import { UserInput } from './inputs/user.input';
 import { User, UserDocument } from './user.model';
-
-import fs = require('fs');
 
 /**
  * User service

@@ -2,10 +2,9 @@ import { CorePersistenceModel, Restricted, RoleEnum } from '@lenne.tech/nest-ser
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Prop } from '@nestjs/mongoose';
 import { Types } from 'mongoose';
+import mongoose = require('mongoose');
 
 import { User } from '../../modules/user/user.model';
-
-import mongoose = require('mongoose');
 
 /**
  * Metadata for persistent objects

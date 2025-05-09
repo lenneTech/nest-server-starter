@@ -1,17 +1,16 @@
 import { HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
+import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
 import { MongoClient, ObjectId } from 'mongodb';
+import path = require('path');
 
 import envConfig from '../src/config.env';
 import { FileInfo } from '../src/server/modules/file/file-info.model';
 import { User } from '../src/server/modules/user/user.model';
 import { UserService } from '../src/server/modules/user/user.service';
 import { ServerModule } from '../src/server/server.module';
-
-import fs = require('fs');
-import path = require('path');
 
 describe('File (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
@@ -28,7 +27,7 @@ describe('File (e2e)', () => {
 
   // Global vars
   let userService: UserService;
-  const users: Partial<{ token: string } & User>[] = [];
+  const users: Partial<User & { token: string }>[] = [];
   let fileInfo: FileInfo;
   let fileContent: string;
 

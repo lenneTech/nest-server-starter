@@ -1,9 +1,8 @@
 import { ConfigService, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Controller, Get, Render } from '@nestjs/common';
 
-import { MetaService } from './modules/meta/meta.service';
-
 import metaData = require('../meta.json');
+import { MetaService } from './modules/meta/meta.service';
 
 @Controller()
 @Roles(RoleEnum.ADMIN)
