@@ -32,7 +32,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
   })
   @Prop({ ref: 'User', type: mongoose.Schema.Types.ObjectId })
   @Restricted(RoleEnum.ADMIN)
-  createdBy?: string | Types.ObjectId = undefined;
+  createdBy?: string | Types.ObjectId;
 
   /**
    * ID of the user who updated the object
@@ -45,7 +45,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
   })
   @Prop({ ref: 'User', type: mongoose.Schema.Types.ObjectId })
   @Restricted(RoleEnum.ADMIN)
-  updatedBy?: string | Types.ObjectId = undefined;
+  updatedBy?: string | Types.ObjectId;
 
   // ===================================================================================================================
   // Methods

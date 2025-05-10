@@ -18,7 +18,7 @@ export class Auth extends CoreAuthModel {
    */
   @Field(() => User, { description: 'User who signed in' })
   @Restricted(RoleEnum.S_EVERYONE)
-  override user: User = undefined;
+  declare user: User;
 
   // ===================================================================================================================
   // Methods

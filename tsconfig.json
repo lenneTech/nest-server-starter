@@ -16,7 +16,8 @@
     "incremental": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "noImplicitOverride": true
+    "noImplicitOverride": true,
+    "useDefineForClassFields": true,
   },
   "exclude": ["node_modules", "dist"]
 }

@@ -16,12 +16,12 @@ export class AuthSignUpInput extends CoreAuthSignUpInput {
     isOptional: true,
     roles: RoleEnum.S_EVERYONE,
   })
-  firstName: string = undefined;
+  firstName: string;
 
   @UnifiedField({
     description: 'lastName',
     isOptional: true,
     roles: RoleEnum.S_EVERYONE,
   })
-  lastName: string = undefined;
+  lastName: string;
 }

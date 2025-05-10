@@ -16,28 +16,28 @@ export class Meta extends CoreModel {
    */
   @Field({ description: 'Environment of API' })
   @Restricted(RoleEnum.S_EVERYONE)
-  environment: string = undefined;
+  environment: string;
 
   /**
    * Name of API
    */
   @Field({ description: 'Title of API' })
   @Restricted(RoleEnum.S_EVERYONE)
-  title: string = undefined;
+  title: string;
 
   /**
    * Package title of API
    */
   @Field({ description: 'Package name of API' })
   @Restricted(RoleEnum.S_EVERYONE)
-  package: string = undefined;
+  package: string;
 
   /**
    * Version of API
    */
   @Field({ description: 'Version of API' })
   @Restricted(RoleEnum.S_EVERYONE)
-  version: string = undefined;
+  version: string;
 
   // ===================================================================================================================
   // Methods

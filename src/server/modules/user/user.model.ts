@@ -25,7 +25,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   @Field({ description: 'URL to avatar file of the user', nullable: true })
   @Prop()
   @Restricted(RoleEnum.S_EVERYONE)
-  avatar: string = undefined;
+  avatar: string;
 
   /**
    * ID of the user who created the object
@@ -38,7 +38,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   })
   @Prop({ ref: 'User', type: Schema.Types.ObjectId })
   @Restricted(RoleEnum.S_EVERYONE)
-  createdBy: string = undefined;
+  createdBy: string;
 
   /**
    * E-Mail address of the user
@@ -47,7 +47,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   @IsEmail()
   @Prop({ lowercase: true, trim: true, unique: true })
   @Restricted(RoleEnum.S_EVERYONE)
-  override email: string = undefined;
+  declare email: string;
 
   /**
    * Roles of the user
@@ -56,7 +56,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   @IsOptional()
   @Prop([String])
   @Restricted(RoleEnum.S_EVERYONE)
-  override roles: string[] = undefined;
+  declare roles: string[];
 
   /**
    * ID of the user who updated the object
@@ -69,7 +69,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   })
   @Prop({ ref: 'User', type: Schema.Types.ObjectId })
   @Restricted(RoleEnum.S_USER)
-  updatedBy: string = undefined;
+  updatedBy: string;
 
   // ===================================================================================================================
   // Methods
