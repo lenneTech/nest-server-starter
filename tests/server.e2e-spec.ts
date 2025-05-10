@@ -14,7 +14,7 @@ import metaData = require('../src/meta.json');
 import { UserCreateInput } from '../src/server/modules/user/inputs/user-create.input';
 import { User } from '../src/server/modules/user/user.model';
 import { UserService } from '../src/server/modules/user/user.service';
-import { ServerModule } from '../src/server/server.module';
+import { imports, ServerModule } from '../src/server/server.module';
 
 describe('ServerModule (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
@@ -60,7 +60,10 @@ describe('ServerModule (e2e)', () => {
     try {
       // Start server for testing
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [ServerModule],
+        imports: [
+          ...imports,
+          ServerModule,
+        ],
         providers: [
           UserService,
           {

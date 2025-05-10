@@ -9,6 +9,25 @@ import { FileModule } from './modules/file/file.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { ServerController } from './server.controller';
 
+// Export imports for reuse (e.g. in tests)
+export const imports = [
+  // Include CoreModule for standard processes
+  CoreModule.forRoot(CoreAuthService, AuthModule.forRoot(envConfig.jwt), envConfig),
+
+  // Include cron job handling
+  ScheduleModule.forRoot(),
+
+  // Include AuthModule for authorization handling,
+  // which will also include UserModule
+  AuthModule.forRoot(envConfig.jwt),
+
+  // Include MetaModule to offer information about the server
+  MetaModule,
+
+  // Include FileModule for file handling
+  FileModule,
+];
+
 /**
  * Server module (dynamic)
  *
@@ -23,23 +42,7 @@ import { ServerController } from './server.controller';
   exports: [CoreModule, AuthModule, MetaModule, FileModule],
 
   // Include modules
-  imports: [
-    // Include CoreModule for standard processes
-    CoreModule.forRoot(CoreAuthService, AuthModule.forRoot(envConfig.jwt), envConfig),
-
-    // Include cron job handling
-    ScheduleModule.forRoot(),
-
-    // Include AuthModule for authorization handling,
-    // which will also include UserModule
-    AuthModule.forRoot(envConfig.jwt),
-
-    // Include MetaModule to offer information about the server
-    MetaModule,
-
-    // Include FileModule for file handling
-    FileModule,
-  ],
+  imports,
 
   // Include services and scalars
   providers: [

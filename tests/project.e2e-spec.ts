@@ -13,7 +13,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 import envConfig from '../src/config.env';
 import { User } from '../src/server/modules/user/user.model';
 import { UserService } from '../src/server/modules/user/user.service';
-import { ServerModule } from '../src/server/server.module';
+import { imports, ServerModule } from '../src/server/server.module';
 
 describe('Project (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
@@ -46,7 +46,10 @@ describe('Project (e2e)', () => {
     }
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [ServerModule],
+        imports: [
+          ...imports,
+          ServerModule,
+        ],
         providers: [
           UserService,
           {

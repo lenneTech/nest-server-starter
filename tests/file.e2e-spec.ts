@@ -10,7 +10,7 @@ import envConfig from '../src/config.env';
 import { FileInfo } from '../src/server/modules/file/file-info.model';
 import { User } from '../src/server/modules/user/user.model';
 import { UserService } from '../src/server/modules/user/user.service';
-import { ServerModule } from '../src/server/server.module';
+import { imports, ServerModule } from '../src/server/server.module';
 
 describe('File (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
@@ -45,7 +45,10 @@ describe('File (e2e)', () => {
     }
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [ServerModule],
+        imports: [
+          ...imports,
+          ServerModule,
+        ],
         providers: [
           UserService,
           {
