@@ -19,6 +19,9 @@ const customRules = patched.map(config => {
       { "allowShortCircuit": true, "allowTernary": true }
     ];
   }
+  if (config.plugins?.['@stylistic']) {
+    config.rules['@stylistic/indent'] = ['error', 2];
+  }
   return config;
 });
 
