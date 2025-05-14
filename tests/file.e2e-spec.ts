@@ -142,8 +142,8 @@ describe('File (e2e)', () => {
    */
   it('prepareUsers', async () => {
     await db
-    .collection('users')
-    .findOneAndUpdate({ _id: new ObjectId(users[0].id) }, { $set: { roles: [RoleEnum.ADMIN] } });
+      .collection('users')
+      .findOneAndUpdate({ _id: new ObjectId(users[0].id) }, { $set: { roles: [RoleEnum.ADMIN] } });
   });
 
   // ===================================================================================================================
