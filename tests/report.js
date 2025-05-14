@@ -25,9 +25,8 @@ class CustomReporter {
   }
 
   onRunComplete() {
-    /* eslint-disable no-console */
-    console.log('--------------------------------------------------------');
-    console.log(`\n ${colors.cyan('Test Cases Overview:')}`);
+    console.debug('--------------------------------------------------------');
+    console.debug(`\n ${colors.cyan('Test Cases Overview:')}`);
 
     const config = {
       failed: { statusColor: colors.red, statusSymbol: '✘', titleDisplay: title => colors.bgRed(title) },
@@ -36,10 +35,10 @@ class CustomReporter {
     };
 
     this.fileResults.forEach(({ duration, file, tests }) => {
-      console.log(colors.blue(`\nTest Suite: ${file} - ${duration}ms`));
+      console.debug(colors.blue(`\nTest Suite: ${file} - ${duration}ms`));
       tests.forEach((test) => {
         const { statusColor, statusSymbol, titleDisplay } = config[test.status];
-        console.log(` ${statusColor(statusSymbol)} ${titleDisplay(test.title)} ${colors.dim(`(${test.duration}ms)`)}`);
+        console.debug(` ${statusColor(statusSymbol)} ${titleDisplay(test.title)} ${colors.dim(`(${test.duration}ms)`)}`);
       });
     });
   }
