@@ -44,6 +44,7 @@ describe('ServerModule (e2e)', () => {
   let gToken: string;
   let gRefreshToken: string;
   let gLastRefreshRequestTime: number;
+  let gUpdatedTs: number;
 
   // ===================================================================================================================
   // Preparations
@@ -304,7 +305,7 @@ describe('ServerModule (e2e)', () => {
           password: gPassword,
         },
       },
-      fields: ['token', 'refreshToken', { user: ['id', 'email'] }],
+      fields: ['token', 'refreshToken', { user: ['id', 'email', 'createdAt', 'createdTs', 'updatedAt', 'updatedTs'] }],
       name: 'signIn',
       type: TestGraphQLType.MUTATION,
     });
@@ -312,8 +313,14 @@ describe('ServerModule (e2e)', () => {
     expect(res.user.email).toEqual(gEmail);
     expect(res.token.length).toBeGreaterThan(0);
     expect(res.refreshToken.length).toBeGreaterThan(0);
+    expect(res.user.createdAt).toBeDefined();
+    expect(new Date(res.user.createdAt).getTime()).toEqual(res.user.createdTs);
+    expect(res.user.updatedAt).toBeDefined();
+    expect(new Date(res.user.updatedAt).getTime()).toEqual(res.user.updatedTs);
+    expect(res.user.updatedTs).toBeGreaterThanOrEqual(res.user.createdTs);
     gToken = res.token;
     gRefreshToken = res.refreshToken;
+    gUpdatedTs = res.user.updatedTs;
   });
 
   /**
@@ -459,7 +466,7 @@ describe('ServerModule (e2e)', () => {
             firstName: 'Jonny',
           },
         },
-        fields: ['id', 'email', 'firstName', 'roles'],
+        fields: ['id', 'email', 'firstName', 'roles', 'createdAt', 'createdTs', 'updatedAt', 'updatedBy', 'updatedTs'],
         name: 'updateUser',
         type: TestGraphQLType.MUTATION,
       },
@@ -469,6 +476,13 @@ describe('ServerModule (e2e)', () => {
     expect(res.email).toEqual(gEmail);
     expect(res.firstName).toEqual('Jonny');
     expect(res.roles.length).toEqual(0);
+    expect(res.createdAt).toBeDefined();
+    expect(new Date(res.createdAt).getTime()).toEqual(res.createdTs);
+    expect(res.updatedBy).toEqual(gId);
+    expect(res.updatedAt).toBeDefined();
+    expect(new Date(res.updatedAt).getTime()).toEqual(res.updatedTs);
+    expect(res.updatedTs).toBeGreaterThan(res.createdTs);
+    expect(res.updatedTs).toBeGreaterThan(gUpdatedTs);
   });
 
   /**
