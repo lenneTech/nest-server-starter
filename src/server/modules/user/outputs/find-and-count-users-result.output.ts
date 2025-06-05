@@ -8,8 +8,8 @@ import { User } from '../user.model';
 export class FindAndCountUsersResult {
 
   @UnifiedField({
-    array: true,
     description: 'Found users',
+    isArray: true,
     type: () => User,
   })
   items: User[];
