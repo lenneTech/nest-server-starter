@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.1.10",
+  "version": "11.1.11",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -92,7 +92,7 @@
     "@getbrevo/brevo": "1.0.1",
     "@lenne.tech/mongoose-gridfs": "1.4.2",
     "@lenne.tech/multer-gridfs-storage": "5.0.6",
-    "@lenne.tech/nest-server": "11.1.10",
+    "@lenne.tech/nest-server": "11.1.11",
     "@nestjs/apollo": "13.1.0",
     "@nestjs/common": "11.1.0",
     "@nestjs/core": "11.1.0",
