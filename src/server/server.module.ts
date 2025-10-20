@@ -45,11 +45,6 @@ export const imports = [
   imports,
 
   // Include services and scalars
-  providers: [
-    Any,
-    CronJobs,
-    DateScalar,
-    JSON,
-  ],
+  providers: [Any, CronJobs, DateScalar, JSON],
 })
 export class ServerModule {}

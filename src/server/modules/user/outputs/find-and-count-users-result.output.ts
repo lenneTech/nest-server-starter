@@ -6,7 +6,6 @@ import { User } from '../user.model';
 @ObjectType({ description: 'Result of find and count' })
 @Restricted(RoleEnum.ADMIN)
 export class FindAndCountUsersResult {
-
   @UnifiedField({
     description: 'Found users',
     isArray: true,

@@ -90,7 +90,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     logExceptions: true,
     mongoose: {
       modelDocumentation: false,
-      uri: 'mongodb://mongo:27017/nest-server-ci',
+      uri: 'mongodb://127.0.0.1:27017/nest-server-ci',
     },
     port: 3000,
     security: {

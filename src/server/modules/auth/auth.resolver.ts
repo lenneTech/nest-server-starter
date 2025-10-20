@@ -2,7 +2,8 @@ import {
   ConfigService,
   CoreAuthResolver,
   GraphQLServiceOptions,
-  RoleEnum, Roles,
+  RoleEnum,
+  Roles,
   ServiceOptions,
 } from '@lenne.tech/nest-server';
 import { Args, Context, Mutation, Resolver } from '@nestjs/graphql';
