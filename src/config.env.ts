@@ -329,6 +329,108 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   },
 
   // ===========================================================================
+  // E2E Test environment
+  // ===========================================================================
+  e2e: {
+    automaticObjectIdFiltering: true,
+    compression: true,
+    cookies: false,
+    cronJobs: {},
+    email: {
+      defaultSender: {
+        email: 'cade72@ethereal.email',
+        name: 'Nest Server Starter E2E',
+      },
+      smtp: {
+        auth: {
+          pass: 'jpvTwGYeSajEqDvRKT',
+          user: 'cade72@ethereal.email',
+        },
+        host: 'mailhog.lenne.tech',
+        port: 1025,
+        secure: false,
+      },
+    },
+    env: 'e2e',
+    execAfterInit: 'npm run docs:bootstrap',
+    filter: {
+      maxLimit: null,
+    },
+    graphQl: {
+      driver: {
+        introspection: true,
+        playground: true,
+      },
+      maxComplexity: 1000,
+    },
+    healthCheck: {
+      configs: {
+        database: {
+          enabled: true,
+        },
+      },
+      enabled: true,
+    },
+    hostname: '127.0.0.1',
+    ignoreSelectionsForPopulate: true,
+    jwt: {
+      // Each secret should be unique and not reused in other environments,
+      // also the JWT secret should be different from the Refresh secret!
+      // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+      refresh: {
+        renewal: true,
+        // Each secret should be unique and not reused in other environments,
+        // also the JWT secret should be different from the Refresh secret!
+        // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
+        // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
+        // tslint:disable-next-line:max-line-length
+        secret: 'SECRET_OR_PRIVATE_KEY_E2E_REFRESH',
+        signInOptions: {
+          expiresIn: '7d',
+        },
+      },
+      sameTokenIdPeriod: 2000,
+      // tslint:disable-next-line:max-line-length
+      secret: 'SECRET_OR_PRIVATE_KEY_E2E',
+      signInOptions: {
+        expiresIn: '15m',
+      },
+    },
+    loadLocalConfig: false,
+    logExceptions: true,
+    mongoose: {
+      modelDocumentation: false,
+      uri: 'mongodb://127.0.0.1/nest-server-e2e',
+    },
+    port: 3000,
+    security: {
+      checkResponseInterceptor: {
+        checkObjectItself: false,
+        debug: false,
+        ignoreUndefined: true,
+        mergeRoles: true,
+        noteCheckedObjects: true,
+        removeUndefinedFromResultArray: true,
+        throwError: false,
+      },
+      checkSecurityInterceptor: {
+        debug: false,
+        noteCheckedObjects: true,
+      },
+      mapAndValidatePipe: true,
+    },
+    sha256: true,
+    staticAssets: {
+      options: { prefix: '' },
+      path: join(__dirname, '..', 'public'),
+    },
+    templates: {
+      engine: 'ejs',
+      path: join(__dirname, 'assets', 'templates'),
+    },
+  },
+
+  // ===========================================================================
   // Production environment
   // ===========================================================================
   production: {
