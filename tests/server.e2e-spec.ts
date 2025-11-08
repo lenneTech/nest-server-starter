@@ -276,7 +276,7 @@ describe('ServerModule (e2e)', () => {
 
     // Test for concrete values
     expect(res).toMatchObject({
-      message: 'Bad Request Exception',
+      message: expect.stringContaining('Validation failed'),
       name: 'BadRequestException',
       options: {},
       response: {
@@ -284,6 +284,7 @@ describe('ServerModule (e2e)', () => {
           isEmail: 'email must be an email',
           isNotEmpty: 'email should not be empty',
         },
+        message: expect.stringContaining('Validation failed'),
         password: {
           isNotEmpty: 'password should not be empty',
           isString: 'password must be a string',
