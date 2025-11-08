@@ -1,13 +1,8 @@
-import config from '../src/config.env';
-const migrate = require('migrate');
-const { MongoStateStore } = require('@nodepit/migrate-state-store-mongodb');
+const { createMigrationStore } = require('@lenne.tech/nest-server');
 
-const MONGO_URL = config.mongoose.uri;
+const config = require('../src/config.env');
 
-const COLLECTION_NAME = 'migrations';
-
-module.exports = class MyMongoStateStore extends MongoStateStore {
-  constructor() {
-    super({ uri: MONGO_URL, collectionName: COLLECTION_NAME });
-  }
-};
+module.exports = createMigrationStore(
+  config.default.mongoose.uri,
+  'migrations' // optional, default is 'migrations'
+);

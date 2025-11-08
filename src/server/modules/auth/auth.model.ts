@@ -1,5 +1,5 @@
-import { CoreAuthModel, mapClasses, Restricted, RoleEnum } from '@lenne.tech/nest-server';
-import { Field, ObjectType } from '@nestjs/graphql';
+import { CoreAuthModel, mapClasses, Restricted, RoleEnum, UnifiedField } from '@lenne.tech/nest-server';
+import { ObjectType } from '@nestjs/graphql';
 
 import { User } from '../user/user.model';
 
@@ -16,9 +16,12 @@ export class Auth extends CoreAuthModel {
   /**
    * Signed-in user
    */
-  @Field(() => User, { description: 'User who signed in' })
-  @Restricted(RoleEnum.S_EVERYONE)
-  declare user: User;
+  @UnifiedField({
+    description: 'User who signed in',
+    roles: RoleEnum.S_EVERYONE,
+    type: () => User,
+  })
+  override user: User = undefined;
 
   // ===================================================================================================================
   // Methods

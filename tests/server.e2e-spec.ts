@@ -665,6 +665,146 @@ describe('ServerModule (e2e)', () => {
     expect(res.id).toEqual(gId);
   });
 
+  // ===================================================================================================================
+  // REST API Tests for User Controller
+  // ===================================================================================================================
+
+  /**
+   * Prepare user for REST tests
+   */
+  it('REST: prepare user for testing', async () => {
+    // Create new user
+    gPassword = Math.random().toString(36).substring(7);
+    gEmail = `${gPassword}@rest-test.com`;
+    const res: any = await testHelper.graphQl({
+      arguments: {
+        input: {
+          email: gEmail,
+          firstName: 'RESTTestUser',
+          password: gPassword,
+        },
+      },
+      fields: [{ user: ['id', 'email', 'roles', 'createdBy'] }],
+      name: 'signUp',
+      type: TestGraphQLType.MUTATION,
+    });
+    gId = res.user.id;
+
+    // Verify user
+    await db.collection('users').updateOne({ _id: new ObjectId(gId) }, { $set: { roles: ['admin'], verified: true } });
+
+    // Sign in to get token
+    const signInRes: any = await testHelper.graphQl({
+      arguments: {
+        input: {
+          email: gEmail,
+          password: gPassword,
+        },
+      },
+      fields: ['token', 'refreshToken', { user: ['id', 'email', 'roles'] }],
+      name: 'signIn',
+      type: TestGraphQLType.MUTATION,
+    });
+    gToken = signInRes.token;
+    expect(signInRes.user.roles).toContain('admin');
+  });
+
+  /**
+   * Get Meta via REST
+   */
+  it('REST: getMeta', async () => {
+    const res = await testHelper.rest('/meta');
+    expect(res.package).toEqual(metaData.name);
+    expect(res.version).toEqual(metaData.version);
+  });
+
+  /**
+   * Create user via REST
+   */
+  it('REST: createUser', async () => {
+    const random = Math.random().toString(36).substring(7);
+    const input = {
+      email: `${random}@rest-test.com`,
+      firstName: 'RestTest',
+      lastName: 'User',
+      password: random,
+    };
+
+    const res = await testHelper.rest('/users', {
+      method: 'POST',
+      payload: input,
+      statusCode: 201,
+      token: gToken,
+    });
+
+    expect(res.id).toBeDefined();
+    expect(res.email).toEqual(input.email);
+    expect(res.firstName).toEqual(input.firstName);
+    gId = res.id;
+    gEmail = res.email;
+  });
+
+  /**
+   * Get user by ID via REST
+   */
+  it('REST: getUserById', async () => {
+    const res = await testHelper.rest(`/users/${gId}`, {
+      token: gToken,
+    });
+    expect(res.id).toEqual(gId);
+    expect(res.email).toEqual(gEmail);
+  });
+
+  /**
+   * Find users via REST
+   */
+  it('REST: findUsers', async () => {
+    const res = await testHelper.rest('/users', {
+      token: gToken,
+    });
+    expect(Array.isArray(res)).toEqual(true);
+    expect(res.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * Find users with count via REST
+   */
+  it('REST: findAndCountUsers', async () => {
+    const res = await testHelper.rest('/users/count', {
+      token: gToken,
+    });
+    expect(res.items).toBeDefined();
+    expect(res.totalCount).toBeDefined();
+    expect(Array.isArray(res.items)).toEqual(true);
+    expect(res.totalCount).toBeGreaterThan(0);
+  });
+
+  /**
+   * Update user via REST
+   */
+  it('REST: updateUser', async () => {
+    const res = await testHelper.rest(`/users/${gId}`, {
+      method: 'PATCH',
+      payload: {
+        firstName: 'RestUpdated',
+      },
+      token: gToken,
+    });
+    expect(res.id).toEqual(gId);
+    expect(res.firstName).toEqual('RestUpdated');
+  });
+
+  /**
+   * Delete user via REST
+   */
+  it('REST: deleteUser', async () => {
+    const res = await testHelper.rest(`/users/${gId}`, {
+      method: 'DELETE',
+      token: gToken,
+    });
+    expect(res.id).toEqual(gId);
+  });
+
   /**
    * Check user service
    */

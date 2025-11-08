@@ -1,7 +1,7 @@
-import { CoreUserModel, Restricted, RoleEnum } from '@lenne.tech/nest-server';
-import { Field, ObjectType } from '@nestjs/graphql';
-import { Schema as MongooseSchema, Prop, SchemaFactory } from '@nestjs/mongoose';
-import { IsEmail, IsOptional } from 'class-validator';
+import { CoreUserModel, Restricted, RoleEnum, UnifiedField } from '@lenne.tech/nest-server';
+import { ObjectType } from '@nestjs/graphql';
+import { Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
+import { IsEmail } from 'class-validator';
 import { Document, Schema } from 'mongoose';
 
 import { PersistenceModel } from '../../common/models/persistence.model';
@@ -22,9 +22,12 @@ export class User extends CoreUserModel implements PersistenceModel {
   /**
    * URL to avatar file of the user
    */
-  @Field({ description: 'URL to avatar file of the user', nullable: true })
-  @Prop()
-  @Restricted(RoleEnum.S_EVERYONE)
+  @UnifiedField({
+    description: 'URL to avatar file of the user',
+    isOptional: true,
+    mongoose: true,
+    roles: RoleEnum.S_EVERYONE,
+  })
   avatar: string;
 
   /**
@@ -32,43 +35,52 @@ export class User extends CoreUserModel implements PersistenceModel {
    *
    * Not set when created by system
    */
-  @Field(() => String, {
+  @UnifiedField({
     description: 'ID of the user who created the object',
-    nullable: true,
+    isOptional: true,
+    mongoose: { ref: 'User', type: Schema.Types.ObjectId },
+    roles: RoleEnum.S_EVERYONE,
+    type: () => String,
   })
-  @Prop({ ref: 'User', type: Schema.Types.ObjectId })
-  @Restricted(RoleEnum.S_EVERYONE)
   createdBy: string;
 
   /**
    * E-Mail address of the user
    */
-  @Field({ description: 'Email of the user', nullable: true })
-  @IsEmail()
-  @Prop({ lowercase: true, trim: true, unique: true })
-  @Restricted(RoleEnum.S_EVERYONE)
-  declare email: string;
+  @UnifiedField({
+    description: 'Email of the user',
+    isOptional: true,
+    mongoose: { lowercase: true, trim: true, unique: true },
+    roles: RoleEnum.S_EVERYONE,
+    validator: () => [IsEmail()],
+  })
+  override email: string = undefined;
 
   /**
    * Roles of the user
    */
-  @Field(() => [String], { description: 'Roles of the user', nullable: true })
-  @IsOptional()
-  @Prop([String])
-  @Restricted(RoleEnum.S_EVERYONE)
-  declare roles: string[];
+  @UnifiedField({
+    description: 'Roles of the user',
+    isArray: true,
+    isOptional: true,
+    mongoose: [String],
+    roles: RoleEnum.S_EVERYONE,
+    type: () => String,
+  })
+  override roles: string[] = undefined;
 
   /**
    * ID of the user who updated the object
    *
    * Not set when updated by system
    */
-  @Field(() => String, {
+  @UnifiedField({
     description: 'ID of the user who last updated the object',
-    nullable: true,
+    isOptional: true,
+    mongoose: { ref: 'User', type: Schema.Types.ObjectId },
+    roles: RoleEnum.S_USER,
+    type: () => String,
   })
-  @Prop({ ref: 'User', type: Schema.Types.ObjectId })
-  @Restricted(RoleEnum.S_USER)
   updatedBy: string;
 
   // ===================================================================================================================
