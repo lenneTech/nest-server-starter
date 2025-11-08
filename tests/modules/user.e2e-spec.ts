@@ -19,8 +19,8 @@ import { imports, ServerModule } from '../../src/server/server.module';
 
 describe('User Module (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
-  const log = true;
-  const logError = true;
+  const log = true; // eslint-disable-line unused-imports/no-unused-vars
+  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
 
   // Test environment properties
   const port = 3030;

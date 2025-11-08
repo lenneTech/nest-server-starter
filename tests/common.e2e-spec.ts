@@ -15,8 +15,8 @@ import { imports, ServerModule } from '../src/server/server.module';
 
 describe('Common (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
-  const log = true;
-  const logError = true;
+  const log = true; // eslint-disable-line unused-imports/no-unused-vars
+  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
 
   // Test environment properties
   let app;
@@ -28,7 +28,7 @@ describe('Common (e2e)', () => {
 
   // Services
   let userService: UserService;
-  let configService: ConfigService;
+  let configService: ConfigService; // eslint-disable-line unused-imports/no-unused-vars
 
   // Global vars for admin user
   let gAdminId: string;
@@ -140,7 +140,7 @@ describe('Common (e2e)', () => {
    * Test if swagger error-structure mirrors the actual error structure
    */
   it('Try sign in without input', async () => {
-    const res: any = await testHelper.rest('/auth/signin', { log, logError, method: 'POST', statusCode: 400 });
+    const res: any = await testHelper.rest('/auth/signin', { method: 'POST', statusCode: 400 });
     expect(res).toMatchObject({
       message: 'Missing input',
       name: 'BadRequestException',
