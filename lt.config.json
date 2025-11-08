@@ -1,0 +1,19 @@
+{
+  "commands": {
+    "server": {
+      "addProp": {
+        "skipLint": false
+      },
+      "module": {
+        "controller": "Both",
+        "skipLint": false
+      },
+      "object": {
+        "skipLint": false
+      }
+    }
+  },
+  "meta": {
+    "version": "1.0.0"
+  }
+}
