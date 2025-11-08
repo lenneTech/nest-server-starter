@@ -3,20 +3,21 @@ import {
   ConfigService,
   getPlain,
   HttpExceptionLogFilter,
-  TestGraphQLType, TestHelper,
+  TestGraphQLType,
+  TestHelper,
 } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PubSub } from 'graphql-subscriptions';
 import { MongoClient, ObjectId } from 'mongodb';
 
-import envConfig from '../src/config.env';
-import metaData = require('../src/meta.json');
-import { UserCreateInput } from '../src/server/modules/user/inputs/user-create.input';
-import { User } from '../src/server/modules/user/user.model';
-import { UserService } from '../src/server/modules/user/user.service';
-import { imports, ServerModule } from '../src/server/server.module';
+import envConfig from '../../src/config.env';
+import metaData = require('../../src/meta.json');
+import { UserCreateInput } from '../../src/server/modules/user/inputs/user-create.input';
+import { User } from '../../src/server/modules/user/user.model';
+import { UserService } from '../../src/server/modules/user/user.service';
+import { imports, ServerModule } from '../../src/server/server.module';
 
-describe('ServerModule (e2e)', () => {
+describe('User Module (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
   const log = true;
   const logError = true;
@@ -37,13 +38,19 @@ describe('ServerModule (e2e)', () => {
   // Original data
   let oTempTokenPeriod: number;
 
-  // Global vars
+  // Global vars for GraphQL tests
   let gId: string;
   let gEmail: string;
   let gPassword: string;
   let gToken: string;
   let gRefreshToken: string;
   let gLastRefreshRequestTime: number;
+
+  // Global vars for REST tests
+  let gRestPrepareUserId: string;
+  let gRestPrepareUserToken: string;
+  let gRestUserId: string;
+  let gRestUserEmail: string;
 
   // ===================================================================================================================
   // Preparations
@@ -103,49 +110,6 @@ describe('ServerModule (e2e)', () => {
   // ===================================================================================================================
   // Tests
   // ===================================================================================================================
-
-  /**
-   * Health check
-   */
-  it('health check', async () => {
-    if (envConfig.healthCheck?.enabled) {
-      const res: any = await testHelper.rest('/health-check');
-      expect(res.status).toBe('ok');
-    }
-  });
-
-  /**
-   * Get Schema
-   */
-  it('get schema', async () => {
-    const res: any = await testHelper.rest('/graphql', {
-      headers: {
-        'content-type': 'application/json',
-        'x-apollo-operation-name': 'IntrospectionQuery',
-      },
-      method: 'POST',
-      payload:
-        '{"operationName":"IntrospectionQuery","variables":{},"query":"query IntrospectionQuery {\\n  __schema {\\n    queryType {\\n      name\\n    }\\n    mutationType {\\n      name\\n    }\\n    subscriptionType {\\n      name\\n    }\\n    types {\\n      ...FullType\\n    }\\n    directives {\\n      name\\n      description\\n      locations\\n      args {\\n        ...InputValue\\n      }\\n    }\\n  }\\n}\\n\\nfragment FullType on __Type {\\n  kind\\n  name\\n  description\\n  fields(includeDeprecated: true) {\\n    name\\n    description\\n    args {\\n      ...InputValue\\n    }\\n    type {\\n      ...TypeRef\\n    }\\n    isDeprecated\\n    deprecationReason\\n  }\\n  inputFields {\\n    ...InputValue\\n  }\\n  interfaces {\\n    ...TypeRef\\n  }\\n  enumValues(includeDeprecated: true) {\\n    name\\n    description\\n    isDeprecated\\n    deprecationReason\\n  }\\n  possibleTypes {\\n    ...TypeRef\\n  }\\n}\\n\\nfragment InputValue on __InputValue {\\n  name\\n  description\\n  type {\\n    ...TypeRef\\n  }\\n  defaultValue\\n}\\n\\nfragment TypeRef on __Type {\\n  kind\\n  name\\n  ofType {\\n    kind\\n    name\\n    ofType {\\n      kind\\n      name\\n      ofType {\\n        kind\\n        name\\n        ofType {\\n          kind\\n          name\\n          ofType {\\n            kind\\n            name\\n            ofType {\\n              kind\\n              name\\n              ofType {\\n                kind\\n                name\\n              }\\n            }\\n          }\\n        }\\n      }\\n    }\\n  }\\n}\\n"}',
-    });
-    expect(res.data.__schema.queryType.name).toEqual('Query');
-  });
-
-  /**
-   * Get index
-   */
-  it('get index', async () => {
-    const res: any = await testHelper.rest('');
-    expect(res.includes(`Welcome to ${metaData.name}`)).toBe(true);
-    expect(res.includes(`${envConfig.env} environment`)).toBe(true);
-    expect(res.includes(`version ${metaData.version}`)).toBe(true);
-  });
-
-  /**
-   * Get config without token should fail
-   */
-  it('get config without token', async () => {
-    await testHelper.rest('/config', { statusCode: 401 });
-  });
 
   /**
    * Sign up new user
@@ -231,67 +195,6 @@ describe('ServerModule (e2e)', () => {
     });
     expect(res).toEqual(true);
     gPassword = `new${gPassword}`;
-  });
-
-  /**
-   * Test if swagger error-structure mirrors the actual error structure
-   */
-  it('Try sign in without input', async () => {
-    const res: any = await testHelper.rest('/auth/signin', { log, logError, method: 'POST', statusCode: 400 });
-    expect(res).toMatchObject({
-      message: 'Missing input',
-      name: 'BadRequestException',
-      response: {
-        error: 'Bad Request',
-        message: 'Missing input',
-        statusCode: 400,
-      },
-      status: 400,
-    });
-  });
-
-  /**
-   * Test if swagger error-structure mirrors the actual error structure
-   */
-  it('Validates common-error structure', async () => {
-    const res: any = await testHelper.rest('/auth/signin', { method: 'POST', payload: {}, statusCode: 400 });
-
-    // Test for generic object equality
-    expect(res).toMatchObject({
-      message: expect.any(String),
-      name: expect.any(String),
-      options: expect.any(Object),
-      response: {
-        email: {
-          isEmail: expect.any(String),
-          isNotEmpty: expect.any(String),
-        },
-        password: {
-          isNotEmpty: expect.any(String),
-          isString: expect.any(String),
-        },
-      },
-      status: expect.any(Number),
-    });
-
-    // Test for concrete values
-    expect(res).toMatchObject({
-      message: expect.stringContaining('Validation failed'),
-      name: 'BadRequestException',
-      options: {},
-      response: {
-        email: {
-          isEmail: 'email must be an email',
-          isNotEmpty: 'email should not be empty',
-        },
-        message: expect.stringContaining('Validation failed'),
-        password: {
-          isNotEmpty: 'password should not be empty',
-          isString: 'password must be a string',
-        },
-      },
-      status: 400,
-    });
   });
 
   /**
@@ -442,13 +345,6 @@ describe('ServerModule (e2e)', () => {
   });
 
   /**
-   * Get config without admin rights should fail
-   */
-  it('get config without admin rights should fail', async () => {
-    await testHelper.rest('/config', { statusCode: 401, token: gToken });
-  });
-
-  /**
    * Update user
    */
   it('updateUser', async () => {
@@ -498,18 +394,10 @@ describe('ServerModule (e2e)', () => {
   });
 
   /**
-   * Get config with token
-   */
-  it('get config with admin rights', async () => {
-    await db.collection('users').findOneAndUpdate({ _id: new ObjectId(gId) }, { $set: { roles: ['admin'] } });
-    const res: any = await testHelper.rest('/config', { token: gToken });
-    expect(res.env).toEqual(envConfig.env);
-  });
-
-  /**
    * Get user
    */
   it('getUser', async () => {
+    await db.collection('users').findOneAndUpdate({ _id: new ObjectId(gId) }, { $set: { roles: ['admin'] } });
     const res: any = await testHelper.graphQl(
       {
         arguments: {
@@ -674,39 +562,39 @@ describe('ServerModule (e2e)', () => {
    * Prepare user for REST tests
    */
   it('REST: prepare user for testing', async () => {
-    // Create new user
-    gPassword = Math.random().toString(36).substring(7);
-    gEmail = `${gPassword}@rest-test.com`;
+    // Create new admin user for REST tests
+    const password = Math.random().toString(36).substring(7);
+    const email = `${password}@rest-test.com`;
     const res: any = await testHelper.graphQl({
       arguments: {
         input: {
-          email: gEmail,
+          email,
           firstName: 'RESTTestUser',
-          password: gPassword,
+          password,
         },
       },
       fields: [{ user: ['id', 'email', 'roles', 'createdBy'] }],
       name: 'signUp',
       type: TestGraphQLType.MUTATION,
     });
-    gId = res.user.id;
+    gRestPrepareUserId = res.user.id;
 
     // Verify user
-    await db.collection('users').updateOne({ _id: new ObjectId(gId) }, { $set: { roles: ['admin'], verified: true } });
+    await db.collection('users').updateOne({ _id: new ObjectId(gRestPrepareUserId) }, { $set: { roles: ['admin'], verified: true } });
 
     // Sign in to get token
     const signInRes: any = await testHelper.graphQl({
       arguments: {
         input: {
-          email: gEmail,
-          password: gPassword,
+          email,
+          password,
         },
       },
       fields: ['token', 'refreshToken', { user: ['id', 'email', 'roles'] }],
       name: 'signIn',
       type: TestGraphQLType.MUTATION,
     });
-    gToken = signInRes.token;
+    gRestPrepareUserToken = signInRes.token;
     expect(signInRes.user.roles).toContain('admin');
   });
 
@@ -735,25 +623,25 @@ describe('ServerModule (e2e)', () => {
       method: 'POST',
       payload: input,
       statusCode: 201,
-      token: gToken,
+      token: gRestPrepareUserToken,
     });
 
     expect(res.id).toBeDefined();
     expect(res.email).toEqual(input.email);
     expect(res.firstName).toEqual(input.firstName);
-    gId = res.id;
-    gEmail = res.email;
+    gRestUserId = res.id;
+    gRestUserEmail = res.email;
   });
 
   /**
    * Get user by ID via REST
    */
   it('REST: getUserById', async () => {
-    const res = await testHelper.rest(`/users/${gId}`, {
-      token: gToken,
+    const res = await testHelper.rest(`/users/${gRestUserId}`, {
+      token: gRestPrepareUserToken,
     });
-    expect(res.id).toEqual(gId);
-    expect(res.email).toEqual(gEmail);
+    expect(res.id).toEqual(gRestUserId);
+    expect(res.email).toEqual(gRestUserEmail);
   });
 
   /**
@@ -761,7 +649,7 @@ describe('ServerModule (e2e)', () => {
    */
   it('REST: findUsers', async () => {
     const res = await testHelper.rest('/users', {
-      token: gToken,
+      token: gRestPrepareUserToken,
     });
     expect(Array.isArray(res)).toEqual(true);
     expect(res.length).toBeGreaterThan(0);
@@ -772,7 +660,7 @@ describe('ServerModule (e2e)', () => {
    */
   it('REST: findAndCountUsers', async () => {
     const res = await testHelper.rest('/users/count', {
-      token: gToken,
+      token: gRestPrepareUserToken,
     });
     expect(res.items).toBeDefined();
     expect(res.totalCount).toBeDefined();
@@ -784,14 +672,14 @@ describe('ServerModule (e2e)', () => {
    * Update user via REST
    */
   it('REST: updateUser', async () => {
-    const res = await testHelper.rest(`/users/${gId}`, {
+    const res = await testHelper.rest(`/users/${gRestUserId}`, {
       method: 'PATCH',
       payload: {
         firstName: 'RestUpdated',
       },
-      token: gToken,
+      token: gRestPrepareUserToken,
     });
-    expect(res.id).toEqual(gId);
+    expect(res.id).toEqual(gRestUserId);
     expect(res.firstName).toEqual('RestUpdated');
   });
 
@@ -799,11 +687,22 @@ describe('ServerModule (e2e)', () => {
    * Delete user via REST
    */
   it('REST: deleteUser', async () => {
-    const res = await testHelper.rest(`/users/${gId}`, {
+    const res = await testHelper.rest(`/users/${gRestUserId}`, {
       method: 'DELETE',
-      token: gToken,
+      token: gRestPrepareUserToken,
     });
-    expect(res.id).toEqual(gId);
+    expect(res.id).toEqual(gRestUserId);
+  });
+
+  /**
+   * Clean up REST prepare user
+   */
+  it('REST: delete prepare user', async () => {
+    const res = await testHelper.rest(`/users/${gRestPrepareUserId}`, {
+      method: 'DELETE',
+      token: gRestPrepareUserToken,
+    });
+    expect(res.id).toEqual(gRestPrepareUserId);
   });
 
   /**

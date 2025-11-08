@@ -6,13 +6,13 @@ import { VariableType } from 'json-to-graphql-query';
 import { MongoClient, ObjectId } from 'mongodb';
 import path = require('path');
 
-import envConfig from '../src/config.env';
-import { FileInfo } from '../src/server/modules/file/file-info.model';
-import { User } from '../src/server/modules/user/user.model';
-import { UserService } from '../src/server/modules/user/user.service';
-import { imports, ServerModule } from '../src/server/server.module';
+import envConfig from '../../src/config.env';
+import { FileInfo } from '../../src/server/modules/file/file-info.model';
+import { User } from '../../src/server/modules/user/user.model';
+import { UserService } from '../../src/server/modules/user/user.service';
+import { imports, ServerModule } from '../../src/server/server.module';
 
-describe('File (e2e)', () => {
+describe('File Module (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
   const log = true; // eslint-disable-line unused-imports/no-unused-vars
   const logError = true; // eslint-disable-line unused-imports/no-unused-vars
@@ -231,8 +231,8 @@ describe('File (e2e)', () => {
     // Set paths
     const local1 = path.join(__dirname, 'test1.txt');
     const local2 = path.join(__dirname, 'test2.txt');
-    const remote1 = path.join(__dirname, '..', 'uploads', 'test1.txt');
-    const remote2 = path.join(__dirname, '..', 'uploads', 'test2.txt');
+    const remote1 = path.join(__dirname, '..', '..', 'uploads', 'test1.txt');
+    const remote2 = path.join(__dirname, '..', '..', 'uploads', 'test2.txt');
 
     // Write and send file
     await fs.promises.writeFile(local1, 'Hello GraphQL 1');
