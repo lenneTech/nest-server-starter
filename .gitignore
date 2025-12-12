@@ -104,3 +104,6 @@ globalConfig.json
 
 # Keep .gitkeep files
 !/**/.gitkeep
+
+# Ignore txt files in tests directory
+tests/**/*.txt
