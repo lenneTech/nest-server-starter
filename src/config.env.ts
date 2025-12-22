@@ -16,6 +16,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   ci: {
     automaticObjectIdFiltering: true,
+    betterAuth: true,
     compression: true,
     cookies: false,
     cronJobs: {
@@ -74,14 +75,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_CI_REFRESH',
+        secret: 'SECRET_OR_PRIVATE_KEY_CI_REFRESH_32CH',
         signInOptions: {
           expiresIn: '7d',
         },
       },
       sameTokenIdPeriod: 2000,
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_CI',
+      secret: 'SECRET_OR_PRIVATE_KEY_CI_MIN_32_CHARS',
       signInOptions: {
         expiresIn: '15m',
       },
@@ -125,6 +126,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   develop: {
     automaticObjectIdFiltering: true,
+    betterAuth: true,
     compression: true,
     cookies: false,
     email: {
@@ -174,14 +176,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_DEV_REFRESH',
+        secret: 'SECRET_OR_PRIVATE_KEY_DEV_REFRESH_32CH',
         signInOptions: {
           expiresIn: '7d',
         },
       },
       sameTokenIdPeriod: 2000,
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_DEV',
+      secret: 'SECRET_OR_PRIVATE_KEY_DEV_MIN_32_CHARS',
       signInOptions: {
         expiresIn: '15m',
       },
@@ -224,6 +226,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   e2e: {
     automaticObjectIdFiltering: true,
+    betterAuth: true,
     compression: true,
     cookies: false,
     cronJobs: {},
@@ -275,14 +278,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_E2E_REFRESH',
+        secret: 'SECRET_OR_PRIVATE_KEY_E2E_REFRESH_32CH',
         signInOptions: {
           expiresIn: '7d',
         },
       },
       sameTokenIdPeriod: 2000,
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_E2E',
+      secret: 'SECRET_OR_PRIVATE_KEY_E2E_MIN_32_CHARS',
       signInOptions: {
         expiresIn: '15m',
       },
@@ -326,6 +329,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   local: {
     automaticObjectIdFiltering: true,
+    betterAuth: true,
     compression: true,
     cookies: false,
     cronJobs: {
@@ -384,14 +388,15 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH',
+        secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_REFRESH_32CH',
         signInOptions: {
           expiresIn: '7d',
         },
       },
       sameTokenIdPeriod: 2000,
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_LOCAL',
+      // Min 32 chars required for BetterAuth fallback
+      secret: 'SECRET_OR_PRIVATE_KEY_LOCAL_MIN_32_CHARS',
       signInOptions: {
         expiresIn: '15m',
       },
@@ -435,6 +440,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   production: {
     automaticObjectIdFiltering: true,
+    betterAuth: true,
     compression: true,
     cookies: false,
     email: {
@@ -482,14 +488,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         renewal: true,
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_PROD_REFRESH',
+        secret: 'SECRET_OR_PRIVATE_KEY_PROD_REFRESH_32CH',
         signInOptions: {
           expiresIn: '7d',
         },
       },
       sameTokenIdPeriod: 2000,
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_PROD',
+      secret: 'SECRET_OR_PRIVATE_KEY_PROD_MIN_32_CHARS',
       signInOptions: {
         expiresIn: '15m',
       },
@@ -532,6 +538,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   test: {
     automaticObjectIdFiltering: true,
+    betterAuth: true,
     compression: true,
     cookies: false,
     email: {
@@ -581,14 +588,14 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
         // crypto.randomBytes(512).toString('base64') (see https://nodejs.org/api/crypto.html#crypto)
         // Can be created via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server createSecret
         // tslint:disable-next-line:max-line-length
-        secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH',
+        secret: 'SECRET_OR_PRIVATE_KEY_TEST_REFRESH_32CH',
         signInOptions: {
           expiresIn: '7d',
         },
       },
       sameTokenIdPeriod: 2000,
       // tslint:disable-next-line:max-line-length
-      secret: 'SECRET_OR_PRIVATE_KEY_TEST',
+      secret: 'SECRET_OR_PRIVATE_KEY_TEST_MIN_32_CHARS',
       signInOptions: {
         expiresIn: '15m',
       },

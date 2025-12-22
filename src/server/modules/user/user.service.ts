@@ -1,11 +1,12 @@
 import {
+  BetterAuthUserMapper,
   ConfigService,
   CoreModelConstructor,
   CoreUserService,
   EmailService,
   ServiceOptions,
 } from '@lenne.tech/nest-server';
-import { Inject, Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
+import { Inject, Injectable, Optional, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
@@ -33,8 +34,9 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     @Inject('USER_CLASS') protected override readonly mainModelConstructor: CoreModelConstructor<User>,
     @InjectModel('User') protected override readonly mainDbModel: Model<UserDocument>,
     @Inject('PUB_SUB') protected readonly pubSub: PubSub,
+    @Optional() private readonly betterAuthUserMapper?: BetterAuthUserMapper,
   ) {
-    super(configService, emailService, mainDbModel, mainModelConstructor);
+    super(configService, emailService, mainDbModel, mainModelConstructor, { betterAuthUserMapper });
   }
 
   // ===================================================================================================================
