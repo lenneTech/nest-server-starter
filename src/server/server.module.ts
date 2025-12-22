@@ -1,4 +1,4 @@
-import { Any, CoreAuthService, CoreModule, DateScalar, JSON } from '@lenne.tech/nest-server';
+import { Any, CoreAuthService, CoreModule, DateScalar, JSON, TusModule } from '@lenne.tech/nest-server';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -33,6 +33,9 @@ export const imports = [
 
   // Include FileModule for file handling
   FileModule,
+
+  // Include TusModule for resumable file uploads
+  TusModule.forRoot(),
 ];
 
 /**
@@ -46,7 +49,7 @@ export const imports = [
   controllers: [ServerController],
 
   // Export modules for reuse in other modules
-  exports: [CoreModule, AuthModule, MetaModule, FileModule],
+  exports: [CoreModule, AuthModule, MetaModule, FileModule, TusModule],
 
   // Include modules
   imports,

@@ -1,10 +1,9 @@
-import { ApiCommonErrorResponses, CoreFileInfo, FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { ApiCommonErrorResponses, CoreFileController, CoreFileInfo, FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import {
   BadRequestException,
   Controller,
   Delete,
   Get,
-  NotFoundException,
   Param,
   Post,
   Res,
@@ -28,19 +27,63 @@ import { FileService } from './file.service';
 
 /**
  * Controller to handle file REST API endpoints
+ *
+ * Inherits public download endpoints from CoreFileController:
+ * - GET /files/id/:id - Download file by ID (public)
+ * - GET /files/:filename - Download file by filename (public)
  */
 @ApiCommonErrorResponses()
 @ApiTags('files')
 @Controller('files')
 @Roles(RoleEnum.ADMIN)
-export class FileController {
+export class FileController extends CoreFileController {
   /**
    * Import services
    */
-  constructor(private readonly fileService: FileService) {}
+  constructor(protected override readonly fileService: FileService) {
+    super(fileService);
+  }
+
+  // ===================================================================================================================
+  // Public Download Endpoints (inherited from CoreFileController, documented here for Swagger)
+  // ===================================================================================================================
 
   /**
-   * Upload file via HTTP
+   * Download file by ID
+   * More reliable than filename-based download as IDs are unique.
+   * Recommended for TUS uploads and when filename uniqueness cannot be guaranteed.
+   */
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'File downloaded successfully' })
+  @ApiOperation({ description: 'Download a file from GridFS by ID', summary: 'Download file by ID' })
+  @ApiParam({ description: 'File ID', name: 'id', type: String })
+  @Get('id/:id')
+  @Roles(RoleEnum.S_EVERYONE)
+  override async getFileById(@Param('id') id: string, @Res() res: Response): Promise<Response> {
+    return super.getFileById(id, res);
+  }
+
+  /**
+   * Download file by filename
+   * Note: If multiple files have the same filename, only the first match is returned.
+   * For unique file access, use GET /files/id/:id instead.
+   */
+  @ApiBearerAuth()
+  @ApiOkResponse({ description: 'File downloaded successfully' })
+  @ApiOperation({ description: 'Download a file from GridFS by filename', summary: 'Download file by filename' })
+  @ApiParam({ description: 'Filename', name: 'filename', type: String })
+  @Get(':filename')
+  @Roles(RoleEnum.S_EVERYONE)
+  override async getFile(@Param('filename') filename: string, @Res() res: Response): Promise<Response> {
+    return super.getFile(filename, res);
+  }
+
+  // ===================================================================================================================
+  // Admin Endpoints
+  // ===================================================================================================================
+
+  /**
+   * Upload file via HTTP multipart/form-data
    */
   @ApiBearerAuth()
   @ApiBody({
@@ -61,57 +104,23 @@ export class FileController {
   @Post('upload')
   @Roles(RoleEnum.ADMIN)
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@UploadedFile() file: Express.Multer.File): Promise<any> {
+  async uploadFile(@UploadedFile() file: Express.Multer.File): Promise<CoreFileInfo> {
     if (!file) {
       throw new BadRequestException('No file provided');
     }
 
-    // Convert Multer file to FileUpload interface
     const fileUpload: FileUpload = {
-      capacitor: null, // Not used when creating from buffer
+      capacitor: null,
       createReadStream: () => Readable.from(file.buffer),
       filename: file.originalname,
       mimetype: file.mimetype,
     };
 
-    // Save to GridFS using FileService
-    return await this.fileService.createFile(fileUpload);
+    return this.fileService.createFile(fileUpload);
   }
 
   /**
-   * Download file
-   */
-  @ApiBearerAuth()
-  @ApiOkResponse({ description: 'File downloaded successfully' })
-  @ApiOperation({ description: 'Download a file from GridFS', summary: 'Download file' })
-  @ApiParam({ description: 'File ID', name: 'id', type: String })
-  @Get(':id')
-  @Roles(RoleEnum.ADMIN)
-  async getFile(@Param('id') id: string, @Res() res: Response) {
-    if (!id) {
-      throw new BadRequestException('Missing ID');
-    }
-
-    let file: CoreFileInfo | null;
-    try {
-      file = await this.fileService.getFileInfo(id);
-    } catch (e) {
-      console.error(e);
-      file = null;
-    }
-
-    if (!file) {
-      throw new NotFoundException('File not found');
-    }
-    const filestream = await this.fileService.getFileStream(id);
-    res.header('Content-Type', file.contentType || 'application/octet-stream');
-    res.header('Content-Disposition', `attachment; filename=${file.filename}`);
-    res.header('Cache-Control', 'max-age=31536000');
-    return filestream.pipe(res);
-  }
-
-  /**
-   * Get file information
+   * Get file information by ID
    */
   @ApiBearerAuth()
   @ApiOkResponse({ description: 'File information retrieved successfully', type: CoreFileInfo })
@@ -119,24 +128,20 @@ export class FileController {
   @ApiParam({ description: 'File ID', name: 'id', type: String })
   @Get('info/:id')
   @Roles(RoleEnum.ADMIN)
-  async getFileInfo(@Param('id') id: string) {
-    return await this.fileService.getFileInfo(id);
+  async getFileInfo(@Param('id') id: string): Promise<CoreFileInfo | null> {
+    return this.fileService.getFileInfo(id);
   }
 
   /**
-   * Delete file
+   * Delete file by ID
    */
   @ApiBearerAuth()
-  @ApiOkResponse({ description: 'File deleted successfully', type: Boolean })
+  @ApiOkResponse({ description: 'File deleted successfully', type: CoreFileInfo })
   @ApiOperation({ description: 'Delete a file from GridFS', summary: 'Delete file' })
   @ApiParam({ description: 'File ID', name: 'id', type: String })
   @Delete(':id')
   @Roles(RoleEnum.ADMIN)
-  async deleteFile(@Param('id') id: string) {
-    if (!id) {
-      throw new BadRequestException('Missing ID');
-    }
-
-    return await this.fileService.deleteFile(id);
+  async deleteFile(@Param('id') id: string): Promise<CoreFileInfo | null> {
+    return this.fileService.deleteFile(id);
   }
 }

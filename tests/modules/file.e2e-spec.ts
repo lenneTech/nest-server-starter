@@ -196,7 +196,7 @@ describe('File Module (e2e)', () => {
   });
 
   it('downloadGraphQLFile', async () => {
-    const res = await testHelper.download(`/files/${fileInfo.id}`, users[0].token);
+    const res = await testHelper.download(`/files/id/${fileInfo.id}`, users[0].token);
     expect(res.statusCode).toEqual(200);
     expect(res.data).toEqual(fileContent);
   });
@@ -231,15 +231,14 @@ describe('File Module (e2e)', () => {
     // Set paths
     const local1 = path.join(__dirname, 'test1.txt');
     const local2 = path.join(__dirname, 'test2.txt');
-    const remote1 = path.join(__dirname, '..', '..', 'uploads', 'test1.txt');
-    const remote2 = path.join(__dirname, '..', '..', 'uploads', 'test2.txt');
 
-    // Write and send file
+    // Write and send files
     await fs.promises.writeFile(local1, 'Hello GraphQL 1');
     await fs.promises.writeFile(local2, 'Hello GraphQL 2');
     const res: any = await testHelper.graphQl(
       {
         arguments: { files: new VariableType('files') },
+        fields: ['id', 'filename'],
         name: 'uploadFiles',
         type: TestGraphQLType.MUTATION,
         variables: { files: '[Upload!]!' },
@@ -251,18 +250,25 @@ describe('File Module (e2e)', () => {
     await fs.promises.unlink(local1);
     await fs.promises.unlink(local2);
 
-    // Test response
-    expect(res).toEqual(true);
+    // Test response - should return array of file info
+    expect(Array.isArray(res)).toBe(true);
+    expect(res.length).toBe(2);
+    expect(res[0].id).toBeDefined();
+    expect(res[0].filename).toBe('test1.txt');
+    expect(res[1].id).toBeDefined();
+    expect(res[1].filename).toBe('test2.txt');
 
-    // Check uploaded files
-    const stat1 = await fs.promises.stat(remote1);
-    expect(!!stat1).toEqual(true);
-    const stat2 = await fs.promises.stat(remote2);
-    expect(!!stat2).toEqual(true);
+    // Verify files exist in GridFS
+    const file1 = await db.collection('fs.files').findOne({ _id: new ObjectId(res[0].id) });
+    expect(file1).toBeDefined();
+    const file2 = await db.collection('fs.files').findOne({ _id: new ObjectId(res[1].id) });
+    expect(file2).toBeDefined();
 
-    // Remove remote files
-    await fs.promises.unlink(remote1);
-    await fs.promises.unlink(remote2);
+    // Clean up - delete files from GridFS
+    for (const file of res) {
+      await db.collection('fs.files').deleteOne({ _id: new ObjectId(file.id) });
+      await db.collection('fs.chunks').deleteMany({ files_id: new ObjectId(file.id) });
+    }
   });
 
   // ===================================================================================================================
@@ -302,7 +308,7 @@ describe('File Module (e2e)', () => {
   });
 
   it('downloadRESTFile', async () => {
-    const res = await testHelper.download(`/files/${fileInfo.id}`, users[0].token);
+    const res = await testHelper.download(`/files/id/${fileInfo.id}`, users[0].token);
     expect(res.statusCode).toEqual(200);
     expect(res.data).toEqual(fileContent);
   });

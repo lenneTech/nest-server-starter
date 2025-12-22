@@ -1,14 +1,12 @@
-import { FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { CoreFileInfo, FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { createWriteStream } from 'fs';
-import fs = require('fs');
 import GraphQLUpload = require('graphql-upload/GraphQLUpload.js');
 
 import { FileInfo } from './file-info.model';
 import { FileService } from './file.service';
 
 /**
- * File resolver
+ * File resolver for GraphQL file operations
  */
 @Resolver()
 @Roles(RoleEnum.ADMIN)
@@ -23,12 +21,14 @@ export class FileResolver {
   // ===========================================================================
 
   /**
-   * Get file info
+   * Get file info by filename
    */
   @Query(() => FileInfo, { nullable: true })
   @Roles(RoleEnum.ADMIN)
-  async getFileInfo(@Args({ name: 'filename', type: () => String }) filename: string) {
-    return await this.fileService.getFileInfoByName(filename);
+  async getFileInfo(
+    @Args({ name: 'filename', type: () => String }) filename: string,
+  ): Promise<CoreFileInfo | null> {
+    return this.fileService.getFileInfoByName(filename);
   }
 
   // ===========================================================================
@@ -36,44 +36,37 @@ export class FileResolver {
   // ===========================================================================
 
   /**
-   * Delete file
+   * Delete file by filename
    */
   @Mutation(() => FileInfo)
   @Roles(RoleEnum.ADMIN)
-  async deleteFile(@Args({ name: 'filename', type: () => String }) filename: string) {
-    return await this.fileService.deleteFileByName(filename);
+  async deleteFile(
+    @Args({ name: 'filename', type: () => String }) filename: string,
+  ): Promise<CoreFileInfo | null> {
+    return this.fileService.deleteFileByName(filename);
   }
 
   /**
-   * Upload file
+   * Upload single file to GridFS
    */
   @Mutation(() => FileInfo)
   @Roles(RoleEnum.ADMIN)
-  async uploadFile(@Args({ name: 'file', type: () => GraphQLUpload }) file: FileUpload) {
-    return await this.fileService.createFile(file);
+  async uploadFile(
+    @Args({ name: 'file', type: () => GraphQLUpload }) file: FileUpload,
+  ): Promise<CoreFileInfo> {
+    return this.fileService.createFile(file);
   }
 
   /**
-   * Upload files
+   * Upload multiple files to GridFS
+   * @returns Array of uploaded file information
    */
-  @Mutation(() => Boolean)
+  @Mutation(() => [FileInfo])
   @Roles(RoleEnum.ADMIN)
-  async uploadFiles(@Args({ name: 'files', type: () => [GraphQLUpload] }) files: FileUpload[]) {
-    // Save files in filesystem
-    const promises: Promise<any>[] = [];
-    for (const file of files) {
-      const { createReadStream, filename } = await file;
-      await fs.promises.mkdir('./uploads', { recursive: true });
-      promises.push(
-        new Promise((resolve, reject) =>
-          createReadStream()
-            .pipe(createWriteStream(`./uploads/${filename}`))
-            .on('finish', () => resolve(true))
-            .on('error', error => reject(error)),
-        ),
-      );
-    }
-    await Promise.allSettled(promises);
-    return true;
+  async uploadFiles(
+    @Args({ name: 'files', type: () => [GraphQLUpload] }) files: FileUpload[],
+  ): Promise<CoreFileInfo[]> {
+    const uploadPromises = files.map(file => this.fileService.createFile(file));
+    return Promise.all(uploadPromises);
   }
 }

@@ -1,7 +1,7 @@
 import { CoreFileService } from '@lenne.tech/nest-server';
 import { Injectable } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
+import { Connection, mongo } from 'mongoose';
 
 /**
  * File service
@@ -14,10 +14,11 @@ export class FileService extends CoreFileService {
 
   /**
    * Duplicate file by name
+   * @param fileName - Source file name
+   * @param newName - Name for the duplicated file
+   * @returns The GridFS upload stream for the duplicated file
    */
-  async duplicate(fileName: string, newName: string): Promise<any> {
-    return new Promise(async (resolve) => {
-      resolve(this.files.openDownloadStreamByName(fileName).pipe(this.files.openUploadStream(newName)));
-    });
+  duplicate(fileName: string, newName: string): mongo.GridFSBucketWriteStream {
+    return this.files.openDownloadStreamByName(fileName).pipe(this.files.openUploadStream(newName));
   }
 }
