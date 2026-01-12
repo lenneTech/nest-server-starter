@@ -56,7 +56,7 @@
     "link:nest-server": "yalc add @lenne.tech/nest-server && yalc link @lenne.tech/nest-server && npm install",
     "lint": "eslint '{src,apps,libs,tests}/**/*.{ts,js}' --cache",
     "lint:fix": "eslint '{src,apps,libs,tests}/**/*.{ts,js}' --fix --cache",
-    "migrate:create": "migrate create --template-file ./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/templates/migration-project.template.ts --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
+    "migrate:create": "f() { migrate create \"$1\" --template-file ./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/templates/migration-project.template.ts --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js; }; f",
     "migrate:up": "migrate up --store ./migrations-utils/migrate.js --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
     "migrate:down": "migrate down --store ./migrations-utils/migrate.js --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
     "migrate:list": "migrate list --store ./migrations-utils/migrate.js --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
