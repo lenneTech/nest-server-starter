@@ -339,8 +339,8 @@ describe('User Module (e2e)', () => {
       { token: gToken },
     );
     expect(res.errors.length).toBeGreaterThanOrEqual(1);
-    expect(res.errors[0].extensions.originalError.statusCode).toEqual(401);
-    expect(res.errors[0].message).toEqual('Missing role');
+    expect(res.errors[0].extensions.originalError.statusCode).toEqual(403);
+    expect(res.errors[0].message).toEqual('#LTNS_0101: Access denied - Insufficient permissions');
     expect(res.data).toBe(null);
   });
 

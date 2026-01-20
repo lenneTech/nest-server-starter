@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.8.0",
+  "version": "11.9.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -40,7 +40,7 @@
     "dp:test": "npm run migrate:test:up && NODE_ENV=test node ./dist/src/main.js",
     "dp:prod": "npm run migrate:prod:up && NODE_ENV=production node ./dist/src/main.js",
     "docs": "npm run docs:ci && open http://127.0.0.1:8080/ && open ./public/index.html && compodoc -p tsconfig.json -s",
-    "docs:bootstrap": "node extras/update-spectaql-version.mjs && npx -y spectaql ./spectaql.yml",
+    "docs:bootstrap": "node extras/update-spectaql-version.mjs && node scripts/run-spectaql.mjs",
     "docs:ci": "ts-node ./scripts/init-server.ts && npm run docs:bootstrap && compodoc -p tsconfig.json",
     "format": "prettier --write 'src/**/*.ts' --ignore-unknown",
     "format:check": "prettier --check 'src/**/*.ts' --ignore-unknown",
@@ -101,7 +101,7 @@
     "@apollo/server": "5.2.0",
     "@as-integrations/express5": "1.1.2",
     "@better-auth/passkey": "1.4.8-beta.4",
-    "@lenne.tech/nest-server": "11.8.0",
+    "@lenne.tech/nest-server": "11.9.0",
     "@nestjs/apollo": "13.2.3",
     "@nestjs/common": "11.1.9",
     "@nestjs/core": "11.1.9",

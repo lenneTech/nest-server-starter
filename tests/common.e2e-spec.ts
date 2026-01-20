@@ -279,7 +279,7 @@ describe('Common (e2e)', () => {
     });
 
     // Try to access config without admin rights
-    await testHelper.rest('/config', { statusCode: 401, token: signInRes.token });
+    await testHelper.rest('/config', { statusCode: 403, token: signInRes.token });
 
     // Clean up
     await userService.delete(userRes.user.id);
@@ -291,6 +291,60 @@ describe('Common (e2e)', () => {
   it('get config with admin rights', async () => {
     const res: any = await testHelper.rest('/config', { token: gAdminToken });
     expect(res.env).toEqual(envConfig.env);
+  });
+
+  // ===================================================================================================================
+  // ErrorCodeModule Tests - i18n Error Translations API
+  // ===================================================================================================================
+
+  /**
+   * Get German error translations
+   */
+  it('get error translations in German', async () => {
+    const res: any = await testHelper.rest('/api/i18n/errors/de');
+
+    // Should return errors object
+    expect(res).toHaveProperty('errors');
+    expect(typeof res.errors).toBe('object');
+
+    // Should contain nest-server core errors (LTNS_*)
+    expect(res.errors).toHaveProperty('LTNS_0001'); // USER_NOT_FOUND
+    expect(res.errors.LTNS_0001).toBe('Benutzer wurde nicht gefunden.');
+    expect(res.errors).toHaveProperty('LTNS_0100'); // UNAUTHORIZED
+    expect(res.errors.LTNS_0100).toBe('Sie sind nicht angemeldet.');
+
+    // Should contain project-specific errors (PROJ_*)
+    expect(res.errors).toHaveProperty('PROJ_0001'); // PROJECT_NOT_FOUND
+    expect(res.errors.PROJ_0001).toBe('Projekt wurde nicht gefunden.');
+    expect(res.errors).toHaveProperty('PROJ_0002'); // PROJECT_ALREADY_EXISTS
+    expect(res.errors.PROJ_0002).toBe('Ein Projekt mit diesem Namen existiert bereits.');
+    expect(res.errors).toHaveProperty('PROJ_0100'); // OPERATION_NOT_PERMITTED
+    expect(res.errors.PROJ_0100).toBe('Diese Operation ist nicht erlaubt.');
+  });
+
+  /**
+   * Get English error translations
+   */
+  it('get error translations in English', async () => {
+    const res: any = await testHelper.rest('/api/i18n/errors/en');
+
+    // Should return errors object
+    expect(res).toHaveProperty('errors');
+    expect(typeof res.errors).toBe('object');
+
+    // Should contain nest-server core errors (LTNS_*)
+    expect(res.errors).toHaveProperty('LTNS_0001'); // USER_NOT_FOUND
+    expect(res.errors.LTNS_0001).toBe('User not found.');
+    expect(res.errors).toHaveProperty('LTNS_0100'); // UNAUTHORIZED
+    expect(res.errors.LTNS_0100).toBe('You are not logged in.');
+
+    // Should contain project-specific errors (PROJ_*)
+    expect(res.errors).toHaveProperty('PROJ_0001'); // PROJECT_NOT_FOUND
+    expect(res.errors.PROJ_0001).toBe('Project was not found.');
+    expect(res.errors).toHaveProperty('PROJ_0002'); // PROJECT_ALREADY_EXISTS
+    expect(res.errors.PROJ_0002).toBe('A project with this name already exists.');
+    expect(res.errors).toHaveProperty('PROJ_0101'); // QUOTA_EXCEEDED
+    expect(res.errors.PROJ_0101).toBe('The quota has been exceeded.');
   });
 
   /**

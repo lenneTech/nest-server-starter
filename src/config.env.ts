@@ -3,6 +3,8 @@ import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
 
+import { ProjectErrors } from './server/common/errors/project-errors';
+
 /**
  * Configuration for the different environments
  * See: https://github.com/lenneTech/nest-server/blob/main/src/core/common/interfaces/server-options.interface.ts
@@ -43,6 +45,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'ci',
+    errorCode: {
+      additionalErrorRegistry: ProjectErrors,
+    },
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,
@@ -145,6 +150,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'develop',
+    errorCode: {
+      additionalErrorRegistry: ProjectErrors,
+    },
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,
@@ -246,6 +254,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'e2e',
+    errorCode: {
+      additionalErrorRegistry: ProjectErrors,
+    },
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,
@@ -356,6 +367,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'local',
+    errorCode: {
+      additionalErrorRegistry: ProjectErrors,
+    },
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,
@@ -459,6 +473,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'production',
+    errorCode: {
+      additionalErrorRegistry: ProjectErrors,
+    },
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,
@@ -557,6 +574,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
       },
     },
     env: 'test',
+    errorCode: {
+      additionalErrorRegistry: ProjectErrors,
+    },
     execAfterInit: 'npm run docs:bootstrap',
     filter: {
       maxLimit: null,
