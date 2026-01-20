@@ -1,6 +1,6 @@
 import {
-  BetterAuthUserMapper,
   ConfigService,
+  CoreBetterAuthUserMapper,
   CoreModelConstructor,
   CoreUserService,
   EmailService,
@@ -34,7 +34,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     @Inject('USER_CLASS') protected override readonly mainModelConstructor: CoreModelConstructor<User>,
     @InjectModel('User') protected override readonly mainDbModel: Model<UserDocument>,
     @Inject('PUB_SUB') protected readonly pubSub: PubSub,
-    @Optional() private readonly betterAuthUserMapper?: BetterAuthUserMapper,
+    @Optional() private readonly betterAuthUserMapper?: CoreBetterAuthUserMapper,
   ) {
     super(configService, emailService, mainDbModel, mainModelConstructor, { betterAuthUserMapper });
   }

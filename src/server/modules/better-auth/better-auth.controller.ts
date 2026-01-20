@@ -1,8 +1,8 @@
 import {
-  BetterAuthService,
-  BetterAuthUserMapper,
   ConfigService,
   CoreBetterAuthController,
+  CoreBetterAuthService,
+  CoreBetterAuthUserMapper,
   RoleEnum,
   Roles,
 } from '@lenne.tech/nest-server';
@@ -33,8 +33,8 @@ import { Controller } from '@nestjs/common';
 @Roles(RoleEnum.ADMIN)
 export class BetterAuthController extends CoreBetterAuthController {
   constructor(
-    protected override readonly betterAuthService: BetterAuthService,
-    protected override readonly userMapper: BetterAuthUserMapper,
+    protected override readonly betterAuthService: CoreBetterAuthService,
+    protected override readonly userMapper: CoreBetterAuthUserMapper,
     protected override readonly configService: ConfigService,
   ) {
     super(betterAuthService, userMapper, configService);

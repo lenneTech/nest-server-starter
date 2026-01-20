@@ -1,4 +1,4 @@
-import { BetterAuthModule as CoreBetterAuthModule, IBetterAuth } from '@lenne.tech/nest-server';
+import { CoreBetterAuthModule, IBetterAuth } from '@lenne.tech/nest-server';
 import { DynamicModule, Module } from '@nestjs/common';
 
 import { BetterAuthController } from './better-auth.controller';
