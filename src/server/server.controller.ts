@@ -4,6 +4,9 @@ import { Controller, Get, Render } from '@nestjs/common';
 import metaData = require('../meta.json');
 import { MetaService } from './modules/meta/meta.service';
 
+/**
+ * Server Controller
+ */
 @Controller()
 @Roles(RoleEnum.ADMIN)
 export class ServerController {
@@ -28,6 +31,9 @@ export class ServerController {
     return this.metaService.get();
   }
 
+  /**
+   * Get configuration
+   */
   @Get('config')
   @Roles(RoleEnum.ADMIN)
   config() {

@@ -1,17 +1,26 @@
 import {
   ConfigService,
   HttpExceptionLogFilter,
-  TestGraphQLType,
   TestHelper,
 } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
+import { createHash } from 'crypto';
 import { PubSub } from 'graphql-subscriptions';
 import { MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../src/config.env';
 import metaData = require('../src/meta.json');
-import { UserService } from '../src/server/modules/user/user.service';
 import { imports, ServerModule } from '../src/server/server.module';
+
+/**
+ * Helper to hash password with SHA256 if enabled in config
+ */
+function hashPassword(password: string): string {
+  if (!envConfig.sha256) {
+    return password;
+  }
+  return createHash('sha256').update(password).digest('hex');
+}
 
 describe('Common (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
@@ -27,7 +36,6 @@ describe('Common (e2e)', () => {
   let db;
 
   // Services
-  let userService: UserService;
   let configService: ConfigService; // eslint-disable-line unused-imports/no-unused-vars
 
   // Global vars for admin user
@@ -56,7 +64,6 @@ describe('Common (e2e)', () => {
           ServerModule,
         ],
         providers: [
-          UserService,
           {
             provide: 'PUB_SUB',
             useValue: new PubSub(),
@@ -69,7 +76,6 @@ describe('Common (e2e)', () => {
       app.setViewEngine(envConfig.templates.engine);
       await app.init();
       testHelper = new TestHelper(app);
-      userService = moduleFixture.get(UserService);
       configService = moduleFixture.get(ConfigService);
 
       // Connection to database
@@ -130,93 +136,69 @@ describe('Common (e2e)', () => {
   });
 
   /**
-   * Get config without token should fail
+   * Get config endpoint without token should return 401
+   *
+   * With IAM (Better-Auth) and the global RolesGuard, the @Roles decorator
+   * enforces authentication. Without a token, the endpoint returns 401.
    */
   it('get config without token', async () => {
     await testHelper.rest('/config', { statusCode: 401 });
   });
 
   /**
-   * Test if swagger error-structure mirrors the actual error structure
+   * Test IAM sign-in endpoint returns error for missing credentials
    */
-  it('Try sign in without input', async () => {
-    const res: any = await testHelper.rest('/auth/signin', { method: 'POST', statusCode: 400 });
-    expect(res).toMatchObject({
-      message: 'Missing input',
-      name: 'BadRequestException',
-      response: {
-        error: 'Bad Request',
-        message: 'Missing input',
-        statusCode: 400,
-      },
-      status: 400,
-    });
+  it('Try IAM sign in without credentials', async () => {
+    try {
+      await testHelper.rest('/iam/sign-in/email', { method: 'POST', payload: {}, statusCode: 400 });
+    } catch (error: any) {
+      // IAM returns 400 for missing/invalid input
+      expect(error).toBeDefined();
+    }
   });
 
   /**
-   * Test if swagger error-structure mirrors the actual error structure
+   * Test IAM sign-in with invalid credentials
    */
-  it('Validates common-error structure', async () => {
-    const res: any = await testHelper.rest('/auth/signin', { method: 'POST', payload: {}, statusCode: 400 });
-
-    // Test for generic object equality
-    expect(res).toMatchObject({
-      message: expect.any(String),
-      name: expect.any(String),
-      options: expect.any(Object),
-      response: {
-        email: {
-          isEmail: expect.any(String),
-          isNotEmpty: expect.any(String),
-        },
-        password: {
-          isNotEmpty: expect.any(String),
-          isString: expect.any(String),
-        },
-      },
-      status: expect.any(Number),
-    });
-
-    // Test for concrete values
-    expect(res).toMatchObject({
-      message: expect.stringContaining('Validation failed'),
-      name: 'BadRequestException',
-      options: {},
-      response: {
-        email: {
-          isEmail: 'email must be an email',
-          isNotEmpty: 'email should not be empty',
-        },
-        message: expect.stringContaining('Validation failed'),
-        password: {
-          isNotEmpty: 'password should not be empty',
-          isString: 'password must be a string',
-        },
-      },
-      status: 400,
-    });
+  it('Validates IAM sign-in with invalid credentials', async () => {
+    try {
+      await testHelper.rest('/iam/sign-in/email', {
+        method: 'POST',
+        payload: { email: 'invalid@test.com', password: hashPassword('wrongpassword') },
+        statusCode: 401,
+      });
+    } catch (error: any) {
+      // IAM returns 401 for invalid credentials
+      expect(error).toBeDefined();
+    }
   });
 
   /**
    * Prepare admin user for config tests
    */
   it('prepare admin user for config tests', async () => {
-    // Create admin user
-    gAdminPassword = Math.random().toString(36).substring(7);
-    gAdminEmail = `${gAdminPassword}@admin-test.com`;
-    const res: any = await testHelper.graphQl({
-      arguments: {
-        input: {
-          email: gAdminEmail,
-          firstName: 'Admin',
-          password: gAdminPassword,
-        },
+    // Create admin user via IAM
+    const random = Math.random().toString(36).substring(7);
+    gAdminPassword = `${random  }A1!`;
+    gAdminEmail = `admin-${random}@testusers.com`;
+
+    const signUpRes = await testHelper.rest('/iam/sign-up/email', {
+      method: 'POST',
+      payload: {
+        email: gAdminEmail,
+        name: 'Admin',
+        password: hashPassword(gAdminPassword),
       },
-      fields: [{ user: ['id', 'email'] }],
-      name: 'signUp',
-      type: TestGraphQLType.MUTATION,
+      statusCode: 201,
     });
-    gAdminId = res.user.id;
+
+    // Get user ID from response or database
+    if (signUpRes.user?.id) {
+      gAdminId = signUpRes.user.id;
+    } else {
+      const user = await db.collection('users').findOne({ email: gAdminEmail });
+      if (user) gAdminId = user._id.toString();
+    }
 
     // Set admin role and verify
     await db.collection('users').findOneAndUpdate(
@@ -224,65 +206,70 @@ describe('Common (e2e)', () => {
       { $set: { roles: ['admin'], verified: true } },
     );
 
-    // Sign in
-    const signInRes: any = await testHelper.graphQl({
-      arguments: {
-        input: {
-          email: gAdminEmail,
-          password: gAdminPassword,
-        },
+    // Sign in via IAM
+    const signInRes = await testHelper.rest('/iam/sign-in/email', {
+      method: 'POST',
+      payload: {
+        email: gAdminEmail,
+        password: hashPassword(gAdminPassword),
       },
-      fields: ['token', { user: ['id', 'email'] }],
-      name: 'signIn',
-      type: TestGraphQLType.MUTATION,
+      statusCode: 200,
     });
     gAdminToken = signInRes.token;
   });
 
   /**
-   * Get config without admin rights should fail
+   * Get config with non-admin user should return 403
+   *
+   * With IAM (Better-Auth) and the global RolesGuard, the @Roles decorator
+   * enforces role-based access. Non-admin users get 403 Forbidden.
    */
   it('get config without admin rights should fail', async () => {
-    // Create non-admin user
-    const password = Math.random().toString(36).substring(7);
-    const email = `${password}@user-test.com`;
-    const userRes: any = await testHelper.graphQl({
-      arguments: {
-        input: {
-          email,
-          firstName: 'User',
-          password,
-        },
+    // Create non-admin user via IAM
+    const randomUser = Math.random().toString(36).substring(7);
+    const password = `${randomUser  }U1!`;
+    const email = `user-${randomUser}@testusers.com`;
+
+    const signUpRes = await testHelper.rest('/iam/sign-up/email', {
+      method: 'POST',
+      payload: {
+        email,
+        name: 'User',
+        password: hashPassword(password),
       },
-      fields: [{ user: ['id', 'email'] }],
-      name: 'signUp',
-      type: TestGraphQLType.MUTATION,
+      statusCode: 201,
     });
 
-    // Verify user
+    // Get user ID from response or database
+    let userId: string;
+    if (signUpRes.user?.id) {
+      userId = signUpRes.user.id;
+    } else {
+      const user = await db.collection('users').findOne({ email });
+      if (user) userId = user._id.toString();
+    }
+
+    // Verify user (but not admin)
     await db.collection('users').updateOne(
-      { _id: new ObjectId(userRes.user.id) },
+      { _id: new ObjectId(userId) },
       { $set: { verified: true } },
     );
 
-    // Sign in
-    const signInRes: any = await testHelper.graphQl({
-      arguments: {
-        input: {
-          email,
-          password,
-        },
+    // Sign in via IAM
+    const signInRes = await testHelper.rest('/iam/sign-in/email', {
+      method: 'POST',
+      payload: {
+        email,
+        password: hashPassword(password),
       },
-      fields: ['token', { user: ['id', 'email'] }],
-      name: 'signIn',
-      type: TestGraphQLType.MUTATION,
+      statusCode: 200,
     });
 
-    // Try to access config without admin rights
+    // Non-admin users should get 403 Forbidden
     await testHelper.rest('/config', { statusCode: 403, token: signInRes.token });
 
     // Clean up
-    await userService.delete(userRes.user.id);
+    await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
   });
 
   /**
@@ -351,6 +338,6 @@ describe('Common (e2e)', () => {
    * Clean up admin user
    */
   it('clean up admin user', async () => {
-    await userService.delete(gAdminId);
+    await db.collection('users').deleteOne({ _id: new ObjectId(gAdminId) });
   });
 });

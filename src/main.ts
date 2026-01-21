@@ -15,7 +15,6 @@ import cookieParser = require('cookie-parser');
 import packageJson = require('../package.json');
 import envConfig from './config.env';
 import { PersistenceModel } from './server/common/models/persistence.model';
-import { Auth } from './server/modules/auth/auth.model';
 import { User } from './server/modules/user/user.model';
 import { ServerModule } from './server/server.module';
 
@@ -76,7 +75,7 @@ async function bootstrap() {
     SwaggerModule.createDocument(server, config, {
       autoTagControllers: true,
       deepScanRoutes: true,
-      extraModels: [CoreUserModel, CoreAuthModel, Auth, User, PersistenceModel, CorePersistenceModel, FilterArgs],
+      extraModels: [CoreUserModel, CoreAuthModel, User, PersistenceModel, CorePersistenceModel, FilterArgs],
     });
   SwaggerModule.setup('swagger', server, documentFactory, {
     jsonDocumentUrl: '/api-docs-json',

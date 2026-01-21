@@ -16,23 +16,29 @@ import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Request, Response } from 'express';
 
 /**
- * Server BetterAuth GraphQL Resolver
+ * Server IAM GraphQL Resolver (Reference Implementation)
  *
- * This resolver extends CoreBetterAuthResolver and exposes all GraphQL operations.
- * The `isAbstract: true` pattern in NestJS GraphQL requires concrete classes to
- * explicitly override and decorate methods for them to be registered in the schema.
+ * This resolver extends CoreBetterAuthResolver and can be customized
+ * for project-specific requirements (e.g., additional fields, custom responses).
  *
- * Each method delegates to the parent implementation via `super.methodName()`.
- * Override any method to add custom behavior (e.g., sending welcome emails after signup).
+ * NOTE: This is kept as a reference implementation. For new projects,
+ * REST-only via IamController is recommended.
+ *
+ * The `isAbstract: true` pattern in NestJS GraphQL requires concrete classes
+ * to explicitly override and decorate methods for them to be registered in the schema.
  *
  * @example
  * ```typescript
- * // Add custom behavior after sign-up
- * override async betterAuthSignUp(email: string, password: string, name?: string) {
- *   const result = await super.betterAuthSignUp(email, password, name);
+ * // Add custom behavior after sign-in
+ * override async betterAuthSignIn(
+ *   email: string,
+ *   password: string,
+ *   ctx: { req: Request; res: Response },
+ * ) {
+ *   const result = await super.betterAuthSignIn(email, password, ctx);
  *
- *   if (result.success && result.user) {
- *     await this.emailService.sendWelcomeEmail(result.user.email);
+ *   if (result.success) {
+ *     await this.auditService.log('user_signed_in', result.user.email);
  *   }
  *
  *   return result;
@@ -41,7 +47,7 @@ import { Request, Response } from 'express';
  */
 @Resolver(() => CoreBetterAuthAuthModel)
 @Roles(RoleEnum.ADMIN)
-export class BetterAuthResolver extends CoreBetterAuthResolver {
+export class IamResolver extends CoreBetterAuthResolver {
   constructor(
     protected override readonly betterAuthService: CoreBetterAuthService,
     protected override readonly userMapper: CoreBetterAuthUserMapper,
@@ -49,12 +55,12 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
     super(betterAuthService, userMapper);
   }
 
-  // ===========================================================================
-  // Queries
-  // ===========================================================================
+  // -----------------------------------------------------------------------------------------------------------------
+  // Public Queries
+  // -----------------------------------------------------------------------------------------------------------------
 
   @Query(() => CoreBetterAuthSessionModel, {
-    description: 'Get current Better-Auth session',
+    description: 'Get current IAM session',
     nullable: true,
   })
   @Roles(RoleEnum.S_USER)
@@ -62,33 +68,18 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
     return super.betterAuthSession(ctx);
   }
 
-  @Query(() => Boolean, { description: 'Check if Better-Auth is enabled' })
-  @Roles(RoleEnum.S_EVERYONE)
-  override betterAuthEnabled(): boolean {
-    return super.betterAuthEnabled();
-  }
-
-  @Query(() => CoreBetterAuthFeaturesModel, { description: 'Get enabled Better-Auth features' })
+  @Query(() => CoreBetterAuthFeaturesModel, { description: 'Get enabled IAM features' })
   @Roles(RoleEnum.S_EVERYONE)
   override betterAuthFeatures(): CoreBetterAuthFeaturesModel {
     return super.betterAuthFeatures();
   }
 
   @Query(() => CoreBetterAuthMigrationStatusModel, {
-    description: 'Get migration status from Legacy Auth to Better-Auth (IAM) - Admin only',
+    description: 'Get migration status from Legacy Auth to IAM - Admin only',
   })
   @Roles(RoleEnum.ADMIN)
   override async betterAuthMigrationStatus(): Promise<CoreBetterAuthMigrationStatusModel> {
     return super.betterAuthMigrationStatus();
-  }
-
-  @Query(() => String, {
-    description: 'Get fresh JWT token for the current session (requires valid session)',
-    nullable: true,
-  })
-  @Roles(RoleEnum.S_USER)
-  override async betterAuthToken(@Context() ctx: { req: Request }): Promise<null | string> {
-    return super.betterAuthToken(ctx);
   }
 
   @Query(() => [CoreBetterAuthPasskeyModel], {
@@ -100,12 +91,12 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
     return super.betterAuthListPasskeys(ctx);
   }
 
-  // ===========================================================================
+  // -----------------------------------------------------------------------------------------------------------------
   // Authentication Mutations
-  // ===========================================================================
+  // -----------------------------------------------------------------------------------------------------------------
 
   @Mutation(() => CoreBetterAuthAuthModel, {
-    description: 'Sign in via Better-Auth (email/password)',
+    description: 'Sign in via IAM (email/password)',
   })
   @Roles(RoleEnum.S_EVERYONE)
   override async betterAuthSignIn(
@@ -117,7 +108,7 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
   }
 
   @Mutation(() => CoreBetterAuthAuthModel, {
-    description: 'Sign up via Better-Auth (email/password)',
+    description: 'Sign up via IAM (email/password)',
   })
   @Roles(RoleEnum.S_EVERYONE)
   override async betterAuthSignUp(
@@ -128,15 +119,15 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
     return super.betterAuthSignUp(email, password, name);
   }
 
-  @Mutation(() => Boolean, { description: 'Sign out via Better-Auth' })
+  @Mutation(() => Boolean, { description: 'Sign out from IAM session' })
   @Roles(RoleEnum.S_USER)
   override async betterAuthSignOut(@Context() ctx: { req: Request }): Promise<boolean> {
     return super.betterAuthSignOut(ctx);
   }
 
-  // ===========================================================================
+  // -----------------------------------------------------------------------------------------------------------------
   // 2FA Mutations
-  // ===========================================================================
+  // -----------------------------------------------------------------------------------------------------------------
 
   @Mutation(() => CoreBetterAuthAuthModel, {
     description: 'Verify 2FA code during sign-in',
@@ -160,9 +151,7 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
     return super.betterAuthEnable2FA(password, ctx);
   }
 
-  @Mutation(() => Boolean, {
-    description: 'Disable 2FA for the current user',
-  })
+  @Mutation(() => Boolean, { description: 'Disable 2FA for the current user' })
   @Roles(RoleEnum.S_USER)
   override async betterAuthDisable2FA(
     @Args('password') password: string,
@@ -180,9 +169,9 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
     return super.betterAuthGenerateBackupCodes(ctx);
   }
 
-  // ===========================================================================
+  // -----------------------------------------------------------------------------------------------------------------
   // Passkey Mutations
-  // ===========================================================================
+  // -----------------------------------------------------------------------------------------------------------------
 
   @Mutation(() => CoreBetterAuthPasskeyChallengeModel, {
     description: 'Get passkey registration challenge for WebAuthn',
@@ -194,9 +183,7 @@ export class BetterAuthResolver extends CoreBetterAuthResolver {
     return super.betterAuthGetPasskeyChallenge(ctx);
   }
 
-  @Mutation(() => Boolean, {
-    description: 'Delete a passkey by ID',
-  })
+  @Mutation(() => Boolean, { description: 'Delete a passkey by ID' })
   @Roles(RoleEnum.S_USER)
   override async betterAuthDeletePasskey(
     @Args('passkeyId') passkeyId: string,

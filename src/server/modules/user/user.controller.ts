@@ -50,7 +50,7 @@ export class UserController {
   @ApiOperation({ description: 'Find users (via filter)', summary: 'Get all users' })
   @Get()
   @Roles(RoleEnum.ADMIN)
-  @UseGuards(AuthGuard(AuthGuardStrategy.JWT))
+  @UseGuards(AuthGuard(AuthGuardStrategy.BETTER_AUTH))
   async findUsers(@CurrentUser() currentUser: User): Promise<User[]> {
     const serviceOptions: ServiceOptions = {
       currentUser,
@@ -69,7 +69,7 @@ export class UserController {
   })
   @Get('count')
   @Roles(RoleEnum.ADMIN)
-  @UseGuards(AuthGuard(AuthGuardStrategy.JWT))
+  @UseGuards(AuthGuard(AuthGuardStrategy.BETTER_AUTH))
   async findAndCountUsers(@CurrentUser() currentUser: User): Promise<FindAndCountUsersResult> {
     const serviceOptions: ServiceOptions = {
       currentUser,
@@ -101,7 +101,7 @@ export class UserController {
   @ApiParam({ description: 'User ID', name: 'id', type: String })
   @Get(':id')
   @Roles(RoleEnum.S_USER)
-  @UseGuards(AuthGuard(AuthGuardStrategy.JWT))
+  @UseGuards(AuthGuard(AuthGuardStrategy.BETTER_AUTH))
   async getUser(@CurrentUser() currentUser: User, @Param('id') id: string): Promise<User> {
     const serviceOptions: ServiceOptions = {
       currentUser,
@@ -123,7 +123,7 @@ export class UserController {
   @ApiOperation({ description: 'Create a new user', summary: 'Create user' })
   @Post()
   @Roles(RoleEnum.ADMIN)
-  @UseGuards(AuthGuard(AuthGuardStrategy.JWT))
+  @UseGuards(AuthGuard(AuthGuardStrategy.BETTER_AUTH))
   async createUser(@CurrentUser() currentUser: User, @Body() input: UserCreateInput): Promise<User> {
     const serviceOptions: ServiceOptions = {
       currentUser,
@@ -210,7 +210,7 @@ export class UserController {
   @ApiParam({ description: 'User ID', name: 'id', type: String })
   @Patch(':id')
   @Roles(RoleEnum.S_USER)
-  @UseGuards(AuthGuard(AuthGuardStrategy.JWT))
+  @UseGuards(AuthGuard(AuthGuardStrategy.BETTER_AUTH))
   async updateUser(@CurrentUser() currentUser: User, @Param('id') id: string, @Body() input: UserInput): Promise<User> {
     const serviceOptions: ServiceOptions = {
       currentUser,
@@ -233,7 +233,7 @@ export class UserController {
   @ApiParam({ description: 'User ID', name: 'id', type: String })
   @Delete(':id')
   @Roles(RoleEnum.S_USER)
-  @UseGuards(AuthGuard(AuthGuardStrategy.JWT))
+  @UseGuards(AuthGuard(AuthGuardStrategy.BETTER_AUTH))
   async deleteUser(@CurrentUser() currentUser: User, @Param('id') id: string): Promise<User> {
     const serviceOptions: ServiceOptions = {
       currentUser,

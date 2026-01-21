@@ -1,5 +1,6 @@
 import { HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
+import { createHash } from 'crypto';
 import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
@@ -9,8 +10,17 @@ import path = require('path');
 import envConfig from '../../src/config.env';
 import { FileInfo } from '../../src/server/modules/file/file-info.model';
 import { User } from '../../src/server/modules/user/user.model';
-import { UserService } from '../../src/server/modules/user/user.service';
 import { imports, ServerModule } from '../../src/server/server.module';
+
+/**
+ * Helper to hash password with SHA256 if enabled in config
+ */
+function hashPassword(password: string): string {
+  if (!envConfig.sha256) {
+    return password;
+  }
+  return createHash('sha256').update(password).digest('hex');
+}
 
 describe('File Module (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
@@ -26,7 +36,6 @@ describe('File Module (e2e)', () => {
   let db;
 
   // Global vars
-  let userService: UserService;
   const users: Partial<User & { token: string }>[] = [];
   let fileInfo: FileInfo;
   let fileContent: string;
@@ -50,7 +59,6 @@ describe('File Module (e2e)', () => {
           ServerModule,
         ],
         providers: [
-          UserService,
           {
             provide: 'PUB_SUB',
             useValue: new PubSub(),
@@ -63,7 +71,6 @@ describe('File Module (e2e)', () => {
       app.setViewEngine(envConfig.templates.engine);
       await app.init();
       testHelper = new TestHelper(app);
-      userService = moduleFixture.get(UserService);
 
       // Connection to database
       connection = await MongoClient.connect(envConfig.mongoose.uri);
@@ -77,6 +84,16 @@ describe('File Module (e2e)', () => {
    * After all tests are finished
    */
   afterAll(async () => {
+    // Clean up test users
+    for (const user of users) {
+      if (user.id) {
+        try {
+          await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+    }
     await connection.close();
     await app.close();
   });
@@ -86,53 +103,64 @@ describe('File Module (e2e)', () => {
   // ===================================================================================================================
 
   /**
-   * Create and verify users for testing
+   * Create and verify users for testing via IAM
    */
   it('createAndVerifyUsers', async () => {
     const userCount = 2;
     for (let i = 0; i < userCount; i++) {
       const random = Math.random().toString(36).substring(7);
+      const password = `${random  }P1!`;
       const input = {
         email: `${random}@testusers.com`,
-        firstName: `Test${random}`,
-        lastName: `User${random}`,
-        password: random,
+        name: `Test${random}`,
+        password: hashPassword(password),
       };
 
-      // Sign up user
-      const res: any = await testHelper.graphQl({
-        arguments: { input },
-        fields: [{ user: ['id', 'email', 'firstName', 'lastName'] }],
-        name: 'signUp',
-        type: TestGraphQLType.MUTATION,
+      // Sign up user via IAM REST
+      const res = await testHelper.rest('/iam/sign-up/email', {
+        method: 'POST',
+        payload: input,
+        statusCode: 201,
       });
-      res.user.password = input.password;
-      users.push(res.user);
 
-      // Verify user
-      await db.collection('users').updateOne({ _id: new ObjectId(res.id) }, { $set: { verified: true } });
+      expect(res).toBeDefined();
+
+      // Get user from database
+      const user = await db.collection('users').findOne({ email: input.email });
+      expect(user).toBeDefined();
+
+      users.push({
+        email: input.email,
+        firstName: input.name,
+        id: user._id.toString(),
+        password,
+      });
+
+      // Verify user in database
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(user._id) },
+        { $set: { verified: true } },
+      );
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
   });
 
   /**
-   * Sign in users
+   * Sign in users via IAM
    */
   it('signInUsers', async () => {
     for (const user of users) {
-      const res: any = await testHelper.graphQl({
-        arguments: {
-          input: {
-            email: user.email,
-            password: user.password,
-          },
+      const res = await testHelper.rest('/iam/sign-in/email', {
+        method: 'POST',
+        payload: {
+          email: user.email,
+          password: hashPassword(user.password),
         },
-        fields: ['token', { user: ['id', 'email'] }],
-        name: 'signIn',
-        type: TestGraphQLType.MUTATION,
+        statusCode: 200,
       });
-      expect(res.user.id).toEqual(user.id);
-      expect(res.user.email).toEqual(user.email);
+
+      expect(res).toBeDefined();
+      expect(res.token).toBeDefined();
       user.token = res.token;
     }
   });
@@ -328,11 +356,13 @@ describe('File Module (e2e)', () => {
   // ===================================================================================================================
 
   /**
-   * Delete users
+   * Delete users via GraphQL
    */
   it('deleteUsers', async () => {
     // Add admin role to last user
-    await userService.setRoles(users[users.length - 1].id, ['admin']);
+    await db
+      .collection('users')
+      .findOneAndUpdate({ _id: new ObjectId(users[users.length - 1].id) }, { $set: { roles: ['admin'] } });
 
     for (const user of users) {
       const res: any = await testHelper.graphQl(

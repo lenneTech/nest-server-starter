@@ -5,7 +5,7 @@
         "skipLint": false
       },
       "module": {
-        "controller": "Both",
+        "controller": "Rest",
         "skipLint": false
       },
       "object": {

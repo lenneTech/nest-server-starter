@@ -1,16 +1,16 @@
 import { HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
+import { createHash } from 'crypto';
 import { PubSub } from 'graphql-subscriptions';
 import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as tus from 'tus-js-client';
 
 import envConfig from '../../src/config.env';
 import { User } from '../../src/server/modules/user/user.model';
-import { UserService } from '../../src/server/modules/user/user.service';
 import { imports, ServerModule } from '../../src/server/server.module';
 
 // =====================================================================================================================
-// Types & Interfaces
+// Helper Functions
 // =====================================================================================================================
 
 interface GridFsFile {
@@ -20,6 +20,10 @@ interface GridFsFile {
   length: number;
   metadata?: Record<string, unknown>;
 }
+
+// =====================================================================================================================
+// Types & Interfaces
+// =====================================================================================================================
 
 interface TusClientUploadOptions {
   chunkSize?: number;
@@ -39,6 +43,16 @@ interface TusUploadResult {
   filename: string;
   gridFsId?: string;
   location?: string;
+}
+
+/**
+ * Helper to hash password with SHA256 if enabled in config
+ */
+function hashPassword(password: string): string {
+  if (!envConfig.sha256) {
+    return password;
+  }
+  return createHash('sha256').update(password).digest('hex');
 }
 
 // =====================================================================================================================
@@ -70,9 +84,6 @@ describe('TUS Module (e2e)', () => {
   // Database
   let connection: MongoClient;
   let db: Db;
-
-  // Services
-  let userService: UserService;
 
   // Test data
   const users: Partial<User & { token: string }>[] = [];
@@ -258,7 +269,6 @@ describe('TUS Module (e2e)', () => {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [...imports, ServerModule],
         providers: [
-          UserService,
           { provide: 'PUB_SUB', useValue: new PubSub() },
         ],
       }).compile();
@@ -280,7 +290,6 @@ describe('TUS Module (e2e)', () => {
       });
 
       testHelper = new TestHelper(app);
-      userService = moduleFixture.get(UserService);
 
       // Database connection
       connection = await MongoClient.connect(envConfig.mongoose.uri);
@@ -304,6 +313,17 @@ describe('TUS Module (e2e)', () => {
       }
     }
 
+    // Clean up test users
+    for (const user of users) {
+      if (user.id) {
+        try {
+          await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+        } catch {
+          // Ignore cleanup errors
+        }
+      }
+    }
+
     await connection.close();
     await app.close();
   });
@@ -317,25 +337,36 @@ describe('TUS Module (e2e)', () => {
 
     for (let i = 0; i < userCount; i++) {
       const random = Math.random().toString(36).substring(7);
+      const password = `${random  }P1!`;
       const input = {
         email: `${random}@testusers.com`,
-        firstName: `Test${random}`,
-        lastName: `User${random}`,
-        password: random,
+        name: `Test${random}`,
+        password: hashPassword(password),
       };
 
-      const res: any = await testHelper.graphQl({
-        arguments: { input },
-        fields: [{ user: ['id', 'email', 'firstName', 'lastName'] }],
-        name: 'signUp',
-        type: TestGraphQLType.MUTATION,
+      // Sign up user via IAM REST
+      const res = await testHelper.rest('/iam/sign-up/email', {
+        method: 'POST',
+        payload: input,
+        statusCode: 201,
       });
 
-      res.user.password = input.password;
-      users.push(res.user);
+      expect(res).toBeDefined();
 
+      // Get user from database
+      const user = await db.collection('users').findOne({ email: input.email });
+      expect(user).toBeDefined();
+
+      users.push({
+        email: input.email,
+        firstName: input.name,
+        id: user._id.toString(),
+        password,
+      });
+
+      // Verify user in database
       await db.collection('users').updateOne(
-        { _id: new ObjectId(res.id) },
+        { _id: new ObjectId(user._id) },
         { $set: { verified: true } },
       );
     }
@@ -345,16 +376,17 @@ describe('TUS Module (e2e)', () => {
 
   it('signInUsers', async () => {
     for (const user of users) {
-      const res: any = await testHelper.graphQl({
-        arguments: {
-          input: { email: user.email, password: user.password },
+      const res = await testHelper.rest('/iam/sign-in/email', {
+        method: 'POST',
+        payload: {
+          email: user.email,
+          password: hashPassword(user.password),
         },
-        fields: ['token', { user: ['id', 'email'] }],
-        name: 'signIn',
-        type: TestGraphQLType.MUTATION,
+        statusCode: 200,
       });
 
-      expect(res.user.id).toEqual(user.id);
+      expect(res).toBeDefined();
+      expect(res.token).toBeDefined();
       user.token = res.token;
     }
   });
@@ -787,7 +819,11 @@ describe('TUS Module (e2e)', () => {
   // ===================================================================================================================
 
   it('deleteUsers', async () => {
-    await userService.setRoles(users[users.length - 1].id, ['admin']);
+    // Add admin role to last user
+    await db.collection('users').findOneAndUpdate(
+      { _id: new ObjectId(users[users.length - 1].id) },
+      { $set: { roles: ['admin'] } },
+    );
 
     for (const user of users) {
       const res: any = await testHelper.graphQl(
