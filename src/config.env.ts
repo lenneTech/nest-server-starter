@@ -7,9 +7,11 @@ import { ProjectErrors } from './server/common/errors/project-errors';
 
 /**
  * Configuration for the different environments
- * See: https://github.com/lenneTech/nest-server/blob/main/src/core/common/interfaces/server-options.interface.ts
+ * @see IServerOptions for documentation of all options
  *
- * Set all SECRET_OR_PRIVATE_KEYs at once via [lenne.Tech CLI](https://github.com/lenneTech/cli): lt server setConfigSecrets
+ * URL Configuration:
+ * - local, ci, e2e: Auto-defaults (localhost:3000/3001), no baseUrl needed
+ * - develop, test, production: Set `baseUrl` once domain is known!
  */
 dotenv.config();
 export const config: { [env: string]: Partial<IServerOptions> } = {
@@ -18,7 +20,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   ci: {
     automaticObjectIdFiltering: true,
-    betterAuth: true,
+    // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
+    // baseUrl: 'http://localhost:4000',
     compression: true,
     cookies: false,
     cronJobs: {
@@ -131,7 +134,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   develop: {
     automaticObjectIdFiltering: true,
-    betterAuth: true,
+    // REQUIRED: Set baseUrl once domain is known (e.g., 'https://api.develop.example.com')
+    // baseUrl: process.env.BASE_URL,
     compression: true,
     cookies: false,
     email: {
@@ -234,7 +238,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   e2e: {
     automaticObjectIdFiltering: true,
-    betterAuth: true,
+    // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
+    // baseUrl: 'http://localhost:4000',
     compression: true,
     cookies: false,
     cronJobs: {},
@@ -340,9 +345,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   local: {
     automaticObjectIdFiltering: true,
-    betterAuth: true,
+    // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
+    // baseUrl: 'http://localhost:4000',
+    // appUrl: 'http://localhost:4001',
     compression: true,
-    cookies: false,
     cronJobs: {
       sayHello: {
         cronTime: CronExpression.EVERY_5_MINUTES,
@@ -454,7 +460,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   production: {
     automaticObjectIdFiltering: true,
-    betterAuth: true,
+    // REQUIRED: Set baseUrl once domain is known (e.g., 'https://api.example.com')
+    // appUrl is auto-derived (api.example.com → example.com)
+    // baseUrl: process.env.BASE_URL,
     compression: true,
     cookies: false,
     email: {
@@ -555,7 +563,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ===========================================================================
   test: {
     automaticObjectIdFiltering: true,
-    betterAuth: true,
+    // REQUIRED: Set baseUrl once domain is known (e.g., 'https://api.test.example.com')
+    // baseUrl: process.env.BASE_URL,
     compression: true,
     cookies: false,
     email: {

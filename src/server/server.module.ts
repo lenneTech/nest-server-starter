@@ -18,12 +18,8 @@ export const imports = [
   // Include cron job handling
   ScheduleModule.forRoot(),
 
-  // Include IamModule for IAM (Better-Auth) authentication handling,
-  // which will also include UserModule
-  IamModule.forRoot({
-    config: envConfig.betterAuth ?? {},
-    fallbackSecrets: [envConfig.jwt?.secret],
-  }),
+  // Include IamModule for IAM (Better-Auth) authentication handling
+  IamModule.forRoot(),
 
   // Include MetaModule to offer information about the server
   MetaModule,
@@ -55,11 +51,6 @@ export const imports = [
   imports,
 
   // Include services and scalars
-  providers: [
-    Any,
-    CronJobs,
-    DateScalar,
-    JSON,
-  ],
+  providers: [Any, CronJobs, DateScalar, JSON],
 })
 export class ServerModule {}
