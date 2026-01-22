@@ -18,7 +18,6 @@ export class IamModule {
       imports: [
         CoreBetterAuthModule.forRoot({
           controller: IamController,
-          registerRolesGuardGlobally: true,
           resolver: IamResolver,
         }),
       ],
