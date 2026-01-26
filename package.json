@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.11.0",
+  "version": "11.11.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -105,7 +105,7 @@
     "@apollo/server": "5.3.0",
     "@as-integrations/express5": "1.1.2",
     "@better-auth/passkey": "1.4.17",
-    "@lenne.tech/nest-server": "11.11.0",
+    "@lenne.tech/nest-server": "11.11.1",
     "@nestjs/apollo": "13.2.3",
     "@nestjs/common": "11.1.12",
     "@nestjs/core": "11.1.12",
