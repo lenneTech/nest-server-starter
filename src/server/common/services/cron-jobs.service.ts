@@ -11,7 +11,10 @@ export class CronJobs extends CoreCronJobs {
   /**
    * Init cron jobs
    */
-  constructor(protected override schedulerRegistry: SchedulerRegistry, protected configService: ConfigService) {
+  constructor(
+    protected override schedulerRegistry: SchedulerRegistry,
+    protected configService: ConfigService,
+  ) {
     super(schedulerRegistry, configService.config.cronJobs, { log: true });
   }
 
@@ -21,9 +24,9 @@ export class CronJobs extends CoreCronJobs {
 
   protected sayHello() {
     console.info(
-      'Hello :)\n'
-        + 'Remove this cron job by removing the corresponding configuration from config.env.ts '
-        + 'or the service from the provider configuration in the ServerModule',
+      'Hello :)\n' +
+        'Remove this cron job by removing the corresponding configuration from config.env.ts ' +
+        'or the service from the provider configuration in the ServerModule',
     );
   }
 }
