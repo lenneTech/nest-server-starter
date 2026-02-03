@@ -1,4 +1,11 @@
-import { ApiCommonErrorResponses, CoreFileController, CoreFileInfo, FileUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import {
+  ApiCommonErrorResponses,
+  CoreFileController,
+  CoreFileInfo,
+  FileUpload,
+  RoleEnum,
+  Roles,
+} from '@lenne.tech/nest-server';
 import {
   BadRequestException,
   Controller,
@@ -11,15 +18,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOkResponse,
-  ApiOperation,
-  ApiParam,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { Readable } from 'stream';
 
