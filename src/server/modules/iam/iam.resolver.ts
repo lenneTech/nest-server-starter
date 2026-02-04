@@ -115,8 +115,9 @@ export class IamResolver extends CoreBetterAuthResolver {
     @Args('email') email: string,
     @Args('password') password: string,
     @Args('name', { nullable: true }) name?: string,
+    @Args('termsAndPrivacyAccepted', { nullable: true }) termsAndPrivacyAccepted?: boolean,
   ): Promise<CoreBetterAuthAuthModel> {
-    return super.betterAuthSignUp(email, password, name);
+    return super.betterAuthSignUp(email, password, name, termsAndPrivacyAccepted);
   }
 
   @Mutation(() => Boolean, { description: 'Sign out from IAM session' })

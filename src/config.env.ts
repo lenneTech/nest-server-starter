@@ -22,6 +22,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     automaticObjectIdFiltering: true,
     // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
     // baseUrl: 'http://localhost:4000',
+    betterAuth: {
+      emailVerification: false,
+      signUpChecks: false,
+    },
     compression: true,
     cookies: false,
     cronJobs: {
@@ -240,6 +244,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     automaticObjectIdFiltering: true,
     // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
     // baseUrl: 'http://localhost:4000',
+    betterAuth: {
+      emailVerification: false,
+      signUpChecks: false,
+    },
     compression: true,
     cookies: false,
     cronJobs: {},
@@ -348,6 +356,10 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
     // baseUrl: 'http://localhost:4000',
     // appUrl: 'http://localhost:4001',
+    betterAuth: {
+      emailVerification: false,
+      signUpChecks: false,
+    },
     compression: true,
     cronJobs: {
       sayHello: {
