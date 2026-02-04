@@ -261,10 +261,6 @@ describe('TUS Module (e2e)', () => {
   // ===================================================================================================================
 
   beforeAll(async () => {
-    if (envConfig.cookies) {
-      console.error('NOTE: Cookie handling is enabled. The tests with tokens will fail!');
-    }
-
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [...imports, ServerModule],
@@ -342,6 +338,7 @@ describe('TUS Module (e2e)', () => {
         email: `${random}@testusers.com`,
         name: `Test${random}`,
         password: hashPassword(password),
+        termsAndPrivacyAccepted: true,
       };
 
       // Sign up user via IAM REST
@@ -367,7 +364,7 @@ describe('TUS Module (e2e)', () => {
       // Verify user in database
       await db.collection('users').updateOne(
         { _id: new ObjectId(user._id) },
-        { $set: { verified: true } },
+        { $set: { emailVerified: true, verified: true } },
       );
     }
 
@@ -382,12 +379,13 @@ describe('TUS Module (e2e)', () => {
           email: user.email,
           password: hashPassword(user.password),
         },
+        returnResponse: true,
         statusCode: 200,
       });
 
       expect(res).toBeDefined();
-      expect(res.token).toBeDefined();
-      user.token = res.token;
+      user.token = TestHelper.extractSessionToken(res);
+      expect(user.token).toBeDefined();
     }
   });
 
@@ -688,7 +686,7 @@ describe('TUS Module (e2e)', () => {
 
     it('should get file info via REST', async () => {
       const res = await testHelper.rest(`/files/info/${testFile.gridFsId}`, {
-        token: users[0].token,
+        cookies: users[0].token,
       });
 
       expect(res.id).toBe(testFile.gridFsId);

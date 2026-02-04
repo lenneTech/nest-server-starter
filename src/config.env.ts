@@ -22,12 +22,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     automaticObjectIdFiltering: true,
     // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
     // baseUrl: 'http://localhost:4000',
-    betterAuth: {
-      emailVerification: false,
-      signUpChecks: false,
-    },
     compression: true,
-    cookies: false,
     cronJobs: {
       sayHello: {
         cronTime: CronExpression.EVERY_5_MINUTES,
@@ -141,7 +136,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     // REQUIRED: Set baseUrl once domain is known (e.g., 'https://api.develop.example.com')
     // baseUrl: process.env.BASE_URL,
     compression: true,
-    cookies: false,
     email: {
       defaultSender: {
         email: 'cade72@ethereal.email',
@@ -244,12 +238,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     automaticObjectIdFiltering: true,
     // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
     // baseUrl: 'http://localhost:4000',
-    betterAuth: {
-      emailVerification: false,
-      signUpChecks: false,
-    },
     compression: true,
-    cookies: false,
     cronJobs: {},
     email: {
       defaultSender: {
@@ -356,10 +345,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     // baseUrl/appUrl only needed if NOT using default ports (API:3000, App:3001)
     // baseUrl: 'http://localhost:4000',
     // appUrl: 'http://localhost:4001',
-    betterAuth: {
-      emailVerification: false,
-      signUpChecks: false,
-    },
     compression: true,
     cronJobs: {
       sayHello: {
@@ -476,7 +461,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     // appUrl is auto-derived (api.example.com → example.com)
     // baseUrl: process.env.BASE_URL,
     compression: true,
-    cookies: false,
     email: {
       defaultSender: {
         email: 'cade72@ethereal.email',
@@ -578,7 +562,6 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     // REQUIRED: Set baseUrl once domain is known (e.g., 'https://api.test.example.com')
     // baseUrl: process.env.BASE_URL,
     compression: true,
-    cookies: false,
     email: {
       defaultSender: {
         email: 'cade72@ethereal.email',

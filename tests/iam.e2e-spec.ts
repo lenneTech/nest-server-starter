@@ -22,7 +22,7 @@ function hashPassword(password: string): string {
 /**
  * Auth (IAM) Integration Tests
  *
- * Tests for IAM (Better-Auth) authentication via REST:
+ * Tests for IAM (Better-Auth) authentication via REST with cookie-based sessions:
  * - UserA: IAM signUp → IAM signIn → IAM signOut
  * - UserB: IAM signUp → get session → sign out
  */
@@ -41,21 +41,19 @@ describe('Auth Integration (e2e)', () => {
   let userAEmail: string;
   let userAPassword: string;
   let userAId: string;
-  let userAToken: string;
+  let userASessionToken: string;
 
   // UserB: IAM registration, session check
   let userBEmail: string;
   let userBPassword: string;
   let userBId: string;
+  let userBSessionToken: string;
 
   // ===================================================================================================================
   // Preparations
   // ===================================================================================================================
 
   beforeAll(async () => {
-    if (envConfig.cookies) {
-      console.error('NOTE: Cookie handling is enabled. The tests with tokens will fail!');
-    }
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [...imports, ServerModule],
@@ -154,6 +152,7 @@ describe('Auth Integration (e2e)', () => {
           email: userAEmail,
           name: 'UserA',
           password: hashPassword(userAPassword),
+          termsAndPrivacyAccepted: true,
         },
         statusCode: 201,
       });
@@ -168,6 +167,12 @@ describe('Auth Integration (e2e)', () => {
         const user = await db.collection('users').findOne({ email: userAEmail });
         if (user) userAId = user._id.toString();
       }
+
+      // Verify email for BetterAuth
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(userAId) },
+        { $set: { emailVerified: true, verified: true } },
+      );
     });
 
     it('should sign in via IAM', async () => {
@@ -177,40 +182,38 @@ describe('Auth Integration (e2e)', () => {
           email: userAEmail,
           password: hashPassword(userAPassword),
         },
+        returnResponse: true,
         statusCode: 200,
       });
 
       expect(res).toBeDefined();
-      expect(res.token || res.session).toBeDefined();
-
-      if (res.token) {
-        userAToken = res.token;
-      }
+      userASessionToken = TestHelper.extractSessionToken(res);
+      expect(userASessionToken).toBeDefined();
     });
 
     it('should get session via IAM', async () => {
-      if (!userAToken) {
+      if (!userASessionToken) {
         return;
       }
 
       const res = await testHelper.rest('/iam/session', {
+        cookies: userASessionToken,
         method: 'GET',
         statusCode: 200,
-        token: userAToken,
       });
 
       expect(res).toBeDefined();
     });
 
     it('should sign out via IAM', async () => {
-      if (!userAToken) {
+      if (!userASessionToken) {
         return;
       }
 
       const res = await testHelper.rest('/iam/sign-out', {
+        cookies: userASessionToken,
         method: 'POST',
         statusCode: 201,
-        token: userAToken,
       });
 
       expect(res).toBeDefined();
@@ -232,6 +235,7 @@ describe('Auth Integration (e2e)', () => {
           email: userBEmail,
           name: 'UserB',
           password: hashPassword(userBPassword),
+          termsAndPrivacyAccepted: true,
         },
         statusCode: 201,
       });
@@ -245,24 +249,28 @@ describe('Auth Integration (e2e)', () => {
         const user = await db.collection('users').findOne({ email: userBEmail });
         if (user) userBId = user._id.toString();
       }
+
+      // Verify email for BetterAuth
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(userBId) },
+        { $set: { emailVerified: true, verified: true } },
+      );
     });
 
-    it('should sign in and receive token via IAM', async () => {
+    it('should sign in and receive session via IAM', async () => {
       const res = await testHelper.rest('/iam/sign-in/email', {
         method: 'POST',
         payload: {
           email: userBEmail,
           password: hashPassword(userBPassword),
         },
+        returnResponse: true,
         statusCode: 200,
       });
 
       expect(res).toBeDefined();
-      // JWT mode should return token
-      if (betterAuthService.isJwtEnabled()) {
-        expect(res.token).toBeDefined();
-        expect(res.token.length).toBeGreaterThan(0);
-      }
+      userBSessionToken = TestHelper.extractSessionToken(res);
+      expect(userBSessionToken).toBeDefined();
     });
   });
 
@@ -296,6 +304,7 @@ describe('Auth Integration (e2e)', () => {
             email: userAEmail,
             name: 'Duplicate',
             password: hashPassword('password123'),
+            termsAndPrivacyAccepted: true,
           },
           statusCode: 400,
         });

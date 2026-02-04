@@ -49,10 +49,6 @@ describe('Project (e2e)', () => {
    * Before all tests
    */
   beforeAll(async () => {
-    // Indicates that cookies are enabled
-    if (envConfig.cookies) {
-      console.error('NOTE: Cookie handling is enabled. The tests with tokens will fail!');
-    }
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [
@@ -105,6 +101,7 @@ describe('Project (e2e)', () => {
         email: `${random + i}@testusers.com`,
         name: `Test${'0'.repeat((`${userCount}`).length - (`${i}`).length)}${i}${random}`,
         password: hashPassword(password),
+        termsAndPrivacyAccepted: true,
       };
 
       // Sign up user via IAM REST
@@ -130,7 +127,7 @@ describe('Project (e2e)', () => {
       // Verify user in database
       await db.collection('users').updateOne(
         { _id: new ObjectId(user._id) },
-        { $set: { verified: true } },
+        { $set: { emailVerified: true, verified: true } },
       );
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
@@ -147,12 +144,13 @@ describe('Project (e2e)', () => {
           email: user.email,
           password: hashPassword(user.password),
         },
+        returnResponse: true,
         statusCode: 200,
       });
 
       expect(res).toBeDefined();
-      expect(res.token).toBeDefined();
-      user.token = res.token;
+      user.token = TestHelper.extractSessionToken(res);
+      expect(user.token).toBeDefined();
     }
   });
 

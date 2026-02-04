@@ -42,7 +42,7 @@ describe('Common (e2e)', () => {
   let gAdminId: string;
   let gAdminEmail: string;
   let gAdminPassword: string;
-  let gAdminToken: string;
+  let gAdminSessionToken: string;
 
   // ===================================================================================================================
   // Preparations
@@ -52,10 +52,6 @@ describe('Common (e2e)', () => {
    * Before all tests
    */
   beforeAll(async () => {
-    // Indicates that cookies are enabled
-    if (envConfig.cookies) {
-      console.error('NOTE: Cookie handling is enabled. The tests with tokens will fail!');
-    }
     try {
       // Start server for testing
       const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -188,6 +184,7 @@ describe('Common (e2e)', () => {
         email: gAdminEmail,
         name: 'Admin',
         password: hashPassword(gAdminPassword),
+        termsAndPrivacyAccepted: true,
       },
       statusCode: 201,
     });
@@ -200,10 +197,10 @@ describe('Common (e2e)', () => {
       if (user) gAdminId = user._id.toString();
     }
 
-    // Set admin role and verify
+    // Set admin role and verify email
     await db.collection('users').findOneAndUpdate(
       { _id: new ObjectId(gAdminId) },
-      { $set: { roles: ['admin'], verified: true } },
+      { $set: { emailVerified: true, roles: ['admin'], verified: true } },
     );
 
     // Sign in via IAM
@@ -213,9 +210,10 @@ describe('Common (e2e)', () => {
         email: gAdminEmail,
         password: hashPassword(gAdminPassword),
       },
+      returnResponse: true,
       statusCode: 200,
     });
-    gAdminToken = signInRes.token;
+    gAdminSessionToken = TestHelper.extractSessionToken(signInRes);
   });
 
   /**
@@ -236,6 +234,7 @@ describe('Common (e2e)', () => {
         email,
         name: 'User',
         password: hashPassword(password),
+        termsAndPrivacyAccepted: true,
       },
       statusCode: 201,
     });
@@ -249,10 +248,10 @@ describe('Common (e2e)', () => {
       if (user) userId = user._id.toString();
     }
 
-    // Verify user (but not admin)
+    // Verify user email (but not admin)
     await db.collection('users').updateOne(
       { _id: new ObjectId(userId) },
-      { $set: { verified: true } },
+      { $set: { emailVerified: true, verified: true } },
     );
 
     // Sign in via IAM
@@ -262,11 +261,13 @@ describe('Common (e2e)', () => {
         email,
         password: hashPassword(password),
       },
+      returnResponse: true,
       statusCode: 200,
     });
+    const userSessionToken = TestHelper.extractSessionToken(signInRes);
 
     // Non-admin users should get 403 Forbidden
-    await testHelper.rest('/config', { statusCode: 403, token: signInRes.token });
+    await testHelper.rest('/config', { cookies: userSessionToken, statusCode: 403 });
 
     // Clean up
     await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
@@ -276,7 +277,7 @@ describe('Common (e2e)', () => {
    * Get config with token
    */
   it('get config with admin rights', async () => {
-    const res: any = await testHelper.rest('/config', { token: gAdminToken });
+    const res: any = await testHelper.rest('/config', { cookies: gAdminSessionToken });
     expect(res.env).toEqual(envConfig.env);
   });
 

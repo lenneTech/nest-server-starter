@@ -48,10 +48,6 @@ describe('File Module (e2e)', () => {
    * Before all tests
    */
   beforeAll(async () => {
-    // Indicates that cookies are enabled
-    if (envConfig.cookies) {
-      console.error('NOTE: Cookie handling is enabled. The tests with tokens will fail!');
-    }
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [
@@ -114,6 +110,7 @@ describe('File Module (e2e)', () => {
         email: `${random}@testusers.com`,
         name: `Test${random}`,
         password: hashPassword(password),
+        termsAndPrivacyAccepted: true,
       };
 
       // Sign up user via IAM REST
@@ -139,7 +136,7 @@ describe('File Module (e2e)', () => {
       // Verify user in database
       await db.collection('users').updateOne(
         { _id: new ObjectId(user._id) },
-        { $set: { verified: true } },
+        { $set: { emailVerified: true, verified: true } },
       );
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
@@ -156,12 +153,13 @@ describe('File Module (e2e)', () => {
           email: user.email,
           password: hashPassword(user.password),
         },
+        returnResponse: true,
         statusCode: 200,
       });
 
       expect(res).toBeDefined();
-      expect(res.token).toBeDefined();
-      user.token = res.token;
+      user.token = TestHelper.extractSessionToken(res);
+      expect(user.token).toBeDefined();
     }
   });
 
@@ -314,8 +312,8 @@ describe('File Module (e2e)', () => {
     await fs.promises.writeFile(local, fileContent);
     const res = await testHelper.rest('/files/upload', {
       attachments: { file: local },
+      cookies: users[0].token,
       statusCode: 201,
-      token: users[0].token,
     });
 
     // Remove file
@@ -330,7 +328,7 @@ describe('File Module (e2e)', () => {
   });
 
   it('getFileInfoForRESTFile', async () => {
-    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { token: users[0].token });
+    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { cookies: users[0].token });
     expect(res.id).toEqual(fileInfo.id);
     expect(res.filename).toEqual(fileInfo.filename);
   });
@@ -342,12 +340,12 @@ describe('File Module (e2e)', () => {
   });
 
   it('deleteRESTFile', async () => {
-    const res = await testHelper.rest(`/files/${fileInfo.id}`, { method: 'DELETE', token: users[0].token });
+    const res = await testHelper.rest(`/files/${fileInfo.id}`, { cookies: users[0].token, method: 'DELETE' });
     expect(res.id).toEqual(fileInfo.id);
   });
 
   it('getRESTFileInfo', async () => {
-    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { token: users[0].token });
+    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { cookies: users[0].token });
     expect(res).toEqual(null);
   });
 

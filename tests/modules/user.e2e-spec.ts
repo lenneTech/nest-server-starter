@@ -63,10 +63,6 @@ describe('User Module (e2e)', () => {
    * Before all tests
    */
   beforeAll(async () => {
-    // Indicates that cookies are enabled
-    if (envConfig.cookies) {
-      console.error('NOTE: Cookie handling is enabled. The tests with tokens will fail!');
-    }
     try {
       // Start server for testing
       const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -150,6 +146,7 @@ describe('User Module (e2e)', () => {
         email: gEmail,
         name: 'Everardo',
         password: hashPassword(gPassword),
+        termsAndPrivacyAccepted: true,
       },
       statusCode: 201,
     });
@@ -160,6 +157,12 @@ describe('User Module (e2e)', () => {
     const user = await db.collection('users').findOne({ email: gEmail });
     expect(user).toBeDefined();
     gId = user._id.toString();
+
+    // Verify email for BetterAuth
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(gId) },
+      { $set: { emailVerified: true, verified: true } },
+    );
   });
 
   /**
@@ -172,13 +175,13 @@ describe('User Module (e2e)', () => {
         email: gEmail,
         password: hashPassword(gPassword),
       },
+      returnResponse: true,
       statusCode: 200,
     });
 
     expect(res).toBeDefined();
-    expect(res.token).toBeDefined();
-    expect(res.token.length).toBeGreaterThan(0);
-    gToken = res.token;
+    gToken = TestHelper.extractSessionToken(res);
+    expect(gToken).toBeDefined();
   });
 
   /**
@@ -186,9 +189,9 @@ describe('User Module (e2e)', () => {
    */
   it('IAM: getSession', async () => {
     const res = await testHelper.rest('/iam/session', {
+      cookies: gToken,
       method: 'GET',
       statusCode: 200,
-      token: gToken,
     });
 
     expect(res).toBeDefined();
@@ -398,6 +401,7 @@ describe('User Module (e2e)', () => {
         email,
         name: 'RESTTestUser',
         password: hashPassword(password),
+        termsAndPrivacyAccepted: true,
       },
       statusCode: 201,
     });
@@ -406,22 +410,23 @@ describe('User Module (e2e)', () => {
     const user = await db.collection('users').findOne({ email });
     gRestPrepareUserId = user._id.toString();
 
-    // Set admin role
+    // Set admin role and verify email
     await db.collection('users').updateOne(
       { _id: new ObjectId(gRestPrepareUserId) },
-      { $set: { roles: ['admin'], verified: true } },
+      { $set: { emailVerified: true, roles: ['admin'], verified: true } },
     );
 
-    // Sign in to get token
+    // Sign in to get session token
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
       method: 'POST',
       payload: {
         email,
         password: hashPassword(password),
       },
+      returnResponse: true,
       statusCode: 200,
     });
-    gRestPrepareUserToken = signInRes.token;
+    gRestPrepareUserToken = TestHelper.extractSessionToken(signInRes);
     expect(gRestPrepareUserToken).toBeDefined();
   });
 
@@ -447,10 +452,10 @@ describe('User Module (e2e)', () => {
     };
 
     const res = await testHelper.rest('/users', {
+      cookies: gRestPrepareUserToken,
       method: 'POST',
       payload: input,
       statusCode: 201,
-      token: gRestPrepareUserToken,
     });
 
     expect(res.id).toBeDefined();
@@ -465,7 +470,7 @@ describe('User Module (e2e)', () => {
    */
   it('REST: getUserById', async () => {
     const res = await testHelper.rest(`/users/${gRestUserId}`, {
-      token: gRestPrepareUserToken,
+      cookies: gRestPrepareUserToken,
     });
     expect(res.id).toEqual(gRestUserId);
     expect(res.email).toEqual(gRestUserEmail);
@@ -476,7 +481,7 @@ describe('User Module (e2e)', () => {
    */
   it('REST: findUsers', async () => {
     const res = await testHelper.rest('/users', {
-      token: gRestPrepareUserToken,
+      cookies: gRestPrepareUserToken,
     });
     expect(Array.isArray(res)).toEqual(true);
     expect(res.length).toBeGreaterThan(0);
@@ -487,7 +492,7 @@ describe('User Module (e2e)', () => {
    */
   it('REST: findAndCountUsers', async () => {
     const res = await testHelper.rest('/users/count', {
-      token: gRestPrepareUserToken,
+      cookies: gRestPrepareUserToken,
     });
     expect(res.items).toBeDefined();
     expect(res.totalCount).toBeDefined();
@@ -500,11 +505,11 @@ describe('User Module (e2e)', () => {
    */
   it('REST: updateUser', async () => {
     const res = await testHelper.rest(`/users/${gRestUserId}`, {
+      cookies: gRestPrepareUserToken,
       method: 'PATCH',
       payload: {
         firstName: 'RestUpdated',
       },
-      token: gRestPrepareUserToken,
     });
     expect(res.id).toEqual(gRestUserId);
     expect(res.firstName).toEqual('RestUpdated');
@@ -515,8 +520,8 @@ describe('User Module (e2e)', () => {
    */
   it('REST: deleteUser', async () => {
     const res = await testHelper.rest(`/users/${gRestUserId}`, {
+      cookies: gRestPrepareUserToken,
       method: 'DELETE',
-      token: gRestPrepareUserToken,
     });
     expect(res.id).toEqual(gRestUserId);
   });
@@ -526,8 +531,8 @@ describe('User Module (e2e)', () => {
    */
   it('REST: delete prepare user', async () => {
     const res = await testHelper.rest(`/users/${gRestPrepareUserId}`, {
+      cookies: gRestPrepareUserToken,
       method: 'DELETE',
-      token: gRestPrepareUserToken,
     });
     expect(res.id).toEqual(gRestPrepareUserId);
   });
