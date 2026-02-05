@@ -7,6 +7,7 @@ console.time('duration');
 // Configurations
 // =====================================================================================================================
 const npmPackage = '@lenne.tech/nest-server';
+const addMissing = process.argv.includes('--add-missing');
 
 // =====================================================================================================================
 // Import packages and data
@@ -68,15 +69,24 @@ if (!packageJson.devDependencies) {
 }
 
 // Update versions
-console.log('Add or update packages');
+console.log(addMissing ? 'Update existing and add missing packages' : 'Update existing packages');
 let counter = 0;
+let added = 0;
 for (const dep of ['dependencies', 'devDependencies']) {
   // console.log(dep, meta['versions'][version][dep]);
   if (!meta['versions']?.[version]?.[dep]) {
     continue;
   }
   for (const [pack, ver] of Object.entries(meta['versions'][version][dep])) {
-    if (!packageJson[dep][pack] || semver.gt(ver, packageJson[dep][pack])) {
+    if (!packageJson[dep][pack]) {
+      if (addMissing) {
+        packageJson[dep][pack] = ver;
+        console.log(dep, pack, 'added ' + ver);
+        added++;
+      }
+      continue;
+    }
+    if (semver.gt(ver, packageJson[dep][pack])) {
       const old = packageJson[dep][pack];
       packageJson[dep][pack] = ver;
       console.log(dep, pack, old + ' => ' + ver);
@@ -85,13 +95,14 @@ for (const dep of ['dependencies', 'devDependencies']) {
   }
   packageJson[dep] = Object.fromEntries(Object.entries(packageJson[dep]).sort((a, b) => a[0].localeCompare(b[0])));
 }
-if (!counter) {
+if (!counter && !added) {
   execSync('cd ' + __dirname + '/.. && npm i', { stdio: 'inherit' });
   console.log('Everything is up-to-date for ' + npmPackage + ' version ' + version);
   getVersionHint();
   process.exit(0);
 }
-console.log(counter + ' packages updated');
+if (counter) console.log(counter + ' packages updated');
+if (added) console.log(added + ' packages added');
 
 // Save package.json
 console.log('Save package.json');

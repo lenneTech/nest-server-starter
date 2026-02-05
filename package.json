@@ -86,6 +86,7 @@
     "test:e2e": "npm run vitest",
     "unlink:nest-server": "yalc remove @lenne.tech/nest-server && npm install",
     "update": "node extras/sync-packages.mjs",
+    "update:all": "node extras/sync-packages.mjs --add-missing",
     "vitest": "NODE_ENV=e2e vitest run --config vitest-e2e.config.ts",
     "vitest:ci": "NODE_ENV=ci vitest run --config vitest-e2e.config.ts",
     "vitest:cov": "NODE_ENV=e2e vitest run --coverage --config vitest-e2e.config.ts",
