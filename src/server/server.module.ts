@@ -5,7 +5,6 @@ import { ScheduleModule } from '@nestjs/schedule';
 import envConfig from '../config.env';
 import { CronJobs } from './common/services/cron-jobs.service';
 import { FileModule } from './modules/file/file.module';
-import { IamModule } from './modules/iam/iam.module';
 import { MetaModule } from './modules/meta/meta.module';
 import { UserModule } from './modules/user/user.module';
 import { ServerController } from './server.controller';
@@ -17,9 +16,6 @@ export const imports = [
 
   // Include cron job handling
   ScheduleModule.forRoot(),
-
-  // Include IamModule for IAM (Better-Auth) authentication handling
-  IamModule.forRoot(),
 
   // Include MetaModule to offer information about the server
   MetaModule,
@@ -45,7 +41,7 @@ export const imports = [
   controllers: [ServerController],
 
   // Export modules for reuse in other modules
-  exports: [CoreModule, IamModule, MetaModule, FileModule, TusModule, UserModule],
+  exports: [CoreModule, MetaModule, FileModule, TusModule, UserModule],
 
   // Include modules
   imports,
