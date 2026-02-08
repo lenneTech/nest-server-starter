@@ -1,10 +1,12 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="E2E-Tests" type="JavaScriptTestRunnerJest">
+  <configuration default="false" name="E2E-Tests" type="ViTestConfigurationType">
     <node-interpreter value="project" />
-    <jest-package value="$PROJECT_DIR$/node_modules/jest" />
+    <vitest-package value="$PROJECT_DIR$/node_modules/vitest" />
     <working-dir value="$PROJECT_DIR$" />
-    <jest-options value=" --config jest-e2e.json --forceExit" />
-    <envs />
+    <vitest-config value="$PROJECT_DIR$/vitest-e2e.config.ts" />
+    <envs>
+      <env name="NODE_ENV" value="e2e" />
+    </envs>
     <scope-kind value="ALL" />
     <method v="2" />
   </configuration>

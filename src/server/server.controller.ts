@@ -10,7 +10,10 @@ import { MetaService } from './modules/meta/meta.service';
 @Controller()
 @Roles(RoleEnum.ADMIN)
 export class ServerController {
-  constructor(protected configService: ConfigService, protected metaService: MetaService) {}
+  constructor(
+    protected configService: ConfigService,
+    protected metaService: MetaService,
+  ) {}
 
   @Get()
   @Render('index')

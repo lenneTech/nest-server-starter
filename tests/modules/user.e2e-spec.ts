@@ -28,8 +28,8 @@ function hashPassword(password: string): string {
 
 describe('User Module (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
-  const log = true; // eslint-disable-line unused-imports/no-unused-vars
-  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
+  const log = true;
+  const logError = true;
 
   // Test environment properties
   let app: NestExpressApplication;
@@ -41,7 +41,7 @@ describe('User Module (e2e)', () => {
   let db;
 
   // Services
-  let configService: ConfigService; // eslint-disable-line unused-imports/no-unused-vars
+  let configService: ConfigService;
 
   // Global vars for IAM tests
   let gId: string;

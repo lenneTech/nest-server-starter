@@ -25,9 +25,7 @@ export class FileResolver {
    */
   @Query(() => FileInfo, { nullable: true })
   @Roles(RoleEnum.ADMIN)
-  async getFileInfo(
-    @Args({ name: 'filename', type: () => String }) filename: string,
-  ): Promise<CoreFileInfo | null> {
+  async getFileInfo(@Args({ name: 'filename', type: () => String }) filename: string): Promise<CoreFileInfo | null> {
     return this.fileService.getFileInfoByName(filename);
   }
 
@@ -40,9 +38,7 @@ export class FileResolver {
    */
   @Mutation(() => FileInfo)
   @Roles(RoleEnum.ADMIN)
-  async deleteFile(
-    @Args({ name: 'filename', type: () => String }) filename: string,
-  ): Promise<CoreFileInfo | null> {
+  async deleteFile(@Args({ name: 'filename', type: () => String }) filename: string): Promise<CoreFileInfo | null> {
     return this.fileService.deleteFileByName(filename);
   }
 
@@ -51,9 +47,7 @@ export class FileResolver {
    */
   @Mutation(() => FileInfo)
   @Roles(RoleEnum.ADMIN)
-  async uploadFile(
-    @Args({ name: 'file', type: () => GraphQLUpload }) file: FileUpload,
-  ): Promise<CoreFileInfo> {
+  async uploadFile(@Args({ name: 'file', type: () => GraphQLUpload }) file: FileUpload): Promise<CoreFileInfo> {
     return this.fileService.createFile(file);
   }
 
@@ -66,7 +60,7 @@ export class FileResolver {
   async uploadFiles(
     @Args({ name: 'files', type: () => [GraphQLUpload] }) files: FileUpload[],
   ): Promise<CoreFileInfo[]> {
-    const uploadPromises = files.map(file => this.fileService.createFile(file));
+    const uploadPromises = files.map((file) => this.fileService.createFile(file));
     return Promise.all(uploadPromises);
   }
 }

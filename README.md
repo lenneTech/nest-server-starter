@@ -92,9 +92,9 @@ $ npm run test:e2e
 Configuration for testing:
 ```
 Node interpreter: /user/local/bin/node
-Jest package: FULL_PATH_TO_PROJECT_DIR/node_modules/jest
+Vitest package: FULL_PATH_TO_PROJECT_DIR/node_modules/vitest
 Working directory: FULL_PATH_TO_PROJECT_DIR
-Jest options: --config jest-e2e.json --forceExit
+Vitest config: vitest-e2e.config.ts
 ```
 see [E2E-Tests.run.xml](.run/E2E-Tests.run.xml)
 

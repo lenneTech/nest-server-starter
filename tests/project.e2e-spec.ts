@@ -27,8 +27,8 @@ function hashPassword(password: string): string {
 
 describe('Project (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
-  const log = true; // eslint-disable-line unused-imports/no-unused-vars
-  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
+  const log = true;
+  const logError = true;
 
   // Test environment properties
   let app;

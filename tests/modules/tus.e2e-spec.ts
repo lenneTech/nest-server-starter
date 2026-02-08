@@ -73,8 +73,8 @@ const GRIDFS_MIGRATION_INTERVAL = 100;
 
 describe('TUS Module (e2e)', () => {
   // Debug flags
-  const log = false; // eslint-disable-line unused-imports/no-unused-vars
-  const logError = true; // eslint-disable-line unused-imports/no-unused-vars
+  const log = false;
+  const logError = true;
 
   // Test environment
   let app;
