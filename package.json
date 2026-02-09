@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.14.1",
+  "version": "11.15.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -12,16 +12,21 @@
     "graphql",
     "typescript"
   ],
-  "author": "lenne.Tech <info@lenne.tech> (https://lenne.tech)",
   "homepage": "https://lenne.tech",
-  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lenneTech/nest-server-starter/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/lenneTech/nest-server-starter"
   },
-  "bugs": {
-    "url": "https://github.com/lenneTech/nest-server-starter/issues"
-  },
+  "license": "MIT",
+  "author": "lenne.Tech <info@lenne.tech> (https://lenne.tech)",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "init": "npm install",
     "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy",
@@ -71,8 +76,10 @@
     "start:local:swc": "NODE_ENV=local nest start -b swc -w --type-check",
     "start:nodemon": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:prod": "NODE_ENV=production node dist/main.js",
+    "strip-markers": "node scripts/strip-api-mode-markers.mjs",
     "test": "npm run vitest",
     "test:ci": "npm run vitest:ci",
+    "test:cleanup": "find tests -type f \\( -name '*.txt' -o -name '*.bin' \\) -not -name '.gitkeep' -delete && echo 'Test artifacts cleaned up'",
     "test:e2e": "npm run vitest",
     "unlink:nest-server": "yalc remove @lenne.tech/nest-server && npm install",
     "update": "node extras/sync-packages.mjs",
@@ -84,55 +91,35 @@
     "vitest:unit": "vitest run --config vitest.config.ts",
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
-  "engines": {
-    "node": ">= 20"
+  "//overrides": {
+    "lodash": "Security fix",
+    "tar": "Security fix",
+    "@apollo/server": "Prevents infinite npm install loop: @nestjs/apollo pulls in @apollo/server-plugin-landing-page-graphql-playground@4.0.1 (peerDep @apollo/server@^4), conflicting with @lenne.tech/nest-server requiring v5. Update this value when nest-server changes its @apollo/server version. Remove once the playground plugin accepts v5."
   },
   "overrides": {
     "lodash": "4.17.23",
-    "tar": "7.5.7"
+    "tar": "7.5.7",
+    "@apollo/server": "5.4.0"
   },
   "dependencies": {
-    "@apollo/gateway": "2.13.0",
-    "@apollo/server": "5.4.0",
-    "@as-integrations/express5": "1.1.2",
-    "@better-auth/passkey": "1.4.18",
-    "@getbrevo/brevo": "3.0.1",
-    "@lenne.tech/nest-server": "11.14.1",
-    "@nestjs/apollo": "13.2.4",
+    "@lenne.tech/nest-server": "11.15.0",
     "@nestjs/common": "11.1.13",
     "@nestjs/core": "11.1.13",
     "@nestjs/graphql": "13.2.4",
-    "@nestjs/jwt": "11.0.2",
     "@nestjs/mongoose": "11.0.4",
-    "@nestjs/passport": "11.0.5",
     "@nestjs/platform-express": "11.1.13",
     "@nestjs/schedule": "6.1.1",
     "@nestjs/swagger": "11.2.6",
-    "@nestjs/terminus": "11.0.0",
-    "@nestjs/websockets": "11.1.13",
-    "@tus/file-store": "2.0.0",
-    "@tus/server": "2.3.0",
-    "bcrypt": "6.0.0",
-    "better-auth": "1.4.18",
-    "class-transformer": "0.5.1",
     "class-validator": "0.14.3",
     "compression": "1.8.1",
     "cookie-parser": "1.4.7",
     "dotenv": "17.2.4",
     "express": "5.2.1",
-    "graphql": "16.12.0",
-    "graphql-query-complexity": "1.1.0",
     "graphql-subscriptions": "3.0.0",
     "graphql-upload": "15.0.2",
-    "json-to-graphql-query": "2.3.0",
-    "lodash": "4.17.23",
     "mongodb": "7.0.0",
     "mongoose": "9.1.6",
-    "multer": "2.0.2",
-    "passport": "0.7.0",
-    "passport-jwt": "4.0.1",
-    "reflect-metadata": "0.2.2",
-    "rxjs": "7.8.2"
+    "multer": "2.0.2"
   },
   "devDependencies": {
     "@compodoc/compodoc": "1.2.1",
@@ -158,6 +145,7 @@
     "cpy-cli": "6.0.0",
     "find-file-up": "2.0.1",
     "husky": "9.1.7",
+    "json-to-graphql-query": "2.3.0",
     "nodemon": "3.1.11",
     "oxfmt": "0.28.0",
     "oxlint": "1.43.0",
@@ -177,9 +165,7 @@
     "vitest": "4.0.18",
     "yalc": "1.0.0-pre.53"
   },
-  "main": "dist/main.js",
-  "types": "dist/main.d.ts",
-  "files": [
-    "dist"
-  ]
+  "engines": {
+    "node": ">= 20"
+  }
 }

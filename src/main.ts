@@ -7,14 +7,18 @@ import {
 } from '@lenne.tech/nest-server';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+// #region rest
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+// #endregion rest
 import { exec } from 'child_process';
 import compression = require('compression');
 import cookieParser = require('cookie-parser');
 
 import packageJson = require('../package.json');
 import envConfig from './config.env';
+// #region rest
 import { PersistenceModel } from './server/common/models/persistence.model';
+// #endregion rest
 import { User } from './server/modules/user/user.model';
 import { ServerModule } from './server/server.module';
 
@@ -64,6 +68,7 @@ async function bootstrap() {
   // Enable cors to allow requests from other domains
   server.enableCors();
 
+  // #region rest
   // Swagger documentation
   const config = new DocumentBuilder()
     .setTitle('Nest Server Starter API')
@@ -80,6 +85,7 @@ async function bootstrap() {
   SwaggerModule.setup('swagger', server, documentFactory, {
     jsonDocumentUrl: '/api-docs-json',
   });
+  // #endregion rest
 
   // Set global prefix (if server runs in subdirectory, e.g. /api)
   // server.setGlobalPrefix('api');

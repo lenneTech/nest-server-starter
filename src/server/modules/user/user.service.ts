@@ -9,7 +9,9 @@ import {
 import { Inject, Injectable, Optional, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import fs = require('fs');
+// #region graphql
 import { PubSub } from 'graphql-subscriptions';
+// #endregion graphql
 import { Model } from 'mongoose';
 
 import { UserCreateInput } from './inputs/user-create.input';
@@ -33,7 +35,9 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     protected override readonly emailService: EmailService,
     @Inject('USER_CLASS') protected override readonly mainModelConstructor: CoreModelConstructor<User>,
     @InjectModel('User') protected override readonly mainDbModel: Model<UserDocument>,
+    // #region graphql
     @Inject('PUB_SUB') protected readonly pubSub: PubSub,
+    // #endregion graphql
     @Optional() private readonly betterAuthUserMapper?: CoreBetterAuthUserMapper,
   ) {
     super(configService, emailService, mainDbModel, mainModelConstructor, { betterAuthUserMapper });
@@ -57,10 +61,12 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
       user = await this.get(user.id, { ...serviceOptions, currentUser: serviceOptions?.currentUser || user });
     }
 
+    // #region graphql
     // Publish action
     if (serviceOptions?.pubSub === undefined || serviceOptions.pubSub) {
       await this.pubSub.publish('userCreated', User.map(user));
     }
+    // #endregion graphql
 
     // Return created user
     return user;
@@ -86,6 +92,7 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     return user;
   }
 
+  // #region rest
   /**
    * Set avatar image
    */
@@ -118,4 +125,5 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     // Return user
     return file.filename;
   }
+  // #endregion rest
 }

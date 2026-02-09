@@ -1,10 +1,14 @@
 import {
+  ComparisonOperatorEnum,
   HttpExceptionLogFilter,
   RoleEnum,
+  SortOrderEnum,
+  TestGraphQLType,
   TestHelper,
 } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
+import { PubSub } from 'graphql-subscriptions';
 import { MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../src/config.env';
@@ -21,7 +25,7 @@ function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex');
 }
 
-describe('Project (e2e)', () => {
+describe('Project GraphQL (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
   const log = true;
   const logError = true;
@@ -54,7 +58,7 @@ describe('Project (e2e)', () => {
         providers: [
           {
             provide: 'PUB_SUB',
-            useValue: { publish: async () => {} },
+            useValue: new PubSub(),
           },
         ],
       }).compile();
@@ -160,14 +164,93 @@ describe('Project (e2e)', () => {
   });
 
   // ===================================================================================================================
-  // Tests
+  // GraphQL Tests
   // ===================================================================================================================
 
   /**
-   * Test
+   * Find and count users
    */
-  it('test', async () => {
-    console.info('Implement test here');
+  it('findAndCountUsers', async () => {
+    const emails = users.map(user => user.email);
+    emails.pop();
+    const args = {
+      filter: {
+        singleFilter: {
+          field: 'email',
+          operator: ComparisonOperatorEnum.IN,
+          value: emails,
+        },
+      },
+      limit: 2,
+      skip: 1,
+      sort: [{ field: 'firstName', order: SortOrderEnum.DESC }],
+    };
+    const res: any = await testHelper.graphQl(
+      {
+        arguments: { ...args },
+        fields: [{ items: ['id', 'email', 'firstName', 'lastName'] }, 'totalCount'],
+        name: 'findAndCountUsers',
+        type: TestGraphQLType.QUERY,
+      },
+      { token: users[0].token },
+    );
+    const min = Math.min(args.limit, emails.length - args.skip);
+    expect(res.totalCount).toEqual(emails.length);
+    expect(res.items.length).toEqual(min);
+    for (let i = 0; i < min; i++) {
+      const resPos = emails.length - 1 - args.skip - i;
+      const curPos = i;
+      expect(res.items[curPos].id).toEqual(users[resPos].id);
+      expect(res.items[curPos].email).toEqual(users[resPos].email);
+      expect(emails.includes(res.items[curPos].email)).toBe(true);
+      expect(res.items[curPos].firstName).toEqual(users[resPos].firstName);
+    }
+  });
+
+  /**
+   * Get sample user
+   */
+  it('getSampleUser', async () => {
+    const emails = users.map(user => user.email);
+    const args = {
+      filter: {
+        singleFilter: {
+          field: 'email',
+          operator: ComparisonOperatorEnum.IN,
+          value: emails,
+        },
+      },
+      limit: 2,
+      samples: 1,
+      sort: [{ field: 'email', order: SortOrderEnum.DESC }],
+    };
+    const res: any = await testHelper.graphQl(
+      {
+        arguments: { ...args },
+        fields: ['id', 'email', 'firstName', 'lastName'],
+        name: 'findUsers',
+        type: TestGraphQLType.QUERY,
+      },
+      { token: users[0].token },
+    );
+    expect(res.length).toEqual(1);
+    expect(emails.includes(res[0].email)).toBe(true);
+    const email = res[0].email;
+    let otherEmail = res[0].email;
+    while (email === otherEmail) {
+      const otherRes: any = await testHelper.graphQl(
+        {
+          arguments: { ...args },
+          fields: ['id', 'email', 'firstName', 'lastName'],
+          name: 'findUsers',
+          type: TestGraphQLType.QUERY,
+        },
+        { token: users[0].token },
+      );
+      expect(otherRes.length).toEqual(1);
+      expect(emails.includes(otherRes[0].email)).toBe(true);
+      otherEmail = otherRes[0].email;
+    }
   });
 
   // ===================================================================================================================
@@ -178,8 +261,24 @@ describe('Project (e2e)', () => {
    * Delete users
    */
   it('deleteUsers', async () => {
+    // Add admin role to last user
+    await db
+      .collection('users')
+      .findOneAndUpdate({ _id: new ObjectId(users[users.length - 1].id) }, { $set: { roles: ['admin'] } });
+
     for (const user of users) {
-      await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+      const res: any = await testHelper.graphQl(
+        {
+          arguments: {
+            id: user.id,
+          },
+          fields: ['id'],
+          name: 'deleteUser',
+          type: TestGraphQLType.MUTATION,
+        },
+        { token: users[users.length - 1].token },
+      );
+      expect(res.id).toEqual(user.id);
     }
   });
 });

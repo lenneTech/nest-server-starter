@@ -47,6 +47,13 @@ export const imports = [
   imports,
 
   // Include services and scalars
-  providers: [Any, CronJobs, DateScalar, JSON],
+  providers: [
+    // #region graphql
+    Any,
+    DateScalar,
+    JSON,
+    // #endregion graphql
+    CronJobs,
+  ],
 })
 export class ServerModule {}

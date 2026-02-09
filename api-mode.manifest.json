@@ -1,0 +1,35 @@
+{
+  "version": "1.0.0",
+  "modes": {
+    "graphql": {
+      "regionMarker": "graphql",
+      "packages": ["graphql-subscriptions", "graphql-upload"],
+      "devPackages": ["json-to-graphql-query"],
+      "filePatterns": [
+        "src/server/modules/*/*.resolver.ts",
+        "tests/**/*-graphql.e2e-spec.ts",
+        "schema.gql",
+        "spectaql.yml",
+        "extras/update-spectaql-version.mjs",
+        "scripts/run-spectaql.mjs"
+      ],
+      "scripts": ["docs", "docs:bootstrap", "docs:ci", "copy:spectaql"],
+      "scriptEdits": {
+        "copy": { "remove": " && npm run copy:spectaql" }
+      }
+    },
+    "rest": {
+      "regionMarker": "rest",
+      "packages": [],
+      "devPackages": [],
+      "filePatterns": [
+        "src/server/modules/user/user.controller.ts",
+        "src/server/modules/meta/meta.controller.ts",
+        "src/server/modules/user/avatar.controller.ts",
+        "src/server/modules/file/multer-config.service.ts",
+        "tests/**/*-rest.e2e-spec.ts"
+      ],
+      "scripts": []
+    }
+  }
+}

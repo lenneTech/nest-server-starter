@@ -2,7 +2,6 @@ import { CoreBetterAuthService, HttpExceptionLogFilter, TestHelper } from '@lenn
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import { PubSub } from 'graphql-subscriptions';
 import { Server } from 'http';
 import { Db, MongoClient, ObjectId } from 'mongodb';
 
@@ -60,7 +59,7 @@ describe('Auth Integration (e2e)', () => {
         providers: [
           {
             provide: 'PUB_SUB',
-            useValue: new PubSub(),
+            useValue: { publish: async () => {} },
           },
         ],
       }).compile();

@@ -77,6 +77,7 @@ export class FileController extends CoreFileController {
     return super.getFile(filename, res);
   }
 
+  // #region rest
   // ===================================================================================================================
   // Admin Endpoints
   // ===================================================================================================================
@@ -143,4 +144,5 @@ export class FileController extends CoreFileController {
   async deleteFile(@Param('id') id: string): Promise<CoreFileInfo | null> {
     return this.fileService.deleteFile(id);
   }
+  // #endregion rest
 }

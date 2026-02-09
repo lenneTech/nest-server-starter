@@ -1,7 +1,6 @@
-import { HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
+import { HttpExceptionLogFilter, RoleEnum, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import { PubSub } from 'graphql-subscriptions';
 import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as tus from 'tus-js-client';
 
@@ -265,7 +264,7 @@ describe('TUS Module (e2e)', () => {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [...imports, ServerModule],
         providers: [
-          { provide: 'PUB_SUB', useValue: new PubSub() },
+          { provide: 'PUB_SUB', useValue: { publish: async () => {} } },
         ],
       }).compile();
 
@@ -667,32 +666,6 @@ describe('TUS Module (e2e)', () => {
       expect(res.data).toBe(testFile.content);
     });
 
-    it('should get file info via GraphQL', async () => {
-      const res: any = await testHelper.graphQl(
-        {
-          arguments: { filename: testFile.filename },
-          fields: ['id', 'filename', 'contentType', 'length'],
-          name: 'getFileInfo',
-          type: TestGraphQLType.QUERY,
-        },
-        { token: users[0].token },
-      );
-
-      expect(res.id).toBe(testFile.gridFsId);
-      expect(res.filename).toBe(testFile.filename);
-      expect(res.contentType).toBe('text/plain');
-      expect(res.length).toBe(Buffer.byteLength(testFile.content));
-    });
-
-    it('should get file info via REST', async () => {
-      const res = await testHelper.rest(`/files/info/${testFile.gridFsId}`, {
-        cookies: users[0].token,
-      });
-
-      expect(res.id).toBe(testFile.gridFsId);
-      expect(res.filename).toBe(testFile.filename);
-      expect(res.contentType).toBe('text/plain');
-    });
   });
 
   // ===================================================================================================================
@@ -817,23 +790,8 @@ describe('TUS Module (e2e)', () => {
   // ===================================================================================================================
 
   it('deleteUsers', async () => {
-    // Add admin role to last user
-    await db.collection('users').findOneAndUpdate(
-      { _id: new ObjectId(users[users.length - 1].id) },
-      { $set: { roles: ['admin'] } },
-    );
-
     for (const user of users) {
-      const res: any = await testHelper.graphQl(
-        {
-          arguments: { id: user.id },
-          fields: ['id'],
-          name: 'deleteUser',
-          type: TestGraphQLType.MUTATION,
-        },
-        { token: users[users.length - 1].token },
-      );
-      expect(res.id).toEqual(user.id);
+      await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
     }
   });
 });

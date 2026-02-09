@@ -4,7 +4,7 @@ import { createHash } from 'crypto';
 import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
-import { MongoClient, ObjectId } from 'mongodb';
+import { Db, MongoClient, ObjectId } from 'mongodb';
 import path = require('path');
 
 import envConfig from '../../src/config.env';
@@ -22,7 +22,39 @@ function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex');
 }
 
-describe('File Module (e2e)', () => {
+// =====================================================================================================================
+// Helper Functions & Types for TUS
+// =====================================================================================================================
+
+interface GridFsFile {
+  _id: ObjectId;
+  contentType: string;
+  filename: string;
+  length: number;
+  metadata?: Record<string, unknown>;
+}
+
+interface TusCreateOptions {
+  filename: string;
+  filetype?: string;
+  size: number;
+}
+
+interface TusUploadResult {
+  filename: string;
+  gridFsId?: string;
+  location?: string;
+}
+
+const TUS_HEADERS = {
+  CONTENT_TYPE: 'application/offset+octet-stream',
+  RESUMABLE: '1.0.0',
+} as const;
+
+const GRIDFS_MIGRATION_TIMEOUT = 5000;
+const GRIDFS_MIGRATION_INTERVAL = 100;
+
+describe('File Module GraphQL (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
   const log = true;
   const logError = true;
@@ -30,15 +62,111 @@ describe('File Module (e2e)', () => {
   // Test environment properties
   let app;
   let testHelper: TestHelper;
+  let baseUrl: string;
 
   // database
-  let connection;
-  let db;
+  let connection: MongoClient;
+  let db: Db;
 
   // Global vars
   const users: Partial<User & { token: string }>[] = [];
   let fileInfo: FileInfo;
   let fileContent: string;
+
+  // TUS test data
+  let tusTestFile: { content: string; filename: string; gridFsId: string };
+
+  // ===================================================================================================================
+  // TUS Helper Functions
+  // ===================================================================================================================
+
+  function encodeMetadata(metadata: Record<string, string>): string {
+    return Object.entries(metadata)
+      .map(([key, value]) => `${key} ${Buffer.from(value).toString('base64')}`)
+      .join(',');
+  }
+
+  async function createTusUpload(options: TusCreateOptions): Promise<{ location: string; response: Response }> {
+    const metadata = encodeMetadata({
+      filename: options.filename,
+      filetype: options.filetype || 'text/plain',
+    });
+
+    const response = await fetch(`${baseUrl}/tus`, {
+      headers: {
+        'Content-Length': '0',
+        'Tus-Resumable': TUS_HEADERS.RESUMABLE,
+        'Upload-Length': String(options.size),
+        'Upload-Metadata': metadata,
+      },
+      method: 'POST',
+    });
+
+    return {
+      location: response.headers.get('location') || '',
+      response,
+    };
+  }
+
+  async function patchTusUpload(
+    location: string,
+    data: string,
+    offset: number = 0,
+  ): Promise<{ newOffset: number; response: Response }> {
+    const response = await fetch(location, {
+      body: data,
+      headers: {
+        'Content-Length': String(Buffer.byteLength(data)),
+        'Content-Type': TUS_HEADERS.CONTENT_TYPE,
+        'Tus-Resumable': TUS_HEADERS.RESUMABLE,
+        'Upload-Offset': String(offset),
+      },
+      method: 'PATCH',
+    });
+
+    const newOffset = parseInt(response.headers.get('upload-offset') || '0', 10);
+    return { newOffset, response };
+  }
+
+  async function waitForGridFsMigration(
+    filename: string,
+    timeout: number = GRIDFS_MIGRATION_TIMEOUT,
+  ): Promise<GridFsFile | null> {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      const file = await db.collection<GridFsFile>('fs.files').findOne({ filename });
+      if (file) {
+        return file;
+      }
+      await new Promise(resolve => setTimeout(resolve, GRIDFS_MIGRATION_INTERVAL));
+    }
+
+    return null;
+  }
+
+  async function completeTusUpload(
+    filename: string,
+    content: string,
+    filetype: string = 'text/plain',
+  ): Promise<TusUploadResult> {
+    const size = Buffer.byteLength(content);
+
+    const { location, response: createResponse } = await createTusUpload({ filename, filetype, size });
+    expect(createResponse.status).toBe(201);
+
+    const { response: patchResponse } = await patchTusUpload(location, content);
+    expect(patchResponse.status).toBe(204);
+
+    const gridFsFile = await waitForGridFsMigration(filename);
+    expect(gridFsFile).toBeDefined();
+
+    return {
+      filename,
+      gridFsId: gridFsFile?._id?.toString(),
+      location,
+    };
+  }
 
   // ===================================================================================================================
   // Preparations
@@ -66,11 +194,22 @@ describe('File Module (e2e)', () => {
       app.setBaseViewsDir(envConfig.templates.path);
       app.setViewEngine(envConfig.templates.engine);
       await app.init();
+
+      // Start HTTP server on random port
+      const server = app.getHttpServer();
+      await new Promise<void>((resolve) => {
+        server.listen(0, () => {
+          const address = server.address();
+          baseUrl = `http://127.0.0.1:${(address as { port: number }).port}`;
+          resolve();
+        });
+      });
+
       testHelper = new TestHelper(app);
 
       // Connection to database
       connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = await connection.db();
+      db = connection.db();
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -90,6 +229,18 @@ describe('File Module (e2e)', () => {
         }
       }
     }
+
+    // Clean up TUS test file from GridFS
+    if (tusTestFile?.gridFsId) {
+      try {
+        const fileId = new ObjectId(tusTestFile.gridFsId);
+        await db.collection('fs.files').deleteOne({ _id: fileId });
+        await db.collection('fs.chunks').deleteMany({ files_id: fileId });
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
     await connection.close();
     await app.close();
   });
@@ -298,55 +449,34 @@ describe('File Module (e2e)', () => {
   });
 
   // ===================================================================================================================
-  // Tests for file handling via REST
+  // TUS-uploaded file: getFileInfo via GraphQL
   // ===================================================================================================================
 
-  it('uploadFileViaREST', async () => {
-    const filename = `${Math.random().toString(36).substring(7)}.txt`;
-    fileContent = 'Hello REST';
+  describe('TUS File - GraphQL getFileInfo', () => {
+    it('should upload file via TUS', async () => {
+      const filename = `tus-gql-test-${Date.now()}.txt`;
+      const content = 'This file was uploaded via TUS and will be queried via GraphQL';
 
-    // Set paths
-    const local = path.join(__dirname, filename);
-
-    // Write and send file
-    await fs.promises.writeFile(local, fileContent);
-    const res = await testHelper.rest('/files/upload', {
-      attachments: { file: local },
-      cookies: users[0].token,
-      statusCode: 201,
+      const result = await completeTusUpload(filename, content);
+      tusTestFile = { content, filename, gridFsId: result.gridFsId! };
     });
 
-    // Remove file
-    await fs.promises.unlink(local);
+    it('should get TUS file info via GraphQL', async () => {
+      const res: any = await testHelper.graphQl(
+        {
+          arguments: { filename: tusTestFile.filename },
+          fields: ['id', 'filename', 'contentType', 'length'],
+          name: 'getFileInfo',
+          type: TestGraphQLType.QUERY,
+        },
+        { token: users[0].token },
+      );
 
-    // Test response
-    expect(res.id.length).toBeGreaterThan(0);
-    expect(res.filename).toEqual(filename);
-
-    // Set file info
-    fileInfo = res;
-  });
-
-  it('getFileInfoForRESTFile', async () => {
-    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { cookies: users[0].token });
-    expect(res.id).toEqual(fileInfo.id);
-    expect(res.filename).toEqual(fileInfo.filename);
-  });
-
-  it('downloadRESTFile', async () => {
-    const res = await testHelper.download(`/files/id/${fileInfo.id}`, users[0].token);
-    expect(res.statusCode).toEqual(200);
-    expect(res.data).toEqual(fileContent);
-  });
-
-  it('deleteRESTFile', async () => {
-    const res = await testHelper.rest(`/files/${fileInfo.id}`, { cookies: users[0].token, method: 'DELETE' });
-    expect(res.id).toEqual(fileInfo.id);
-  });
-
-  it('getRESTFileInfo', async () => {
-    const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { cookies: users[0].token });
-    expect(res).toEqual(null);
+      expect(res.id).toBe(tusTestFile.gridFsId);
+      expect(res.filename).toBe(tusTestFile.filename);
+      expect(res.contentType).toBe('text/plain');
+      expect(res.length).toBe(Buffer.byteLength(tusTestFile.content));
+    });
   });
 
   // ===================================================================================================================
