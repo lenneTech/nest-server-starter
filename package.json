@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.15.0",
+  "version": "11.15.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -28,11 +28,17 @@
     "dist"
   ],
   "scripts": {
-    "init": "npm install",
-    "build": "rimraf dist && tsc -p tsconfig.build.json && npm run copy",
-    "build:docs": "rimraf dist && tsc -p tsconfig.build.json && npm run docs:ci && npm run copy",
-    "build:test": "npm run build",
-    "copy": "npm run copy:assets && npm run copy:config && npm run copy:extras && npm run copy:meta && npm run copy:migrations && npm run copy:public && npm run copy:scripts && npm run copy:spectaql",
+    "init": "pnpm install",
+    "build": "rimraf dist && tsc -p tsconfig.build.json && pnpm run copy",
+    "build:docs": "rimraf dist && tsc -p tsconfig.build.json && pnpm run docs:ci && pnpm run copy",
+    "build:test": "pnpm run build",
+    "c": "pnpm run check",
+    "check": "pnpm audit && pnpm run format:check && pnpm run lint && pnpm test && pnpm run build && pnpm start",
+    "check:fix": "pnpm install && pnpm audit --fix && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && pnpm start",
+    "check:naf": "pnpm install && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && pnpm start",
+    "cf": "pnpm run check:fix",
+    "cnaf": "pnpm run check:naf",
+    "copy": "pnpm run copy:assets && pnpm run copy:config && pnpm run copy:extras && pnpm run copy:meta && pnpm run copy:migrations && pnpm run copy:public && pnpm run copy:scripts && pnpm run copy:spectaql",
     "copy:assets": "cpy ./src/assets  assets/**/* ./dist/",
     "copy:config": "cpy ./src/config.env.ts ./dist/",
     "copy:extras": "cpy ./extras ./dist/",
@@ -41,15 +47,15 @@
     "copy:public": "cpy ./public ./dist/ || true",
     "copy:scripts": "cpy ./scripts ./dist/",
     "copy:spectaql": "cpy ./spectaql.yml ./dist/",
-    "dp:dev": "npm run migrate:develop:up && NODE_ENV=develop node ./dist/src/main.js",
-    "dp:test": "npm run migrate:test:up && NODE_ENV=test node ./dist/src/main.js",
-    "dp:prod": "npm run migrate:prod:up && NODE_ENV=production node ./dist/src/main.js",
-    "docs": "npm run docs:ci && open http://127.0.0.1:8080/ && open ./public/index.html && compodoc -p tsconfig.json -s",
+    "dp:dev": "pnpm run migrate:develop:up && NODE_ENV=develop node ./dist/src/main.js",
+    "dp:test": "pnpm run migrate:test:up && NODE_ENV=test node ./dist/src/main.js",
+    "dp:prod": "pnpm run migrate:prod:up && NODE_ENV=production node ./dist/src/main.js",
+    "docs": "pnpm run docs:ci && open http://127.0.0.1:8080/ && open ./public/index.html && compodoc -p tsconfig.json -s",
     "docs:bootstrap": "node extras/update-spectaql-version.mjs && node scripts/run-spectaql.mjs",
-    "docs:ci": "ts-node ./scripts/init-server.ts && npm run docs:bootstrap && compodoc -p tsconfig.json",
+    "docs:ci": "ts-node ./scripts/init-server.ts && pnpm run docs:bootstrap && compodoc -p tsconfig.json",
     "format": "oxfmt --write src/",
     "format:check": "oxfmt --check src/",
-    "link:nest-server": "yalc add @lenne.tech/nest-server && yalc link @lenne.tech/nest-server && npm install",
+    "link:nest-server": "pnpm link ${NEST_SERVER_PATH:-../nest-server}",
     "lint": "oxlint --ignore-path .oxlintignore src/ tests/",
     "lint:fix": "oxlint --fix --fix-suggestions --ignore-path .oxlintignore src/ tests/",
     "migrate:create": "f() { migrate create \"$1\" --template-file ./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/templates/migration-project.template.ts --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js; }; f",
@@ -60,15 +66,15 @@
     "migrate:test:up": "NODE_ENV=test migrate up --store ./migrations-utils/migrate.js --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
     "migrate:preview:up": "NODE_ENV=preview migrate up --store ./migrations-utils/migrate.js --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
     "migrate:prod:up": "NODE_ENV=production migrate up --store ./migrations-utils/migrate.js --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
-    "prepublishOnly": "npm run lint && npm run test:e2e",
-    "prestart:prod": "rimraf dist && npm run build",
-    "preversion": "npm run lint",
-    "reinit": "rimraf package-lock.json && rimraf node_modules && npm i && npm run lint && npm run test:e2e && npm run build",
-    "reinit:clean": "rimraf package-lock.json && rimraf node_modules && npm cache clean --force && npm i && npm run test:e2e && npm run build",
+    "prepublishOnly": "pnpm run lint && pnpm run test:e2e",
+    "prestart:prod": "rimraf dist && pnpm run build",
+    "preversion": "pnpm run lint",
+    "reinit": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm install && pnpm run lint && pnpm run test:e2e && pnpm run build",
+    "reinit:clean": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm store prune && pnpm install && pnpm run test:e2e && pnpm run build",
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
-    "start": "npm run migrate:up && npm run start:local",
+    "start": "pnpm run migrate:up && pnpm run start:local",
     "start:debug": "nodemon --config nodemon-debug.json",
     "start:dev": "nodemon",
     "start:dev:swc": "nest start -b swc -w --type-check",
@@ -77,11 +83,11 @@
     "start:nodemon": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:prod": "NODE_ENV=production node dist/main.js",
     "strip-markers": "node scripts/strip-api-mode-markers.mjs",
-    "test": "npm run vitest",
-    "test:ci": "npm run vitest:ci",
+    "test": "pnpm run vitest",
+    "test:ci": "pnpm run vitest:ci",
     "test:cleanup": "find tests -type f \\( -name '*.txt' -o -name '*.bin' \\) -not -name '.gitkeep' -delete && echo 'Test artifacts cleaned up'",
-    "test:e2e": "npm run vitest",
-    "unlink:nest-server": "yalc remove @lenne.tech/nest-server && npm install",
+    "test:e2e": "pnpm run vitest",
+    "unlink:nest-server": "pnpm unlink @lenne.tech/nest-server && pnpm install",
     "update": "node extras/sync-packages.mjs",
     "update:all": "node extras/sync-packages.mjs --add-missing",
     "vitest": "NODE_ENV=e2e vitest run --config vitest-e2e.config.ts",
@@ -102,7 +108,7 @@
     "@apollo/server": "5.4.0"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.15.0",
+    "@lenne.tech/nest-server": "11.15.1",
     "@nestjs/common": "11.1.13",
     "@nestjs/core": "11.1.13",
     "@nestjs/graphql": "13.2.4",
@@ -162,10 +168,25 @@
     "unplugin-swc": "1.5.9",
     "vite-plugin-node": "7.0.0",
     "vite-tsconfig-paths": "6.1.0",
-    "vitest": "4.0.18",
-    "yalc": "1.0.0-pre.53"
+    "vitest": "4.0.18"
   },
   "engines": {
-    "node": ">= 20"
+    "node": ">= 20",
+    "pnpm": ">= 9"
+  },
+  "pnpm": {
+    "overrides": {
+      "lodash": "4.17.23",
+      "tar": "7.5.7",
+      "@apollo/server": "5.4.0"
+    },
+    "onlyBuiltDependencies": [
+      "@apollo/protobufjs",
+      "@compodoc/compodoc",
+      "@nestjs/core",
+      "@swc/core",
+      "bcrypt",
+      "esbuild"
+    ]
   }
 }

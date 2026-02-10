@@ -18,8 +18,11 @@ and applying them to your own project (see [Update Notes](update)).
 
 ## Requirements
 
-- [Node.js incl. npm](https://nodejs.org):  
+- [Node.js](https://nodejs.org):
   the runtime environment for your server
+
+- [pnpm](https://pnpm.io):
+  the package manager for your dependencies
 
 - [Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git):  
   the version control system for your source code
@@ -31,7 +34,7 @@ and applying them to your own project (see [Update Notes](update)).
 ## 1. Install the starter kit via [CLI](https://github.com/lenneTech/cli)
 
 ```
-$ npm install -g @lenne.tech/cli
+$ pnpm add -g @lenne.tech/cli
 $ lt server create <ServerName>
 $ cd <ServerName>
 ```
@@ -39,7 +42,7 @@ $ cd <ServerName>
 ## 2. Start the server
 
 ```
-$ npm run start:dev
+$ pnpm run start:dev
 ```
 
 ## 3. Extend the server
@@ -73,20 +76,20 @@ There you will find a lot of things that will help you to extend your server, su
 
 ```bash
 # Development
-$ npm start
+$ pnpm start
 
 # Watch mode
-$ npm run start:dev
+$ pnpm run start:dev
 
 # Production mode
-$ npm run start:prod
+$ pnpm run start:prod
 ```
 
 ### Test
 
 ```bash
 # e2e tests
-$ npm run test:e2e
+$ pnpm run test:e2e
 ```
 
 Configuration for testing:
@@ -150,12 +153,12 @@ For example, the configuration value `email.defaultSender.name` can be set via t
 `NSC__EMAIL_DEFAULT_SENDER_NAME`.
 
 ## Test & debug the NestServer package in this project
-Use [yalc](https://github.com/wclr/yalc) to include the NestJS server in the project.
+Use `pnpm link` to include the local NestJS server in the project.
 
 1. clone [NestServer](https://github.com/lenneTech/nest-server): `git clone https://github.com/lenneTech/nest-server.git`
-2. go to the nest-server folder (`cd nest-server`), install the packages via `npm i` and start the nest server in watch & yalc mode: `npm run watch`
-3. link the nest server live package to this project via `npm run link:nest-server` and start the server: `npm start`
-4. unlink the nest-server live package and use the normal package again when you are done: `npm run unlink:nest-server`
+2. go to the nest-server folder (`cd nest-server`), install the packages via `pnpm install` and start the nest server in watch mode: `pnpm run watch`
+3. link the nest server live package to this project via `pnpm run link:nest-server` and start the server: `pnpm start`
+4. unlink the nest-server live package and use the normal package again when you are done: `pnpm run unlink:nest-server`
 
 ## Deployment with deploy.party
 
@@ -176,9 +179,9 @@ Example configuration for deploy.party (productive):
 | Custom image command | RUN apt-get install -y tzdata curl                 |
 |                      | ENV TZ Europe/Berlin                               |
 | Base directory       | ./projects/api                                     |
-| Install command      | npm install                                        |
-| Build command        | npm run build                                      |
-| Start command        | npm run dp:prod                                    |
+| Install command      | pnpm install                                       |
+| Build command        | pnpm run build                                     |
+| Start command        | pnpm run dp:prod                                   |
 | Healthcheck command  | curl --fail http://localhost:3000/meta \|\| exit 1 |
 | Port                 | 3000                                               |
 | Enable SSL           | true                                               |
@@ -188,16 +191,16 @@ The API and developer documentation can automatically be generated.
 
 ```bash
 # generate and serve documentation
-$ npm run docs
+$ pnpm run docs
 ```
 
 ## Update
 An update to a new Nest Sever version can be done as follows:
 
 1. set the new Nest Server version in the package.json under `{dependencies: {"@lenne.tech/nest-server": "NEW_VERSON" }}`.
-2. run `npm run update`
+2. run `pnpm run update`
 3. adjust project according to changes in git history from nest server
-4. run tests via `npm run tests:e2e`, build via `npm run build` and start the server with `npm start` to check if everything is working
+4. run tests via `pnpm run test:e2e`, build via `pnpm run build` and start the server with `pnpm start` to check if everything is working
 
 Since this starter is regularly updated, it is ideal as a template for the changes to be made in your own project. 
 Simply compare the current version in the Git history of this starter with the version that was previously used in 

@@ -44,7 +44,7 @@ if (!packageJson) {
 // Get version
 const version = packageJson?.dependencies?.[npmPackage];
 if (!version) {
-  console.log('Please install Nest-Server: npm i @lenne.tech/nest-server');
+  console.log('Please install Nest-Server: pnpm add @lenne.tech/nest-server');
   process.exit(1);
 }
 console.log('Found ' + npmPackage + ' version ' + version);
@@ -96,7 +96,7 @@ for (const dep of ['dependencies', 'devDependencies']) {
   packageJson[dep] = Object.fromEntries(Object.entries(packageJson[dep]).sort((a, b) => a[0].localeCompare(b[0])));
 }
 if (!counter && !added) {
-  execSync('cd ' + __dirname + '/.. && npm i', { stdio: 'inherit' });
+  execSync('cd ' + __dirname + '/.. && pnpm install', { stdio: 'inherit' });
   console.log('Everything is up-to-date for ' + npmPackage + ' version ' + version);
   getVersionHint();
   process.exit(0);
@@ -114,7 +114,7 @@ try {
 }
 
 // Install packages
-execSync('cd ' + __dirname + '/.. && npm i', { stdio: 'inherit' });
+execSync('cd ' + __dirname + '/.. && pnpm install', { stdio: 'inherit' });
 console.timeEnd('duration');
 
 // Get version hint
