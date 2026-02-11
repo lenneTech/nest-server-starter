@@ -50,7 +50,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     errorCode: {
       additionalErrorRegistry: ProjectErrors,
     },
-    execAfterInit: 'npm run docs:bootstrap',
+    execAfterInit: 'pnpm run docs:bootstrap',
     filter: {
       maxLimit: null,
     },
@@ -155,7 +155,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     errorCode: {
       additionalErrorRegistry: ProjectErrors,
     },
-    execAfterInit: 'npm run docs:bootstrap',
+    execAfterInit: 'pnpm run docs:bootstrap',
     filter: {
       maxLimit: null,
     },
@@ -259,7 +259,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     errorCode: {
       additionalErrorRegistry: ProjectErrors,
     },
-    execAfterInit: 'npm run docs:bootstrap',
+    execAfterInit: 'pnpm run docs:bootstrap',
     filter: {
       maxLimit: null,
     },
@@ -373,7 +373,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     errorCode: {
       additionalErrorRegistry: ProjectErrors,
     },
-    execAfterInit: 'npm run docs:bootstrap',
+    execAfterInit: 'pnpm run docs:bootstrap',
     filter: {
       maxLimit: null,
     },
@@ -480,7 +480,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     errorCode: {
       additionalErrorRegistry: ProjectErrors,
     },
-    execAfterInit: 'npm run docs:bootstrap',
+    execAfterInit: 'pnpm run docs:bootstrap',
     filter: {
       maxLimit: null,
     },
@@ -581,7 +581,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     errorCode: {
       additionalErrorRegistry: ProjectErrors,
     },
-    execAfterInit: 'npm run docs:bootstrap',
+    execAfterInit: 'pnpm run docs:bootstrap',
     filter: {
       maxLimit: null,
     },
