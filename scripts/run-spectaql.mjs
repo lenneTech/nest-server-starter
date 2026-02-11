@@ -9,8 +9,8 @@
 
 import { spawn } from 'child_process';
 
-const spectaql = spawn('npx', ['-y', 'spectaql', './spectaql.yml'], {
-  stdio: ['inherit', 'pipe', 'pipe'],
+const spectaql = spawn('pnpm', ['dlx', 'spectaql', './spectaql.yml'], {
+  stdio: ['inherit', 'pipe', 'pipe']
 });
 
 // Patterns to filter from output (Sass deprecation warnings)
@@ -23,7 +23,7 @@ const filterPatterns = [
   '╵', // Bottom corner
   '╷', // Top corner
   '@import', // Import statements in warnings
-  'root stylesheet',
+  'root stylesheet'
 ];
 
 function shouldFilter(line) {
