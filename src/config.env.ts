@@ -203,6 +203,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     mongoose: {
       uri: 'mongodb://overlay_mongo1/nest-server-develop',
     },
+    permissions: true,
     port: 3000,
     security: {
       checkResponseInterceptor: {
@@ -423,6 +424,9 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
     mongoose: {
       modelDocumentation: false,
       uri: 'mongodb://127.0.0.1/nest-server-local',
+    },
+    permissions: {
+      role: false,
     },
     port: 3000,
     security: {
