@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.18.0",
+  "version": "11.19.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -106,7 +106,7 @@
     "ajv": "Security fix: ReDoS vulnerability in ajv >=7.0.0-alpha.0 <8.18.0 - transitive via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.18.0",
+    "@lenne.tech/nest-server": "11.19.0",
     "@nestjs/common": "11.1.16",
     "@nestjs/core": "11.1.16",
     "@nestjs/graphql": "13.2.4",
@@ -138,7 +138,7 @@
     "@types/express": "5.0.6",
     "@types/lodash": "4.17.24",
     "@types/multer": "2.1.0",
-    "@types/node": "25.3.5",
+    "@types/node": "25.4.0",
     "@types/nodemailer": "7.0.11",
     "@types/passport": "1.0.17",
     "@types/supertest": "7.2.0",

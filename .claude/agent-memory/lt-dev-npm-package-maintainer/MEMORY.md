@@ -1,6 +1,6 @@
 # npm-package-maintainer Memory - nest-server-starter
 
-## Key Findings (last updated 2026-03-08)
+## Key Findings (last updated 2026-03-09)
 
 ### Packages that MUST stay despite appearing unused in grep
 - `supertest` + `@types/supertest`: Required by `@lenne.tech/nest-server/dist/test/test.helper.js` at runtime even though no direct test import. REMOVING BREAKS TESTS.
@@ -13,7 +13,14 @@
 ### Overrides (pnpm.overrides)
 - `@apollo/server`: Still needed. `@apollo/server-plugin-landing-page-graphql-playground@4.0.1` peerDeps `@apollo/server@^4`, conflicting with v5 from nest-server.
 - `qs`: Security fix for CVE arrayLimit bypass DoS. Keep at latest (currently 6.15.0).
-- `hono`, `@hono/node-server`, `lodash`, `ajv`: Security overrides for transitive vulns via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev chain.
+- `hono`: Security fix, keep at latest (currently 4.12.5). @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev chain.
+- `@hono/node-server`: Security fix, keep at latest (currently 1.19.11).
+- `lodash`: Security fix, keep at latest (currently 4.17.23).
+- `ajv`: Security fix (ReDoS), keep at latest (currently 8.18.0). Via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core chain.
+
+### Pre-existing Test Failures (Baseline)
+- 2 tests in `tests/common.e2e-spec.ts` fail at baseline: i18n endpoint tests (`get error translations in English/German`)
+- These fail with 404 - NOT caused by our package maintenance. Unrelated to deps.
 
 ### Deprecated Packages
 - `@types/cron`: Deprecated stub - cron now has own types. Safe to remove.

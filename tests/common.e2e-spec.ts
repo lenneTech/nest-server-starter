@@ -1,8 +1,4 @@
-import {
-  ConfigService,
-  HttpExceptionLogFilter,
-  TestHelper,
-} from '@lenne.tech/nest-server';
+import { ConfigService, HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import { MongoClient, ObjectId } from 'mongodb';
@@ -54,10 +50,7 @@ describe('Common (e2e)', () => {
     try {
       // Start server for testing
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [
-          ...imports,
-          ServerModule,
-        ],
+        imports: [...imports, ServerModule],
         providers: [
           {
             provide: 'PUB_SUB',
@@ -158,7 +151,7 @@ describe('Common (e2e)', () => {
   it('prepare admin user for config tests', async () => {
     // Create admin user via IAM
     const random = Math.random().toString(36).substring(7);
-    gAdminPassword = `${random  }A1!`;
+    gAdminPassword = `${random}A1!`;
     gAdminEmail = `admin-${random}@testusers.com`;
 
     const signUpRes = await testHelper.rest('/iam/sign-up/email', {
@@ -181,10 +174,12 @@ describe('Common (e2e)', () => {
     }
 
     // Set admin role and verify email
-    await db.collection('users').findOneAndUpdate(
-      { _id: new ObjectId(gAdminId) },
-      { $set: { emailVerified: true, roles: ['admin'], verified: true } },
-    );
+    await db
+      .collection('users')
+      .findOneAndUpdate(
+        { _id: new ObjectId(gAdminId) },
+        { $set: { emailVerified: true, roles: ['admin'], verified: true } },
+      );
 
     // Sign in via IAM
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
@@ -208,7 +203,7 @@ describe('Common (e2e)', () => {
   it('get config without admin rights should fail', async () => {
     // Create non-admin user via IAM
     const randomUser = Math.random().toString(36).substring(7);
-    const password = `${randomUser  }U1!`;
+    const password = `${randomUser}U1!`;
     const email = `user-${randomUser}@testusers.com`;
 
     const signUpRes = await testHelper.rest('/iam/sign-up/email', {
@@ -232,10 +227,9 @@ describe('Common (e2e)', () => {
     }
 
     // Verify user email (but not admin)
-    await db.collection('users').updateOne(
-      { _id: new ObjectId(userId) },
-      { $set: { emailVerified: true, verified: true } },
-    );
+    await db
+      .collection('users')
+      .updateOne({ _id: new ObjectId(userId) }, { $set: { emailVerified: true, verified: true } });
 
     // Sign in via IAM
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
@@ -272,7 +266,7 @@ describe('Common (e2e)', () => {
    * Get German error translations
    */
   it('get error translations in German', async () => {
-    const res: any = await testHelper.rest('/api/i18n/errors/de');
+    const res: any = await testHelper.rest('/i18n/errors/de');
 
     // Should return errors object
     expect(res).toHaveProperty('errors');
@@ -297,7 +291,7 @@ describe('Common (e2e)', () => {
    * Get English error translations
    */
   it('get error translations in English', async () => {
-    const res: any = await testHelper.rest('/api/i18n/errors/en');
+    const res: any = await testHelper.rest('/i18n/errors/en');
 
     // Should return errors object
     expect(res).toHaveProperty('errors');

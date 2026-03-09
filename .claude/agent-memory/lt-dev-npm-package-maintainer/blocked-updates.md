@@ -5,9 +5,10 @@
 **Reason**: v7 throws a fatal error when source directory doesn't exist. The `copy:migrations` script (`cpy ./migrations ./dist/`) fails because the `migrations/` directory doesn't exist in a fresh build. v6 silently skipped missing sources.
 **Fix needed**: Add `|| true` to migrations copy or create migrations dir, then upgrade.
 
-## graphql-upload 15 → 17
+## graphql-upload 15 → 16/17
 **Status**: BLOCKED
-**Reason**: v17 moved all exports from `.js` files to `.mjs` files only. The import in `src/server/modules/file/file.resolver.ts` uses `require('graphql-upload/GraphQLUpload.js')` which no longer exists.
+**Reason**: v16+ moved all exports from `.js` files to `.mjs` files only (applies from v16.0.0 onwards). The import in `src/server/modules/file/file.resolver.ts` uses `require('graphql-upload/GraphQLUpload.js')` which no longer exists.
+**Latest versions available**: 16.0.2 (also blocked) and 17.0.0.
 **Fix needed**: Update import to use `import GraphQLUpload from 'graphql-upload/GraphQLUpload.mjs'` (ESM import) and ensure project ESM config supports it, OR wait for @lenne.tech/nest-server to handle this migration.
 
 ## class-validator 0.14 → 0.15
