@@ -15,7 +15,7 @@
       ],
       "scripts": ["docs", "docs:bootstrap", "docs:ci", "copy:spectaql"],
       "scriptEdits": {
-        "copy": { "remove": " && npm run copy:spectaql" }
+        "copy": { "remove": " && pnpm run copy:spectaql" }
       }
     },
     "rest": {
