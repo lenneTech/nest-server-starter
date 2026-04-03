@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.21.1",
+  "version": "11.21.2",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -117,7 +117,7 @@
     "effect": "Security fix: AsyncLocalStorage context contamination in effect <3.20.0 - transitive via @lenne.tech/nest-server>prisma>@prisma/config"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.21.1",
+    "@lenne.tech/nest-server": "11.21.2",
     "@nestjs/common": "11.1.17",
     "@nestjs/core": "11.1.17",
     "@nestjs/graphql": "13.2.4",
