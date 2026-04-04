@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.21.3",
+  "version": "11.22.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -98,6 +98,8 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "//overrides": {
+    "@nestjs/common": "Forces single version of @nestjs/common across all packages to prevent duplicate SchedulerRegistry instances. @lenne.tech/nest-server pins 11.1.17 but starter needs 11.1.18. Update both together when nest-server updates.",
+    "@nestjs/core": "Forces single version of @nestjs/core across all packages to prevent duplicate SchedulerRegistry instances (caused by @lenne.tech/nest-server pinning 11.1.17). Update both together when nest-server updates.",
     "@apollo/server": "Prevents peerDep conflict: @nestjs/apollo pulls in @apollo/server-plugin-landing-page-graphql-playground@4.0.1 (peerDep @apollo/server@^4), conflicting with @lenne.tech/nest-server requiring v5. Update this value when nest-server changes its @apollo/server version. Remove once the playground plugin accepts v5. Also: security fix CVE in @apollo/server <5.5.0.",
     "qs": "Security fix: CVE in qs >=6.7.0 <=6.14.1 (arrayLimit bypass DoS) - updated to latest 6.15.0",
     "hono": "Security fix: Multiple CVEs including Prototype Pollution in hono <4.12.7 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev",
@@ -109,20 +111,21 @@
     "kysely": "Security fix: SQL Injection CVEs in kysely <=0.28.13 - transitive via @lenne.tech/nest-server>@better-auth chain",
     "flatted": "Security fix: Prototype Pollution in flatted <=3.4.1 - transitive via @lenne.tech/nest-server>@getbrevo/brevo>rewire>eslint chain",
     "path-to-regexp": "Security fix: ReDoS and backtracking CVE in path-to-regexp >=8.0.0 <8.4.0 - transitive via @nestjs/core",
-    "srvx": "Security fix: CVE in srvx <0.11.13 - transitive via @lenne.tech/nest-server>@tus/server",
+    "srvx": "Security fix: CVE in srvx <0.11.13 - transitive via @lenne.tech/nest-server>@tus/server. Note: @tus/server@2.3.0 still pins srvx to ~0.8.2 so override is needed.",
     "picomatch": "Security fix: ReDoS via extglob quantifiers in picomatch >=4.0.0 <4.0.4 - transitive via @nestjs/cli>@angular-devkit/core",
     "brace-expansion@1": "Security fix: Process hang/memory exhaustion in brace-expansion <1.1.13 - transitive via @nestjs/cli>fork-ts-checker-webpack-plugin>minimatch@3",
     "brace-expansion@2": "Security fix: Process hang/memory exhaustion in brace-expansion >=2.0.0 <2.0.3 - transitive via @swc/cli>minimatch@9",
     "brace-expansion@5": "Security fix: Process hang/memory exhaustion in brace-expansion >=4.0.0 <5.0.5 - transitive via @compodoc/compodoc>glob>minimatch@10",
-    "effect": "Security fix: AsyncLocalStorage context contamination in effect <3.20.0 - transitive via @lenne.tech/nest-server>prisma>@prisma/config"
+    "effect": "Security fix: AsyncLocalStorage context contamination in effect <3.20.0 - transitive via @lenne.tech/nest-server>prisma>@prisma/config",
+    "defu": "Security fix: Prototype pollution via __proto__ key in defu <=6.1.4 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.21.3",
-    "@nestjs/common": "11.1.17",
-    "@nestjs/core": "11.1.17",
+    "@lenne.tech/nest-server": "11.22.0",
+    "@nestjs/common": "11.1.18",
+    "@nestjs/core": "11.1.18",
     "@nestjs/graphql": "13.2.4",
     "@nestjs/mongoose": "11.0.4",
-    "@nestjs/platform-express": "11.1.17",
+    "@nestjs/platform-express": "11.1.18",
     "@nestjs/schedule": "6.1.1",
     "@nestjs/swagger": "11.2.6",
     "class-validator": "0.15.1",
@@ -132,23 +135,23 @@
     "express": "5.2.1",
     "graphql-subscriptions": "3.0.0",
     "graphql-upload": "15.0.2",
-    "mongoose": "9.3.3",
+    "mongoose": "9.4.1",
     "multer": "2.1.1"
   },
   "devDependencies": {
     "@compodoc/compodoc": "1.2.1",
     "@nestjs/cli": "11.0.17",
     "@nestjs/schematics": "11.0.10",
-    "@nestjs/testing": "11.1.17",
+    "@nestjs/testing": "11.1.18",
     "@swc/cli": "0.8.1",
-    "@swc/core": "1.15.21",
+    "@swc/core": "1.15.24",
     "@types/compression": "1.8.1",
     "@types/cookie-parser": "1.4.10",
     "@types/ejs": "3.1.5",
     "@types/express": "5.0.6",
     "@types/lodash": "4.17.24",
     "@types/multer": "2.1.0",
-    "@types/node": "25.5.0",
+    "@types/node": "25.5.2",
     "@types/nodemailer": "7.0.11",
     "@types/passport": "1.0.17",
     "@types/supertest": "7.2.0",
@@ -180,6 +183,8 @@
   },
   "pnpm": {
     "overrides": {
+      "@nestjs/common": "11.1.18",
+      "@nestjs/core": "11.1.18",
       "@apollo/server": "5.5.0",
       "qs": "6.15.0",
       "hono": "4.12.10",
@@ -191,12 +196,13 @@
       "kysely": "0.28.15",
       "flatted": "3.4.2",
       "path-to-regexp": "8.4.2",
-      "srvx": "0.11.14",
+      "srvx": "0.11.15",
       "picomatch": "4.0.4",
       "effect": "3.21.0",
       "brace-expansion@1": "1.1.13",
       "brace-expansion@2": "2.0.3",
-      "brace-expansion@5": "5.0.5"
+      "brace-expansion@5": "5.0.5",
+      "defu": "6.1.6"
     },
     "onlyBuiltDependencies": [
       "@apollo/protobufjs",
