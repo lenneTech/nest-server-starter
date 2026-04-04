@@ -1,6 +1,6 @@
 # npm-package-maintainer Memory - nest-server-starter
 
-## Key Findings (last updated 2026-04-04)
+## Key Findings (last updated 2026-04-04, session 2)
 
 ### Packages that MUST stay despite appearing unused in grep
 - `supertest` + `@types/supertest`: Required by `@lenne.tech/nest-server/dist/test/test.helper.js` at runtime even though no direct test import. REMOVING BREAKS TESTS.
@@ -14,12 +14,10 @@
 - `typescript` 5.x→6.0.2: TypeScript 6.0 stricter type checking breaks 26 errors in 5 files (user.model.ts, meta.model.ts, find-and-count-users-result.output.ts, user.service.ts, config.env.ts). Issues: TS2564 (strict property initialization), TS2322 (null assignments in securityCheck). Also: `baseUrl` is deprecated in TS6 (but was restored for tsconfig-paths compatibility).
 - `vite-plugin-node` 7→8: v8 requires `vite@^8.0.0`, but vitest@4.x needs `vite@7.x`. Incompatible.
 
-### @nestjs/common + @nestjs/core Overrides (added 2026-04-04)
-When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne.tech/nest-server depends on, pnpm creates two instances of @nestjs/schedule (one per @nestjs/core version). This causes TS2415 build error: "Types have separate declarations of a private property 'logger'". Fix: add `@nestjs/common` AND `@nestjs/core` to pnpm.overrides to force single versions. Remove these overrides when @lenne.tech/nest-server catches up to the same version.
+### @nestjs/common + @nestjs/core Overrides (removed 2026-04-04 session 2)
+When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne.tech/nest-server depends on, pnpm creates two instances of @nestjs/schedule (one per @nestjs/core version). This causes TS2415 build error: "Types have separate declarations of a private property 'logger'". Fix: add `@nestjs/common` AND `@nestjs/core` to pnpm.overrides to force single versions. These overrides were REMOVED in session 2 because nest-server 11.22.1 now uses 11.1.18 (same as starter). Add them back if starter is ever upgraded ahead of nest-server again.
 
-### Overrides (pnpm.overrides) - as of 2026-04-04
-- `@nestjs/common`: Forces single version (11.1.18) to prevent duplicate SchedulerRegistry. @lenne.tech/nest-server pins 11.1.17. Remove when nest-server updates.
-- `@nestjs/core`: Forces single version (11.1.18) to prevent duplicate SchedulerRegistry. Same reason as @nestjs/common. Remove when nest-server updates.
+### Overrides (pnpm.overrides) - as of 2026-04-04 session 2
 - `@apollo/server`: Needed for peerDep conflict (@apollo/server-plugin-landing-page-graphql-playground@4.0.1) + security CVE <5.5.0. Currently 5.5.0.
 - `qs`: Security fix for CVE arrayLimit bypass DoS. Keep at latest (currently 6.15.0).
 - `hono`: Security fix (Prototype Pollution + CVEs), keep at latest (currently 4.12.10).

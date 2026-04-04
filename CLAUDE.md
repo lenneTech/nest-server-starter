@@ -98,3 +98,31 @@ pnpm run build      # Build for production
 ```
 
 MongoDB must be running locally on default port (27017).
+
+## Framework: @lenne.tech/nest-server
+
+This project extends `@lenne.tech/nest-server`. The framework source code is available in `node_modules/@lenne.tech/nest-server/` and **MUST** be read when debugging or extending framework features.
+
+### Key Source Files (in node_modules/@lenne.tech/nest-server/)
+
+| File | Purpose |
+|------|---------|
+| `CLAUDE.md` | Framework rules, architecture overview, debugging guide |
+| `FRAMEWORK-API.md` | Compact API reference (interfaces, method signatures) |
+| `src/core.module.ts` | CoreModule.forRoot() — all module registration logic |
+| `src/core/common/interfaces/server-options.interface.ts` | ALL config interfaces (IServerOptions, IBetterAuth, ICoreModuleOverrides, etc.) |
+| `src/core/common/interfaces/service-options.interface.ts` | ServiceOptions interface for service method calls |
+| `src/core/common/services/crud.service.ts` | CrudService base class — ALL services extend this |
+| `src/core/modules/*/INTEGRATION-CHECKLIST.md` | Per-module integration steps |
+| `src/core/modules/*/README.md` | Per-module documentation |
+| `docs/REQUEST-LIFECYCLE.md` | Complete request lifecycle, interceptor chain, decorator reference |
+| `.claude/rules/` | 11 rule files covering architecture, security, testing, modules |
+
+### Rules
+
+1. **ALWAYS read actual source code** from `node_modules/@lenne.tech/nest-server/` before guessing framework behavior
+2. **NEVER re-implement** functionality that nest-server already provides — check CrudService first
+3. **When extending a Core* class**, read the parent class source first to understand protected helpers and super() calls
+4. **Use `ICoreModuleOverrides`** parameter on `CoreModule.forRoot()` to customize modules — never call `forRoot()` twice
+5. **When debugging framework errors**, start by reading the relevant source file, not by guessing
+6. **Read `FRAMEWORK-API.md`** for a quick overview of all available interfaces, config options, and method signatures

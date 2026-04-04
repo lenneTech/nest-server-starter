@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.22.0",
+  "version": "11.22.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -98,8 +98,6 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "//overrides": {
-    "@nestjs/common": "Forces single version of @nestjs/common across all packages to prevent duplicate SchedulerRegistry instances. @lenne.tech/nest-server pins 11.1.17 but starter needs 11.1.18. Update both together when nest-server updates.",
-    "@nestjs/core": "Forces single version of @nestjs/core across all packages to prevent duplicate SchedulerRegistry instances (caused by @lenne.tech/nest-server pinning 11.1.17). Update both together when nest-server updates.",
     "@apollo/server": "Prevents peerDep conflict: @nestjs/apollo pulls in @apollo/server-plugin-landing-page-graphql-playground@4.0.1 (peerDep @apollo/server@^4), conflicting with @lenne.tech/nest-server requiring v5. Update this value when nest-server changes its @apollo/server version. Remove once the playground plugin accepts v5. Also: security fix CVE in @apollo/server <5.5.0.",
     "qs": "Security fix: CVE in qs >=6.7.0 <=6.14.1 (arrayLimit bypass DoS) - updated to latest 6.15.0",
     "hono": "Security fix: Multiple CVEs including Prototype Pollution in hono <4.12.7 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev",
@@ -120,7 +118,7 @@
     "defu": "Security fix: Prototype pollution via __proto__ key in defu <=6.1.4 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.22.0",
+    "@lenne.tech/nest-server": "11.22.1",
     "@nestjs/common": "11.1.18",
     "@nestjs/core": "11.1.18",
     "@nestjs/graphql": "13.2.4",
@@ -183,8 +181,6 @@
   },
   "pnpm": {
     "overrides": {
-      "@nestjs/common": "11.1.18",
-      "@nestjs/core": "11.1.18",
       "@apollo/server": "5.5.0",
       "qs": "6.15.0",
       "hono": "4.12.10",
