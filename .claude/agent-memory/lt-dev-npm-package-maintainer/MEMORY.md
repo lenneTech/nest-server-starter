@@ -1,6 +1,6 @@
 # npm-package-maintainer Memory - nest-server-starter
 
-## Key Findings (last updated 2026-04-04, session 2)
+## Key Findings (last updated 2026-04-07, session 3)
 
 ### Packages that MUST stay despite appearing unused in grep
 - `supertest` + `@types/supertest`: Required by `@lenne.tech/nest-server/dist/test/test.helper.js` at runtime even though no direct test import. REMOVING BREAKS TESTS.
@@ -17,14 +17,14 @@
 ### @nestjs/common + @nestjs/core Overrides (removed 2026-04-04 session 2)
 When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne.tech/nest-server depends on, pnpm creates two instances of @nestjs/schedule (one per @nestjs/core version). This causes TS2415 build error: "Types have separate declarations of a private property 'logger'". Fix: add `@nestjs/common` AND `@nestjs/core` to pnpm.overrides to force single versions. These overrides were REMOVED in session 2 because nest-server 11.22.1 now uses 11.1.18 (same as starter). Add them back if starter is ever upgraded ahead of nest-server again.
 
-### Overrides (pnpm.overrides) - as of 2026-04-04 session 2
+### Overrides (pnpm.overrides) - as of 2026-04-07 session 3
 - `@apollo/server`: Needed for peerDep conflict (@apollo/server-plugin-landing-page-graphql-playground@4.0.1) + security CVE <5.5.0. Currently 5.5.0.
 - `qs`: Security fix for CVE arrayLimit bypass DoS. Keep at latest (currently 6.15.0).
-- `hono`: Security fix (Prototype Pollution + CVEs), keep at latest (currently 4.12.10).
-- `@hono/node-server`: Security fix, keep at latest (currently 1.19.12).
+- `hono`: Security fix (Prototype Pollution + CVEs), keep at latest (currently 4.12.12).
+- `@hono/node-server`: Security fix, keep at latest (currently 1.19.13).
 - `lodash`: Security fix (Code Injection + Prototype Pollution in <=4.17.23), updated to 4.18.1.
 - `ajv`: Security fix (ReDoS), keep at latest (currently 8.18.0).
-- `file-type`: Security fix (infinite loop in ASF parser), pinned to 21.3.2.
+- `file-type`: Security fix (infinite loop in ASF parser), pinned to 21.3.4. Note: @xhmikosr/downloader@16.1.1 requires '^21.3.0' so cannot go to 22.x yet. Stay in 21.x series.
 - `handlebars`: Security fix (JS Injection/DoS CVEs <=4.7.8), pinned to 4.7.9. Via @compodoc/compodoc and standard-version.
 - `kysely`: Security fix (SQL Injection <=0.28.13), pinned to 0.28.15. Via @lenne.tech/nest-server>@better-auth chain.
 - `flatted`: Security fix (Prototype Pollution <=3.4.1), pinned to 3.4.2. Via @lenne.tech/nest-server>@getbrevo/brevo>rewire>eslint chain.
@@ -35,12 +35,13 @@ When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne
 - `brace-expansion@2`: Security fix (>=2.0.0 <2.0.3), pinned to 2.0.3. Via @swc/cli>minimatch@9.
 - `brace-expansion@5`: Security fix (>=4.0.0 <5.0.5), pinned to 5.0.5. Via @compodoc/compodoc>glob>minimatch@10.
 - `effect`: Security fix (AsyncLocalStorage contamination <3.20.0), pinned to 3.21.0. Via @lenne.tech/nest-server>prisma@7.4.2>@prisma/config@7.4.2 (uses exact version 3.18.4).
-- `defu`: Security fix (Prototype pollution via __proto__ key <=6.1.4), pinned to 6.1.6. Via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12. Note: Previous override `"defu@<=6.1.4": ">=6.1.5"` syntax did NOT work in pnpm - must use exact `"defu": "6.1.6"`.
+- `defu`: Security fix (Prototype pollution via __proto__ key <=6.1.4), pinned to 6.1.7. Via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12. Note: Previous override `"defu@<=6.1.4": ">=6.1.5"` syntax did NOT work in pnpm - must use exact `"defu": "6.1.7"`.
+- `vite`: Security fix (arbitrary file read via WebSocket, fs.deny bypass, path traversal in .map handling >=7.0.0 <=7.3.1), pinned to 7.3.2. Via vite-plugin-node. Added in session 3 on 2026-04-07.
 
 ### Pre-existing Test Failures (Baseline)
-- As of 2026-04-04, all 99 tests pass. No pre-existing failures.
+- As of 2026-04-07, all 99 tests pass. No pre-existing failures.
 
 ### Deprecated Packages
-- No deprecated packages found as of 2026-04-04.
+- No deprecated packages found as of 2026-04-07.
 
 See [blocked-updates.md](blocked-updates.md) for detailed notes.

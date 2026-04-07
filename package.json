@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.22.1",
+  "version": "11.23.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -103,6 +103,7 @@
     "hono": "Security fix: Multiple CVEs including Prototype Pollution in hono <4.12.7 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev",
     "file-type": "Security fix: Infinite loop in ASF parser in file-type >=13.0.0 <21.3.2 - transitive via @swc/cli>@xhmikosr/bin-wrapper>@xhmikosr/downloader",
     "@hono/node-server": "Security fix: Authorization bypass CVE in @hono/node-server <1.19.10 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev",
+    "vite": "Security fix: Multiple CVEs in vite >=7.0.0 <=7.3.1 (arbitrary file read via WebSocket, fs.deny bypass, path traversal in .map handling) - transitive via vite-plugin-node",
     "lodash": "Security fix: Code Injection and Prototype Pollution in lodash <=4.17.23 - transitive via multiple chains. Updated to 4.18.1.",
     "ajv": "Security fix: ReDoS vulnerability in ajv >=7.0.0-alpha.0 <8.18.0 - transitive via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core",
     "handlebars": "Security fix: Multiple JS Injection and DoS CVEs in handlebars <=4.7.8 - transitive via @compodoc/compodoc and standard-version",
@@ -115,10 +116,10 @@
     "brace-expansion@2": "Security fix: Process hang/memory exhaustion in brace-expansion >=2.0.0 <2.0.3 - transitive via @swc/cli>minimatch@9",
     "brace-expansion@5": "Security fix: Process hang/memory exhaustion in brace-expansion >=4.0.0 <5.0.5 - transitive via @compodoc/compodoc>glob>minimatch@10",
     "effect": "Security fix: AsyncLocalStorage context contamination in effect <3.20.0 - transitive via @lenne.tech/nest-server>prisma>@prisma/config",
-    "defu": "Security fix: Prototype pollution via __proto__ key in defu <=6.1.4 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12"
+    "defu": "Security fix: Prototype pollution via __proto__ key in defu <=6.1.4 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12. Note: Previous override syntax 'defu@<=6.1.4: >=6.1.5' did NOT work in pnpm - must use exact version."
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.22.1",
+    "@lenne.tech/nest-server": "11.23.0",
     "@nestjs/common": "11.1.18",
     "@nestjs/core": "11.1.18",
     "@nestjs/graphql": "13.2.4",
@@ -129,7 +130,7 @@
     "class-validator": "0.15.1",
     "compression": "1.8.1",
     "cookie-parser": "1.4.7",
-    "dotenv": "17.4.0",
+    "dotenv": "17.4.1",
     "express": "5.2.1",
     "graphql-subscriptions": "3.0.0",
     "graphql-upload": "15.0.2",
@@ -138,7 +139,7 @@
   },
   "devDependencies": {
     "@compodoc/compodoc": "1.2.1",
-    "@nestjs/cli": "11.0.17",
+    "@nestjs/cli": "11.0.18",
     "@nestjs/schematics": "11.0.10",
     "@nestjs/testing": "11.1.18",
     "@swc/cli": "0.8.1",
@@ -150,19 +151,19 @@
     "@types/lodash": "4.17.24",
     "@types/multer": "2.1.0",
     "@types/node": "25.5.2",
-    "@types/nodemailer": "7.0.11",
+    "@types/nodemailer": "8.0.0",
     "@types/passport": "1.0.17",
     "@types/supertest": "7.2.0",
-    "@vitest/coverage-v8": "4.1.2",
-    "@vitest/ui": "4.1.2",
+    "@vitest/coverage-v8": "4.1.3",
+    "@vitest/ui": "4.1.3",
     "ansi-colors": "4.1.3",
     "cpy-cli": "6.0.0",
     "husky": "9.1.7",
     "json-to-graphql-query": "2.3.0",
     "mongodb": "7.1.1",
     "nodemon": "3.1.14",
-    "oxfmt": "0.43.0",
-    "oxlint": "1.58.0",
+    "oxfmt": "0.44.0",
+    "oxlint": "1.59.0",
     "rimraf": "6.1.3",
     "semver": "7.7.4",
     "standard-version": "9.5.0",
@@ -173,7 +174,7 @@
     "typescript": "5.9.3",
     "unplugin-swc": "1.5.9",
     "vite-plugin-node": "7.0.0",
-    "vitest": "4.1.2"
+    "vitest": "4.1.3"
   },
   "engines": {
     "node": ">= 20",
@@ -183,9 +184,9 @@
     "overrides": {
       "@apollo/server": "5.5.0",
       "qs": "6.15.0",
-      "hono": "4.12.10",
-      "file-type": "21.3.2",
-      "@hono/node-server": "1.19.12",
+      "hono": "4.12.12",
+      "file-type": "21.3.4",
+      "@hono/node-server": "1.19.13",
       "lodash": "4.18.1",
       "ajv": "8.18.0",
       "handlebars": "4.7.9",
@@ -198,7 +199,8 @@
       "brace-expansion@1": "1.1.13",
       "brace-expansion@2": "2.0.3",
       "brace-expansion@5": "5.0.5",
-      "defu": "6.1.6"
+      "defu": "6.1.7",
+      "vite": "7.3.2"
     },
     "onlyBuiltDependencies": [
       "@apollo/protobufjs",

@@ -118,6 +118,27 @@ This project extends `@lenne.tech/nest-server`. The framework source code is ava
 | `docs/REQUEST-LIFECYCLE.md` | Complete request lifecycle, interceptor chain, decorator reference |
 | `.claude/rules/` | 11 rule files covering architecture, security, testing, modules |
 
+### Native MongoDB Driver — Security Rules
+
+**NEVER** use `model.collection.*` or `model.db.*` methods — these bypass all Mongoose plugins (Tenant, Audit, RoleGuard, Password). Use Mongoose Model methods instead:
+- `Model.insertMany([doc])` instead of `collection.insertOne(doc)`
+- `Model.bulkWrite(ops)` instead of `collection.bulkWrite(ops)`
+- `Model.updateMany(f, u)` instead of `collection.updateMany(f, u)`
+
+If native access is unavoidable: use `this.getNativeCollection(reason)` or `this.getNativeDb(reason)` from CrudService.
+
+`connection.db.collection()` is only allowed for schema-less collections (OAuth, BetterAuth, MCP) and read-only aggregations. Never for write operations on tenant-scoped collections.
+
+Details: `node_modules/@lenne.tech/nest-server/docs/native-driver-security.md`
+
+### CrudService process() — Memory Considerations
+
+The `process()` pipeline adds memory overhead per call. Under high traffic or in service cascades this can cause memory issues. If this happens, bypass `process()` while keeping Mongoose plugins active:
+- `Model.insertMany([input])` instead of `CrudService.create(input)`
+- `Model.findByIdAndUpdate(id, input)` instead of `CrudService.update(id, input)`
+
+**NEVER** bypass Mongoose entirely via `collection.*` — see above. Details: `node_modules/@lenne.tech/nest-server/docs/process-performance-optimization.md`
+
 ### Rules
 
 1. **ALWAYS read actual source code** from `node_modules/@lenne.tech/nest-server/` before guessing framework behavior
