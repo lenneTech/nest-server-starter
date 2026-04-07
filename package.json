@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.23.0",
+  "version": "11.23.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -119,7 +119,7 @@
     "defu": "Security fix: Prototype pollution via __proto__ key in defu <=6.1.4 - transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12. Note: Previous override syntax 'defu@<=6.1.4: >=6.1.5' did NOT work in pnpm - must use exact version."
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.23.0",
+    "@lenne.tech/nest-server": "11.23.1",
     "@nestjs/common": "11.1.18",
     "@nestjs/core": "11.1.18",
     "@nestjs/graphql": "13.2.4",
