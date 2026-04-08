@@ -1,6 +1,6 @@
 # npm-package-maintainer Memory - nest-server-starter
 
-## Key Findings (last updated 2026-04-07, session 3)
+## Key Findings (last updated 2026-04-08, session 4)
 
 ### Packages that MUST stay despite appearing unused in grep
 - `supertest` + `@types/supertest`: Required by `@lenne.tech/nest-server/dist/test/test.helper.js` at runtime even though no direct test import. REMOVING BREAKS TESTS.
@@ -37,11 +37,12 @@ When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne
 - `effect`: Security fix (AsyncLocalStorage contamination <3.20.0), pinned to 3.21.0. Via @lenne.tech/nest-server>prisma@7.4.2>@prisma/config@7.4.2 (uses exact version 3.18.4).
 - `defu`: Security fix (Prototype pollution via __proto__ key <=6.1.4), pinned to 6.1.7. Via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/config>c12. Note: Previous override `"defu@<=6.1.4": ">=6.1.5"` syntax did NOT work in pnpm - must use exact `"defu": "6.1.7"`.
 - `vite`: Security fix (arbitrary file read via WebSocket, fs.deny bypass, path traversal in .map handling >=7.0.0 <=7.3.1), pinned to 7.3.2. Via vite-plugin-node. Added in session 3 on 2026-04-07.
+- `drizzle-orm`: Security fix (SQL injection via improperly escaped SQL identifiers in <0.45.2, GHSA-gpj5-g38j-94v9), pinned to 0.45.2. Via @lenne.tech/nest-server>better-auth. Added in session 4 on 2026-04-08.
 
 ### Pre-existing Test Failures (Baseline)
-- As of 2026-04-07, all 99 tests pass. No pre-existing failures.
+- As of 2026-04-08, all 99 tests pass. No pre-existing failures.
 
 ### Deprecated Packages
-- No deprecated packages found as of 2026-04-07.
+- No deprecated packages found as of 2026-04-08.
 
 See [blocked-updates.md](blocked-updates.md) for detailed notes.

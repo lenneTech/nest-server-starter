@@ -146,13 +146,16 @@ Details: `node_modules/@lenne.tech/nest-server/docs/native-driver-security.md`
 The `process()` pipeline adds memory overhead per call. Under high traffic or in service cascades this can cause memory
 issues. If this happens, bypass `process()` while keeping Mongoose plugins active:
 
-- `Model.create(input)` instead of `CrudService.create(input)` — 3x faster, 9x less memory than `save()`. For batch
-  inserts: `Model.insertMany(docs)`.
-- `Model.findByIdAndUpdate(id, input).lean()` instead of `CrudService.update(id, input)` — fastest update pattern
+**Use CrudService** for user-facing APIs (authorization + field filtering needed).
+**Use direct Mongoose** for system-internal code (processors, crons) where no user context exists:
+- `Model.create(input)` instead of `CrudService.create(input)` — 3x faster, 9x less memory than `save()`
+- `Model.findByIdAndUpdate(id, input).lean()` instead of `CrudService.update(id, input)` — fastest update
 - `Model.findById(id).lean()` instead of `getForce(id)` — 5x less memory in high-frequency paths
 
 For high-frequency paths (monitoring, metrics): defer complex logic (incidents, notifications) to cron/queue, avoid
 service cascades, use lean queries for WebSocket data.
+
+**NEVER** pass Mongoose SubDocument Arrays (e.g. `entity.logs`, `entity.comments`) through `CrudService.update()` — not even in controllers. The Proxy-wrapped subdocuments cause OOM when `clone()` (rfdc) and `processDeep()` trigger Proxy getters on every property. Use `CrudService.pushToArray()` / `pullFromArray()` instead (preferred), or direct `$push` / `$set` via `Model.findByIdAndUpdate()` for combined operations.
 
 **NEVER** bypass Mongoose entirely via `collection.*` — see above. Details:
 `node_modules/@lenne.tech/nest-server/docs/process-performance-optimization.md`
