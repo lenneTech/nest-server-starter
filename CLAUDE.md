@@ -107,23 +107,62 @@ MongoDB must be running locally on default port (27017).
 
 ## Framework: @lenne.tech/nest-server
 
-This project extends `@lenne.tech/nest-server`. The framework source code is available in
-`node_modules/@lenne.tech/nest-server/` and **MUST** be read when debugging or extending framework features.
+This starter is the canonical base used by `lt fullstack init` and
+`lt server create` for **both** framework consumption modes:
 
-### Key Source Files (in node_modules/@lenne.tech/nest-server/)
+- **npm mode (default):** `@lenne.tech/nest-server` is installed as
+  an npm dependency; framework code lives in
+  `node_modules/@lenne.tech/nest-server/`.
+- **vendor mode:** after cloning this starter, the lt CLI runs
+  `convertCloneToVendored()` which clones the nest-server repo into
+  `/tmp`, copies its `src/core/` tree (+ flatten-fix) into
+  `<project>/src/core/`, removes the `@lenne.tech/nest-server` npm dep,
+  merges upstream transitive deps, rewrites all consumer imports from
+  `'@lenne.tech/nest-server'` to relative paths, writes
+  `src/core/VENDOR.md`, and wires vendor maintenance scripts. In
+  vendor mode the CLI also prepends a `<!-- lt-vendor-marker -->`
+  block at the top of this CLAUDE.md at init time.
+
+**Auto-detect:** `test -f <api-root>/src/core/VENDOR.md` → vendor mode.
+`lt status`, `lt fullstack update`, `lt server module/object/addProp/
+test/permissions` all detect the mode via this check. Generated code
+follows the project's mode automatically — no manual flag after init.
+
+### Framework source files
+
+Read the framework source at these paths. **Path prefix depends on mode:**
+
+- **npm mode:** `node_modules/@lenne.tech/nest-server/<path>`
+- **vendor mode:** `<path>` relative to the api root, where
+  `src/core/` is the framework tree (so
+  `src/core/common/services/crud.service.ts` instead of
+  `node_modules/@lenne.tech/nest-server/src/core/common/services/crud.service.ts`)
 
 | File                                                      | Purpose                                                                         |
 |-----------------------------------------------------------|---------------------------------------------------------------------------------|
-| `CLAUDE.md`                                               | Framework rules, architecture overview, debugging guide                         |
-| `FRAMEWORK-API.md`                                        | Compact API reference (interfaces, method signatures)                           |
+| `CLAUDE.md` (npm) / `src/core/VENDOR.md` (vendor)         | Framework rules (npm) / vendor baseline + patch log (vendor)                    |
+| `FRAMEWORK-API.md` (npm only)                             | Compact API reference (interfaces, method signatures)                           |
 | `src/core.module.ts`                                      | CoreModule.forRoot() — all module registration logic                            |
 | `src/core/common/interfaces/server-options.interface.ts`  | ALL config interfaces (IServerOptions, IBetterAuth, ICoreModuleOverrides, etc.) |
 | `src/core/common/interfaces/service-options.interface.ts` | ServiceOptions interface for service method calls                               |
 | `src/core/common/services/crud.service.ts`                | CrudService base class — ALL services extend this                               |
 | `src/core/modules/*/INTEGRATION-CHECKLIST.md`             | Per-module integration steps                                                    |
 | `src/core/modules/*/README.md`                            | Per-module documentation                                                        |
-| `docs/REQUEST-LIFECYCLE.md`                               | Complete request lifecycle, interceptor chain, decorator reference              |
-| `.claude/rules/`                                          | 11 rule files covering architecture, security, testing, modules                 |
+| `docs/REQUEST-LIFECYCLE.md` (npm only)                    | Complete request lifecycle, interceptor chain, decorator reference              |
+| `.claude/rules/` (npm only)                               | 11 rule files covering architecture, security, testing, modules                 |
+
+### Updating the framework
+
+- **npm mode:** `/lt-dev:backend:update-nest-server` (bumps
+  `package.json`, walks migration guides).
+- **vendor mode:** `/lt-dev:backend:update-nest-server-core` (clones
+  upstream, computes delta vs baseline, applies hunks, re-runs
+  flatten-fix).
+
+The generic `nest-server-updater` auto-delegates to `-core` when it
+detects a vendored project (`src/core/VENDOR.md` present). In
+practice, users always run `/lt-dev:backend:update-nest-server` and
+the right flow kicks in automatically.
 
 ### Native MongoDB Driver — Security Rules
 
@@ -140,6 +179,22 @@ If native access is unavoidable: use `this.getNativeCollection(reason)` or `this
 aggregations. Never for write operations on tenant-scoped collections.
 
 Details: `node_modules/@lenne.tech/nest-server/docs/native-driver-security.md`
+
+### Mongoose Index Placement
+
+**Rule:** Single-field indexes live on the property. `Schema.index()` is reserved for compound (multi-field) indexes only.
+
+1. **Single-field indexes** → declare directly on the property via `@Prop({ index: true })` or `@UnifiedField({ mongoose: { index: true } })`. Keeps all property info in one place and visible during code review.
+
+2. **Framework-managed indexes** → do NOT set manually. Example: `tenantId` is automatically indexed by the `mongooseTenantPlugin` in `@lenne.tech/nest-server`. Adding `index: true` on `tenantId` triggers Mongoose `"Duplicate schema index"` warnings.
+
+3. **Compound (multi-field) indexes** → only these belong in `Schema.index({ field1: 1, field2: 1 })` after `SchemaFactory.createForClass(...)`. This is the only acceptable use of `Schema.index()`.
+
+4. **TTL indexes** → declare inline: `@Prop({ required: true, index: { expireAfterSeconds: 3600 } })`. Do NOT add a separate `Schema.index()` call — it duplicates the index.
+
+5. **`unique: true` implies an index** → no additional `Schema.index({ field: 1 }, { unique: true })` needed.
+
+**Why:** Hidden `Schema.index()` calls at the bottom of the file are easy to miss, leading to duplicate definitions and Mongoose warnings when multiple developers touch the same model. Add a short comment next to framework-managed fields explaining the index is auto-created.
 
 ### CrudService process() — Memory Considerations
 
