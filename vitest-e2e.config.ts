@@ -6,8 +6,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    globalSetup: ['tests/global-setup.ts'],
     include: ['tests/**/*.ts'],
-    exclude: ['tests/vitest-reporter.ts', 'tests/helpers/**/*'],
+    exclude: ['tests/vitest-reporter.ts', 'tests/helpers/**/*', 'tests/global-setup.ts'],
     root: './',
     reporters: ['default'],
     testTimeout: 30000,

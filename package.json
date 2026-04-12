@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.24.3",
+  "version": "11.24.4",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -33,9 +33,9 @@
     "build:docs": "rimraf dist && tsc -p tsconfig.build.json && pnpm run docs:ci && pnpm run copy",
     "build:test": "pnpm run build",
     "c": "pnpm run check",
-    "check": "pnpm audit && pnpm run format:check && pnpm run lint && pnpm test && pnpm run build && pnpm start",
-    "check:fix": "pnpm install && pnpm audit --fix && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && pnpm start",
-    "check:naf": "pnpm install && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && pnpm start",
+    "check": "pnpm audit && pnpm run format:check && pnpm run lint && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
+    "check:fix": "pnpm install && pnpm audit --fix && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
+    "check:naf": "pnpm install && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
     "cf": "pnpm run check:fix",
     "cnaf": "pnpm run check:naf",
     "copy": "pnpm run copy:assets && pnpm run copy:config && pnpm run copy:extras && pnpm run copy:meta && pnpm run copy:migrations && pnpm run copy:public && pnpm run copy:scripts && pnpm run copy:spectaql",
@@ -81,7 +81,7 @@
     "start:local": "NODE_ENV=local nodemon",
     "start:local:swc": "NODE_ENV=local nest start -b swc -w --type-check",
     "start:nodemon": "ts-node -r tsconfig-paths/register src/main.ts",
-    "start:prod": "NODE_ENV=production node dist/main.js",
+    "start:prod": "NODE_ENV=production node dist/src/main.js",
     "strip-markers": "node scripts/strip-api-mode-markers.mjs",
     "test": "pnpm run vitest",
     "test:ci": "pnpm run vitest:ci",
@@ -120,7 +120,7 @@
     "drizzle-orm": "Security fix: SQL injection via improperly escaped SQL identifiers in drizzle-orm <0.45.2 (GHSA-gpj5-g38j-94v9) - transitive via @lenne.tech/nest-server>better-auth"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.24.3",
+    "@lenne.tech/nest-server": "11.24.4",
     "@nestjs/common": "11.1.18",
     "@nestjs/core": "11.1.18",
     "@nestjs/graphql": "13.2.5",
