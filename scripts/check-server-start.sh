@@ -7,8 +7,12 @@ pnpm run migrate:up
 # Temp file for server output
 LOG_FILE=$(mktemp)
 
+# Pick a free port so the check does not fail when the default port is busy
+FREE_PORT=$(node -e "const s=require('net').createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>console.log(p));});")
+echo "Using free port: $FREE_PORT"
+
 # Start server in background, redirect output to log file
-NODE_ENV=local node dist/src/main.js > "$LOG_FILE" 2>&1 &
+NSC__PORT=$FREE_PORT NODE_ENV=local node dist/src/main.js > "$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 
 # Show log output in real-time
