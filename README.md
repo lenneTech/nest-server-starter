@@ -101,6 +101,39 @@ Vitest config: vitest-e2e.config.ts
 ```
 see [E2E-Tests.run.xml](.run/E2E-Tests.run.xml)
 
+## Docker
+
+The project includes a production-ready multi-stage Dockerfile. It works both as a standalone project and inside a monorepo created with `lt fullstack init`.
+
+### Build & Run
+
+```bash
+# Standalone
+docker build -t api .
+docker run -e NSC__MONGOOSE__URI=mongodb://host:27017/mydb -p 3000:3000 api
+
+# Monorepo (build context = monorepo root)
+docker build --build-arg API_DIR=projects/api -t api .
+```
+
+### What it does
+
+1. **Stage 1 (deps):** Installs dependencies with pnpm, rebuilds bcrypt native addon
+2. **Stage 2 (build):** Compiles TypeScript, removes devDependencies
+3. **Stage 3 (runner):** Minimal Alpine image, non-root user, runs migrations on startup
+
+### Files
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Multi-stage production build |
+| `docker-entrypoint.sh` | Runs DB migrations before server start |
+| `.dockerignore` | Excludes node_modules, dist, tests, etc. from build context |
+
+### Environment
+
+The migration store reads the MongoDB URI from the `NSC__MONGOOSE__URI` environment variable, so it works in Docker production where `config.env.ts` is not available as TypeScript source.
+
 ## Debugging
 
 Configuration for debugging is:

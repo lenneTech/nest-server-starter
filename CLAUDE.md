@@ -88,6 +88,29 @@ Declares mode-specific files, packages, and scripts:
 `pnpm run strip-markers` removes all region markers (keeping all code), deletes the manifest, and cleans up. Use this
 for manual "Both" mode setup without the CLI.
 
+## Docker Production Build
+
+The project includes a multi-stage Dockerfile that works in both standalone and monorepo setups:
+
+```bash
+# Standalone (this repo directly)
+docker build -t api .
+
+# Monorepo (lt fullstack init, build context = repo root)
+docker build --build-arg API_DIR=projects/api -t api .
+```
+
+**Key files:**
+- `Dockerfile` — 3-stage build (deps → build → production runner), pinned Node 22 Alpine, non-root user
+- `docker-entrypoint.sh` — Runs database migrations before server start via `migrate up`
+- `.dockerignore` — Keeps build context lean
+
+**Environment:** The migration store reads MongoDB URI from `NSC__MONGOOSE__URI` env var (not `config.env.ts`), so it works in Docker production where TypeScript source is not available.
+
+```bash
+docker run -e NSC__MONGOOSE__URI=mongodb://host:27017/mydb -p 3000:3000 api
+```
+
 ## Tooling
 
 - **Formatter:** oxfmt (`pnpm run format`)
