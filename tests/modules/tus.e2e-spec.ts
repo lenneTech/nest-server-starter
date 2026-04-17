@@ -653,14 +653,14 @@ describe('TUS Module (e2e)', () => {
     });
 
     it('should download TUS-uploaded file by ID', async () => {
-      const res = await testHelper.download(`/files/id/${testFile.gridFsId}`, users[0].token);
+      const res = await testHelper.download(`/files/id/${testFile.gridFsId}`, { cookies: users[0].token });
 
       expect(res.statusCode).toBe(200);
       expect(res.data).toBe(testFile.content);
     });
 
     it('should download TUS-uploaded file by filename', async () => {
-      const res = await testHelper.download(`/files/${testFile.filename}`, users[0].token);
+      const res = await testHelper.download(`/files/${testFile.filename}`, { cookies: users[0].token });
 
       expect(res.statusCode).toBe(200);
       expect(res.data).toBe(testFile.content);
@@ -689,7 +689,7 @@ describe('TUS Module (e2e)', () => {
       // Download and verify binary content
       const downloadedBuffer = await testHelper.downloadBuffer(
         `/files/id/${result.gridFsId}`,
-        users[0].token,
+        { cookies: users[0].token },
       );
       expect(Buffer.compare(downloadedBuffer, binaryData)).toBe(0);
     });

@@ -207,7 +207,7 @@ describe('File Module REST (e2e)', () => {
   });
 
   it('downloadRESTFile', async () => {
-    const res = await testHelper.download(`/files/id/${fileInfo.id}`, users[0].token);
+    const res = await testHelper.download(`/files/id/${fileInfo.id}`, { cookies: users[0].token });
     expect(res.statusCode).toEqual(200);
     expect(res.data).toEqual(fileContent);
   });

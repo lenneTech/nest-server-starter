@@ -5,7 +5,7 @@
 set -e
 
 echo "[entrypoint] Running database migrations..."
-node /app/node_modules/.bin/migrate up \
+/app/node_modules/.bin/migrate up \
   --store /app/dist/migrations-utils/migrate.js \
   --migrations-dir /app/dist/migrations
 

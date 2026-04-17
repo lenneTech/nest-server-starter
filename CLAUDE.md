@@ -121,12 +121,49 @@ docker run -e NSC__MONGOOSE__URI=mongodb://host:27017/mydb -p 3000:3000 api
 ## Development
 
 ```bash
-pnpm start          # Start with migrations (local env)
-pnpm run test:e2e   # Run E2E tests
-pnpm run build      # Build for production
+pnpm start                 # Start with migrations (local env)
+pnpm run test:e2e          # Run E2E tests
+pnpm run build             # Build for production
+pnpm run check             # audit + format + lint + test + build + local-start
+pnpm run check:envs        # boot every NODE_ENV (host) — verifies fail-fast/no-.env contracts
+pnpm run check:envs:docker # same as above + same checks inside the production Dockerfile image
 ```
 
 MongoDB must be running locally on default port (27017).
+
+## Configuration model — `src/config.env.ts`
+
+`src/config.env.ts` is the single source of truth for env-specific server options.
+Read its JSDoc header before changing anything — it documents the design rules and
+the "where to change what" guide. Quick map:
+
+| Concern | Where to change |
+|---------|-----------------|
+| Defaults shared by every **deployed** env (`develop`/`test`/`production`) | `deployedConfig()` |
+| Defaults shared by every **local** env (`local`/`e2e`/`ci`) | `localConfig()` |
+| Per-env override (e.g. `local` disables roles, `e2e` drops cron jobs) | `options.config` argument when invoking the helper in the env matrix at the bottom |
+| Required `NSC__*` env vars for deployed envs | `REQUIRED_DEPLOYED_ENV_VARS` table — single source for the runtime fail-fast guard AND the docs/error message |
+| Operator knobs (booleans/numbers/CSV) | direct `process.env.X` reads in the helper bodies (`LEGACY_AUTH_ENABLED`, `CORS_ALLOWED_ORIGINS`, `SMTP_PORT`, `SMTP_SECURE`, `TWO_FACTOR_APP_NAME`, `BREVO_API_KEY`) |
+
+### Secrets policy
+
+- **Local-only envs** (`local`, `e2e`, `ci`): hardcoded public dummies inside `localConfig()` — the
+  project must run completely without a `.env`. NEVER reuse these strings in deployments.
+- **Deployed envs** (`develop`, `test`, `production`): NO secrets in this file. Operators set
+  `NSC__*` env vars; missing values throw at startup with the full list of what is missing.
+
+### Adding a new required deployed env var
+
+1. Add an entry to `REQUIRED_DEPLOYED_ENV_VARS` (one line: `{ check, envVar }`).
+2. Add the `NSC__*` line to `.env.example`.
+3. Run `pnpm run check:envs` — Phase 1 confirms fail-fast triggers, Phase 2 confirms boot succeeds.
+
+### Pipelines
+
+- **Local-only envs are independent stages, not a pipeline.** Each is configured for one scenario
+  (developer machine, `pnpm run test:e2e`, `pnpm run vitest:ci`).
+- **Deployed envs follow the pipeline `develop → test → production`** — they share the exact
+  same baseline so any misconfig surfaces in `develop`/`test` before reaching production.
 
 ## Framework: @lenne.tech/nest-server
 
@@ -150,6 +187,32 @@ This starter is the canonical base used by `lt fullstack init` and
 `lt status`, `lt fullstack update`, `lt server module/object/addProp/
 test/permissions` all detect the mode via this check. Generated code
 follows the project's mode automatically — no manual flag after init.
+
+### Vendor Modification Policy
+
+The vendored core exists so Claude Code can read framework internals
+directly — it is a **comprehension aid**, not a fork. Only edit
+`src/core/` when the change is **generally useful to every
+nest-server consumer**:
+
+- Bugfixes that apply to every consumer
+- Broad framework enhancements
+- Security vulnerability fixes
+- Build/TypeScript compatibility fixes every consumer would hit
+
+**Everything else stays out of `src/core/`.** Project-specific
+business rules, customer enums, and proprietary integrations belong
+in project code via modification, inheritance, extension, or
+`ICoreModuleOverrides`.
+
+**Generally-useful changes MUST be submitted as an upstream PR** to
+`github.com/lenneTech/nest-server`. Run
+`/lt-dev:backend:contribute-nest-server-core` to prepare the PR —
+the agent filters cosmetic commits, categorizes each local change as
+upstream-candidate vs. project-specific, and writes PR drafts for
+human review. Letting useful fixes rot in a single project's vendor
+tree is an anti-pattern: they belong upstream so every consumer
+benefits and the local patch disappears on the next sync.
 
 ### Framework source files
 

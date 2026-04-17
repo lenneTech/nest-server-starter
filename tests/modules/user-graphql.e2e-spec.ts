@@ -14,6 +14,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../../src/config.env';
 import { imports, ServerModule } from '../../src/server/server.module';
+import { graphQlWithCookie } from '../helpers/graphql-cookie.helper';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -200,13 +201,14 @@ describe('User Module GraphQL (e2e)', () => {
    * Non-admin users get ACCESS_DENIED error.
    */
   it('findUsers without rights', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         fields: ['id', 'email'],
         name: 'findUsers',
         type: TestGraphQLType.QUERY,
       },
-      { statusCode: 200, token: gToken },
+      { cookies: gToken, statusCode: 200 },
     );
     // Non-admin users should get FORBIDDEN error
     expect(res).toBeDefined();
@@ -218,7 +220,8 @@ describe('User Module GraphQL (e2e)', () => {
    * Update user
    */
   it('updateUser', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: {
           id: gId,
@@ -230,7 +233,7 @@ describe('User Module GraphQL (e2e)', () => {
         name: 'updateUser',
         type: TestGraphQLType.MUTATION,
       },
-      { token: gToken },
+      { cookies: gToken },
     );
     expect(res.id).toEqual(gId);
     expect(res.email).toEqual(gEmail);
@@ -242,7 +245,8 @@ describe('User Module GraphQL (e2e)', () => {
    * Update roles as non admin
    */
   it('user updates own role failed', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: {
           id: gId,
@@ -254,7 +258,7 @@ describe('User Module GraphQL (e2e)', () => {
         name: 'updateUser',
         type: TestGraphQLType.MUTATION,
       },
-      { token: gToken },
+      { cookies: gToken },
     );
 
     expect(res.errors.length).toBeGreaterThanOrEqual(1);
@@ -268,7 +272,8 @@ describe('User Module GraphQL (e2e)', () => {
    */
   it('getUser', async () => {
     await db.collection('users').findOneAndUpdate({ _id: new ObjectId(gId) }, { $set: { roles: ['admin'] } });
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: {
           id: gId,
@@ -276,7 +281,7 @@ describe('User Module GraphQL (e2e)', () => {
         fields: ['id', 'email', 'firstName', 'roles'],
         name: 'getUser',
       },
-      { token: gToken },
+      { cookies: gToken },
     );
     expect(res.id).toEqual(gId);
     expect(res.email).toEqual(gEmail);
@@ -289,12 +294,13 @@ describe('User Module GraphQL (e2e)', () => {
    * Find users
    */
   it('findUsers', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         fields: ['id', 'email'],
         name: 'findUsers',
       },
-      { token: gToken },
+      { cookies: gToken },
     );
     expect(res.length).toBeGreaterThanOrEqual(1);
   });
@@ -303,13 +309,14 @@ describe('User Module GraphQL (e2e)', () => {
    * Find user via ID
    */
   it('findUserViaId', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { filter: { singleFilter: { field: 'id', operator: ComparisonOperatorEnum.EQ, value: gId } } },
         fields: ['id', 'email'],
         name: 'findUsers',
       },
-      { token: gToken },
+      { cookies: gToken },
     );
     expect(res.length).toBe(1);
     expect(res[0].id).toEqual(gId);
@@ -320,13 +327,14 @@ describe('User Module GraphQL (e2e)', () => {
    * Find sample user
    */
   it('findSampleUser', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { samples: 1 },
         fields: ['id', 'email'],
         name: 'findUsers',
       },
-      { token: gToken },
+      { cookies: gToken },
     );
     expect(res.length).toBeGreaterThanOrEqual(1);
   });
@@ -335,7 +343,8 @@ describe('User Module GraphQL (e2e)', () => {
    * Update roles as admin
    */
   it('user updates roles as admin', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: {
           id: gId,
@@ -347,7 +356,7 @@ describe('User Module GraphQL (e2e)', () => {
         name: 'updateUser',
         type: TestGraphQLType.MUTATION,
       },
-      { token: gToken },
+      { cookies: gToken },
     );
     expect(res.id).toEqual(gId);
     expect(res.email).toEqual(gEmail);
@@ -360,7 +369,8 @@ describe('User Module GraphQL (e2e)', () => {
    * Delete user
    */
   it('deleteUser', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: {
           id: gId,
@@ -369,7 +379,7 @@ describe('User Module GraphQL (e2e)', () => {
         name: 'deleteUser',
         type: TestGraphQLType.MUTATION,
       },
-      { token: gToken },
+      { cookies: gToken },
     );
     expect(res.id).toEqual(gId);
     gId = null; // Mark as deleted to skip cleanup

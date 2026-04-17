@@ -134,6 +134,59 @@ describe('Auth Integration (e2e)', () => {
       // IAM features are accessed through the service directly
       expect(betterAuthService.isJwtEnabled()).toBeDefined();
     });
+
+    /**
+     * Sentinel test: cookie-default behaviour (since nest-server 11.25.0).
+     *
+     * Guards against accidental regression of the framework's cookie semantics:
+     *   - Cookies are enabled by default (no `cookies: false` set anywhere).
+     *   - Sign-in returns a `Set-Cookie: iam.session_token=...` header.
+     *   - With `exposeTokenInBody: false` (our default), the response body
+     *     does NOT contain a top-level `token` field — clients must read the
+     *     cookie or use `Authorization: Bearer` separately.
+     *
+     * If this test breaks, our test suite (which uses
+     * `TestHelper.extractSessionToken` from Set-Cookie + `cookies: …` for
+     * authenticated requests) will silently start sending wrong auth.
+     */
+    it('should set httpOnly session cookie on sign-in (cookies default = true)', async () => {
+      const random = Math.random().toString(36).substring(7);
+      const password = `${random}S1!`;
+      const email = `sentinel-${random}@auth-test.com`;
+
+      // Create + verify user
+      await testHelper.rest('/iam/sign-up/email', {
+        method: 'POST',
+        payload: { email, name: 'Sentinel', password: hashPassword(password), termsAndPrivacyAccepted: true },
+        statusCode: 201,
+      });
+      const user = await db.collection('users').findOne({ email });
+      await db.collection('users').updateOne(
+        { _id: new ObjectId(user._id) },
+        { $set: { emailVerified: true, verified: true } },
+      );
+
+      const res = await testHelper.rest('/iam/sign-in/email', {
+        method: 'POST',
+        payload: { email, password: hashPassword(password) },
+        returnResponse: true,
+        statusCode: 200,
+      });
+
+      // 1. Set-Cookie header MUST contain iam.session_token
+      const setCookie = res.headers['set-cookie'];
+      expect(setCookie).toBeDefined();
+      const cookieHeaders = Array.isArray(setCookie) ? setCookie : [setCookie];
+      const sessionCookie = cookieHeaders.find((c: string) => c.startsWith('iam.session_token='));
+      expect(sessionCookie).toBeDefined();
+      // 2. httpOnly flag set (XSS protection)
+      expect(sessionCookie).toMatch(/httponly/i);
+      // 3. extractSessionToken finds the token (used everywhere in the test suite)
+      expect(TestHelper.extractSessionToken(res)).toBeDefined();
+
+      // Cleanup
+      await db.collection('users').deleteOne({ _id: new ObjectId(user._id) });
+    });
   });
 
   // ===================================================================================================================

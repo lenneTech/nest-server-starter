@@ -147,43 +147,54 @@ see [Debug.run.xml](.run/Debug.run.xml)
 
 ## Configuration
 
-The configuration of the server is done via the `src/config.env.ts` file. This file is a TypeScript file that exports
-an object with the configuration values. It is automatically integrated into the `ConfigService`
-(see src/core/common/services/config.service.ts).
+The configuration of the server is done via `src/config.env.ts`. The file is structured into two
+helper functions and an environment matrix; the full philosophy and a "where to change what" guide
+sit in the file's JSDoc header. Read that first when you're not sure where a value comes from.
+
+### Environments
+
+| Env | Type | Secrets | Runs without `.env` |
+|-----|------|---------|---------------------|
+| `local` | local-only — developer machine | hardcoded public dummies | yes |
+| `e2e` | local-only — used by `pnpm run test:e2e` | hardcoded public dummies | yes |
+| `ci` | local-only — used by `pnpm run vitest:ci` | hardcoded public dummies | yes |
+| `develop` | deployed (first stage) | **must** come from `NSC__*` env vars | no — fails fast |
+| `test` | deployed (staging stage) | **must** come from `NSC__*` env vars | no — fails fast |
+| `production` | deployed (final stage) | **must** come from `NSC__*` env vars | no — fails fast |
+
+Local-only envs are independent stages, not a pipeline — each is configured for a specific scenario
+(developer machine, test runs, CI runs). Deployed envs share the exact same baseline (`deployedConfig`)
+and follow the pipeline `develop → test → production`, so any misconfiguration surfaces in `develop`
+or `test` long before it reaches production.
 
 ### Environment variables
 
-To protect sensitive data and to avoid committing them to the repository the `.env` file can be used.
-An example `.env` file is provided in the `.env.example` file.
+Three ways to override or extend the resolved config:
 
-There are multiple ways to manipulate or extend the configuration via environment variables:
-1. Via "normal" integration of the environment variables into the `src/config.env.ts`
-2. Via JSON in the `NEST_SERVER_CONFIG` environment variable
-3. Via single environment variables with the prefix `NSC__` (Nest Server Config)
+1. **`NSC__`-prefixed env vars** *(recommended for secrets/URLs)* — auto-merged into the config tree
+   by `getEnvironmentConfig`. Path mapping: `NSC__FOO__BAR` → `config.foo.bar`; single underscore =
+   camelCase boundary (so `NSC__BETTER_AUTH__SECRET` → `config.betterAuth.secret`).
+2. **`NEST_SERVER_CONFIG` JSON** — a multiline JSON string that is parsed and deep-merged into the
+   config (lodash `mergeWith`, arrays are replaced not concatenated).
+3. **Direct `process.env` reads in `config.env.ts`** — only used for values that need parsing
+   (booleans, numbers, comma-separated lists). Examples: `LEGACY_AUTH_ENABLED`, `CORS_ALLOWED_ORIGINS`,
+   `SMTP_PORT`, `SMTP_SECURE`.
 
-#### Normal environment variables
-Using `dotenv` (see https://www.dotenv.org/) environment variables can directly integrated into the
-`src/config.env.ts` via `process.env`. E.g.:
-```typescript
-export const config = {
-  development: {
-    port: process.env.PORT || 3000,
-  },
-};
-```
+### Secrets policy
 
-#### JSON
-The `NEST_SERVER_CONFIG` is the environment variable for the server configuration.
-The value of `NEST_SERVER_CONFIG` must be a (multiline) JSON string that will be parsed by the server
-(see config.env.ts). The keys will override the other configuration values via deep merge
-(see https://lodash.com/docs/4.17.15#merge, without array merging).
+For deployed envs, `src/config.env.ts` contains **no secrets, no fallback values, no `process.env.*`
+reads for sensitive paths**. Operators set them via `NSC__*` env vars; if any required value is
+missing, the server throws at startup with a list of all missing variables. The full list is
+maintained in a single place (`REQUIRED_DEPLOYED_ENV_VARS` in `config.env.ts`) and is the source of
+truth for both the runtime guard and the inline documentation.
 
-#### Single config variables
-The prefix `NSC__` (**N**est **S**erver **C**onfig) can be used to set single configuration values via environment
-variables. The key is the name of the configuration value in uppercase and with double underscores (`__`) instead of
-dots. Single underscores are used to separate compound terms like `DEFAULT_SENDER` for `defaultSender`.
-For example, the configuration value `email.defaultSender.name` can be set via the environment variable
-`NSC__EMAIL_DEFAULT_SENDER_NAME`.
+See `.env.example` for the complete catalog of required and optional env vars.
+
+### Verifying configurations
+
+`pnpm run check:envs` boots every NODE_ENV against an empty `.env` (deployed must fail-fast,
+local must start) and against a fixture `.env` (all six must start). Add `--docker` for the same
+checks inside the production image: `pnpm run check:envs:docker`.
 
 ## Test & debug the NestServer package in this project
 Use `pnpm link` to include the local NestJS server in the project.

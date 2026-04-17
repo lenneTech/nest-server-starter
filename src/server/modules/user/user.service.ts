@@ -79,11 +79,18 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
     // Set password reset token
     const user = await super.setPasswordResetTokenForEmail(email, serviceOptions);
 
+    // Build reset link.
+    // Priority: explicit email.passwordResetLink (deployment override) → derived from appUrl/baseUrl.
+    // Since nest-server 11.25.0 the reference config no longer ships email.passwordResetLink —
+    // setting it remains supported as a deploy-specific override (IServerOptions still accepts it).
+    const config = this.configService.configFastButReadOnly;
+    const baseLink = config.email?.passwordResetLink || `${config.appUrl || config.baseUrl}/auth/password-reset`;
+
     // Send email
     await this.emailService.sendMail(user.email, 'Password reset', {
       htmlTemplate: 'password-reset',
       templateData: {
-        link: `${this.configService.configFastButReadOnly.email.passwordResetLink}/${user.passwordResetToken}`,
+        link: `${baseLink}/${user.passwordResetToken}`,
         name: user.username,
       },
     });

@@ -14,6 +14,7 @@ import { MongoClient, ObjectId } from 'mongodb';
 import envConfig from '../src/config.env';
 import { User } from '../src/server/modules/user/user.model';
 import { imports, ServerModule } from '../src/server/server.module';
+import { graphQlWithCookie } from './helpers/graphql-cookie.helper';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -185,14 +186,15 @@ describe('Project GraphQL (e2e)', () => {
       skip: 1,
       sort: [{ field: 'firstName', order: SortOrderEnum.DESC }],
     };
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { ...args },
         fields: [{ items: ['id', 'email', 'firstName', 'lastName'] }, 'totalCount'],
         name: 'findAndCountUsers',
         type: TestGraphQLType.QUERY,
       },
-      { token: users[0].token },
+      { cookies: users[0].token },
     );
     const min = Math.min(args.limit, emails.length - args.skip);
     expect(res.totalCount).toEqual(emails.length);
@@ -224,28 +226,30 @@ describe('Project GraphQL (e2e)', () => {
       samples: 1,
       sort: [{ field: 'email', order: SortOrderEnum.DESC }],
     };
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { ...args },
         fields: ['id', 'email', 'firstName', 'lastName'],
         name: 'findUsers',
         type: TestGraphQLType.QUERY,
       },
-      { token: users[0].token },
+      { cookies: users[0].token },
     );
     expect(res.length).toEqual(1);
     expect(emails.includes(res[0].email)).toBe(true);
     const email = res[0].email;
     let otherEmail = res[0].email;
     while (email === otherEmail) {
-      const otherRes: any = await testHelper.graphQl(
+      const otherRes: any = await graphQlWithCookie(
+        testHelper,
         {
           arguments: { ...args },
           fields: ['id', 'email', 'firstName', 'lastName'],
           name: 'findUsers',
           type: TestGraphQLType.QUERY,
         },
-        { token: users[0].token },
+        { cookies: users[0].token },
       );
       expect(otherRes.length).toEqual(1);
       expect(emails.includes(otherRes[0].email)).toBe(true);
@@ -267,7 +271,8 @@ describe('Project GraphQL (e2e)', () => {
       .findOneAndUpdate({ _id: new ObjectId(users[users.length - 1].id) }, { $set: { roles: ['admin'] } });
 
     for (const user of users) {
-      const res: any = await testHelper.graphQl(
+      const res: any = await graphQlWithCookie(
+        testHelper,
         {
           arguments: {
             id: user.id,
@@ -276,7 +281,7 @@ describe('Project GraphQL (e2e)', () => {
           name: 'deleteUser',
           type: TestGraphQLType.MUTATION,
         },
-        { token: users[users.length - 1].token },
+        { cookies: users[users.length - 1].token },
       );
       expect(res.id).toEqual(user.id);
     }

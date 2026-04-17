@@ -11,6 +11,7 @@ import envConfig from '../../src/config.env';
 import { FileInfo } from '../../src/server/modules/file/file-info.model';
 import { User } from '../../src/server/modules/user/user.model';
 import { imports, ServerModule } from '../../src/server/server.module';
+import { graphQlWithCookie } from '../helpers/graphql-cookie.helper';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -336,7 +337,8 @@ describe('File Module GraphQL (e2e)', () => {
 
     // Write and send file
     await fs.promises.writeFile(local, fileContent);
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { file: new VariableType('file') },
         fields: ['id', 'filename'],
@@ -344,7 +346,7 @@ describe('File Module GraphQL (e2e)', () => {
         type: TestGraphQLType.MUTATION,
         variables: { file: 'Upload!' },
       },
-      { token: users[0].token, variables: { file: { type: 'attachment', value: local } } },
+      { cookies: users[0].token, variables: { file: { type: 'attachment', value: local } } },
     );
 
     // Remove file
@@ -359,47 +361,50 @@ describe('File Module GraphQL (e2e)', () => {
   });
 
   it('getFileInfoForGraphQLFile', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { filename: fileInfo.filename },
         fields: ['id', 'filename'],
         name: 'getFileInfo',
         type: TestGraphQLType.QUERY,
       },
-      { token: users[0].token },
+      { cookies: users[0].token },
     );
     expect(res.id).toEqual(fileInfo.id);
     expect(res.filename).toEqual(fileInfo.filename);
   });
 
   it('downloadGraphQLFile', async () => {
-    const res = await testHelper.download(`/files/id/${fileInfo.id}`, users[0].token);
+    const res = await testHelper.download(`/files/id/${fileInfo.id}`, { cookies: users[0].token });
     expect(res.statusCode).toEqual(200);
     expect(res.data).toEqual(fileContent);
   });
 
   it('deleteGraphQLFile', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { filename: fileInfo.filename },
         fields: ['id'],
         name: 'deleteFile',
         type: TestGraphQLType.MUTATION,
       },
-      { token: users[0].token },
+      { cookies: users[0].token },
     );
     expect(res.id).toEqual(fileInfo.id);
   });
 
   it('getGraphQLFileInfo', async () => {
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { filename: fileInfo.filename },
         fields: ['id', 'filename'],
         name: 'getFileInfo',
         type: TestGraphQLType.QUERY,
       },
-      { token: users[0].token },
+      { cookies: users[0].token },
     );
     expect(res).toEqual(null);
   });
@@ -412,7 +417,8 @@ describe('File Module GraphQL (e2e)', () => {
     // Write and send files
     await fs.promises.writeFile(local1, 'Hello GraphQL 1');
     await fs.promises.writeFile(local2, 'Hello GraphQL 2');
-    const res: any = await testHelper.graphQl(
+    const res: any = await graphQlWithCookie(
+      testHelper,
       {
         arguments: { files: new VariableType('files') },
         fields: ['id', 'filename'],
@@ -420,7 +426,7 @@ describe('File Module GraphQL (e2e)', () => {
         type: TestGraphQLType.MUTATION,
         variables: { files: '[Upload!]!' },
       },
-      { token: users[0].token, variables: { files: { type: 'attachment', value: [local1, local2] } } },
+      { cookies: users[0].token, variables: { files: { type: 'attachment', value: [local1, local2] } } },
     );
 
     // Remove local files
@@ -462,14 +468,15 @@ describe('File Module GraphQL (e2e)', () => {
     });
 
     it('should get TUS file info via GraphQL', async () => {
-      const res: any = await testHelper.graphQl(
+      const res: any = await graphQlWithCookie(
+        testHelper,
         {
           arguments: { filename: tusTestFile.filename },
           fields: ['id', 'filename', 'contentType', 'length'],
           name: 'getFileInfo',
           type: TestGraphQLType.QUERY,
         },
-        { token: users[0].token },
+        { cookies: users[0].token },
       );
 
       expect(res.id).toBe(tusTestFile.gridFsId);
@@ -493,7 +500,8 @@ describe('File Module GraphQL (e2e)', () => {
       .findOneAndUpdate({ _id: new ObjectId(users[users.length - 1].id) }, { $set: { roles: ['admin'] } });
 
     for (const user of users) {
-      const res: any = await testHelper.graphQl(
+      const res: any = await graphQlWithCookie(
+        testHelper,
         {
           arguments: {
             id: user.id,
@@ -502,7 +510,7 @@ describe('File Module GraphQL (e2e)', () => {
           name: 'deleteUser',
           type: TestGraphQLType.MUTATION,
         },
-        { token: users[users.length - 1].token },
+        { cookies: users[users.length - 1].token },
       );
       expect(res.id).toEqual(user.id);
     }

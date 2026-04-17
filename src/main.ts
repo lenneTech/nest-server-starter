@@ -1,9 +1,12 @@
 import {
+  buildCorsConfig,
   CoreAuthModel,
   CorePersistenceModel,
   CoreUserModel,
   FilterArgs,
   HttpExceptionLogFilter,
+  isCookiesEnabled,
+  isCorsDisabled,
 } from '@lenne.tech/nest-server';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -53,9 +56,14 @@ async function bootstrap() {
     server.use(compression(compressionOptions));
   }
 
-  // Cookie handling
-  if (envConfig.cookies) {
-    server.use(cookieParser());
+  // Cookie handling (enabled by default since nest-server 11.25.0).
+  // Sign cookies with jwt.secret → betterAuth.secret fallback chain so
+  // signed cookies (req.signedCookies) verify correctly in IAM-only mode.
+  const cookiesEnabled = isCookiesEnabled(envConfig.cookies);
+  if (cookiesEnabled) {
+    const betterAuthSecret = typeof envConfig.betterAuth === 'object' ? envConfig.betterAuth?.secret : undefined;
+    const cookieSecret = envConfig.jwt?.secret || betterAuthSecret;
+    server.use(cookieSecret ? cookieParser(cookieSecret) : cookieParser());
   }
 
   // Asset directory
@@ -65,8 +73,18 @@ async function bootstrap() {
   server.setBaseViewsDir(envConfig.templates.path);
   server.setViewEngine(envConfig.templates.engine);
 
-  // Enable cors to allow requests from other domains
-  server.enableCors();
+  // CORS (unified across REST, GraphQL, and BetterAuth via buildCorsConfig).
+  // - cors: false → fully disabled (no headers)
+  // - origins resolvable via appUrl/baseUrl/allowedOrigins → restricted credentialed CORS
+  // - cookies disabled and no origins → permissive enableCors() for backward compatibility
+  if (!isCorsDisabled(envConfig.cors)) {
+    const corsOptions = buildCorsConfig(envConfig);
+    if (Object.keys(corsOptions).length > 0) {
+      server.enableCors(corsOptions);
+    } else if (!cookiesEnabled) {
+      server.enableCors();
+    }
+  }
 
   // #region rest
   // Swagger documentation
