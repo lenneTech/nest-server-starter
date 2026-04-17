@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.25.0",
+  "version": "11.25.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -122,7 +122,7 @@
     "drizzle-orm": "Security fix: SQL injection via improperly escaped SQL identifiers in drizzle-orm <0.45.2 (GHSA-gpj5-g38j-94v9) - transitive via @lenne.tech/nest-server>better-auth"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.25.0",
+    "@lenne.tech/nest-server": "11.25.1",
     "@nestjs/common": "11.1.19",
     "@nestjs/core": "11.1.19",
     "@nestjs/graphql": "13.2.5",

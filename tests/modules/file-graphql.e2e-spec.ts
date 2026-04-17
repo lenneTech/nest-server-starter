@@ -11,7 +11,6 @@ import envConfig from '../../src/config.env';
 import { FileInfo } from '../../src/server/modules/file/file-info.model';
 import { User } from '../../src/server/modules/user/user.model';
 import { imports, ServerModule } from '../../src/server/server.module';
-import { graphQlWithCookie } from '../helpers/graphql-cookie.helper';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -337,8 +336,7 @@ describe('File Module GraphQL (e2e)', () => {
 
     // Write and send file
     await fs.promises.writeFile(local, fileContent);
-    const res: any = await graphQlWithCookie(
-      testHelper,
+    const res: any = await testHelper.graphQl(
       {
         arguments: { file: new VariableType('file') },
         fields: ['id', 'filename'],
@@ -361,8 +359,7 @@ describe('File Module GraphQL (e2e)', () => {
   });
 
   it('getFileInfoForGraphQLFile', async () => {
-    const res: any = await graphQlWithCookie(
-      testHelper,
+    const res: any = await testHelper.graphQl(
       {
         arguments: { filename: fileInfo.filename },
         fields: ['id', 'filename'],
@@ -382,8 +379,7 @@ describe('File Module GraphQL (e2e)', () => {
   });
 
   it('deleteGraphQLFile', async () => {
-    const res: any = await graphQlWithCookie(
-      testHelper,
+    const res: any = await testHelper.graphQl(
       {
         arguments: { filename: fileInfo.filename },
         fields: ['id'],
@@ -396,8 +392,7 @@ describe('File Module GraphQL (e2e)', () => {
   });
 
   it('getGraphQLFileInfo', async () => {
-    const res: any = await graphQlWithCookie(
-      testHelper,
+    const res: any = await testHelper.graphQl(
       {
         arguments: { filename: fileInfo.filename },
         fields: ['id', 'filename'],
@@ -417,8 +412,7 @@ describe('File Module GraphQL (e2e)', () => {
     // Write and send files
     await fs.promises.writeFile(local1, 'Hello GraphQL 1');
     await fs.promises.writeFile(local2, 'Hello GraphQL 2');
-    const res: any = await graphQlWithCookie(
-      testHelper,
+    const res: any = await testHelper.graphQl(
       {
         arguments: { files: new VariableType('files') },
         fields: ['id', 'filename'],
@@ -468,8 +462,7 @@ describe('File Module GraphQL (e2e)', () => {
     });
 
     it('should get TUS file info via GraphQL', async () => {
-      const res: any = await graphQlWithCookie(
-        testHelper,
+      const res: any = await testHelper.graphQl(
         {
           arguments: { filename: tusTestFile.filename },
           fields: ['id', 'filename', 'contentType', 'length'],
@@ -500,8 +493,7 @@ describe('File Module GraphQL (e2e)', () => {
       .findOneAndUpdate({ _id: new ObjectId(users[users.length - 1].id) }, { $set: { roles: ['admin'] } });
 
     for (const user of users) {
-      const res: any = await graphQlWithCookie(
-        testHelper,
+      const res: any = await testHelper.graphQl(
         {
           arguments: {
             id: user.id,
