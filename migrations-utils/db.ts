@@ -9,7 +9,9 @@ import {
   uploadFileToGridFS,
 } from '@lenne.tech/nest-server';
 
-import config from '../src/config.env';
+import { resolveMongoUri } from './mongo-uri';
+
+const MONGO_URL = resolveMongoUri();
 
 // Re-exports that don't need wrapping
 export { createMigrationStore, uploadFileToGridFS };
@@ -17,5 +19,5 @@ export { createMigrationStore, uploadFileToGridFS };
 // Compatibility wrapper - injects MongoDB URL from config automatically
 // Allows existing migrations to call getDb() without parameters
 export const getDb = async () => {
-  return nestServerGetDb(config.mongoose.uri);
+  return nestServerGetDb(MONGO_URL);
 };
