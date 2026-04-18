@@ -189,10 +189,16 @@ function deployedConfig(
     },
     env: envName,
     errorCode: PROJECT_ERROR_CODE,
+    // #region graphql
+    // docs:bootstrap generates the spectaql GraphQL schema docs — only
+    // meaningful when GraphQL is enabled.
     execAfterInit: 'pnpm run docs:bootstrap',
+    // #endregion graphql
     filter: { maxLimit: null },
+    // #region graphql
     // Disable GraphQL playground in production for security; keep it in develop/test for tooling
     graphQl: { driver: { introspection: true, playground: envName !== 'production' }, maxComplexity: 1000 },
+    // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
     ignoreSelectionsForPopulate: true,
     // jwt.secret + jwt.refresh.secret come from NSC__JWT__SECRET / NSC__JWT__REFRESH__SECRET
@@ -253,9 +259,13 @@ function localConfig(
     },
     env: envName,
     errorCode: PROJECT_ERROR_CODE,
+    // #region graphql
     execAfterInit: 'pnpm run docs:bootstrap',
+    // #endregion graphql
     filter: { maxLimit: null },
+    // #region graphql
     graphQl: { driver: { introspection: true, playground: true }, maxComplexity: 1000 },
+    // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
     // hostname unset → framework default 0.0.0.0 (works on host AND inside containers)
     ignoreSelectionsForPopulate: true,
