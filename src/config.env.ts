@@ -120,15 +120,17 @@ const REQUIRED_DEPLOYED_ENV_VARS: RequiredEnvVar[] = [
     envVar: 'NSC__EMAIL__SMTP__AUTH__PASS',
   },
   { check: (c) => !!c.email?.defaultSender?.email, envVar: 'NSC__EMAIL__DEFAULT_SENDER__EMAIL' },
-  // Legacy Auth secrets — only required when legacy endpoints are enabled
+  // Legacy Auth secrets — ONLY required when a consuming project explicitly
+  // opts back into legacy endpoints via `auth.legacyEndpoints.enabled: true`
+  // (default in this starter is BetterAuth-only, so these stay unset).
   {
     check: (c) => !!c.jwt?.secret,
-    condition: (c) => c.auth?.legacyEndpoints?.enabled !== false,
+    condition: (c) => c.auth?.legacyEndpoints?.enabled === true,
     envVar: 'NSC__JWT__SECRET',
   },
   {
     check: (c) => !!c.jwt?.refresh?.secret,
-    condition: (c) => c.auth?.legacyEndpoints?.enabled !== false,
+    condition: (c) => c.auth?.legacyEndpoints?.enabled === true,
     envVar: 'NSC__JWT__REFRESH__SECRET',
   },
 ];
@@ -140,7 +142,6 @@ const REQUIRED_DEPLOYED_ENV_VARS: RequiredEnvVar[] = [
 // `REQUIRED_DEPLOYED_ENV_VARS` above) and are merged in by `getEnvironmentConfig`.
 //
 // Optional operator knobs (parsed in code → kept as direct env vars):
-//   LEGACY_AUTH_ENABLED   "false" → disables legacy /auth endpoints
 //   CORS_ALLOWED_ORIGINS  comma-separated extra origins
 //   SMTP_PORT             default 587
 //   SMTP_SECURE           "false" → STARTTLS
@@ -157,7 +158,6 @@ function deployedConfig(
   const brand = options?.brandSuffix ? `Nest Server Starter ${options.brandSuffix}` : 'Nest Server Starter';
 
   const base: Partial<IServerOptions> = {
-    auth: { legacyEndpoints: { enabled: process.env.LEGACY_AUTH_ENABLED !== 'false' } },
     automaticObjectIdFiltering: true,
     // betterAuth.secret comes from NSC__BETTER_AUTH__SECRET
     betterAuth: {
@@ -201,12 +201,6 @@ function deployedConfig(
     // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
     ignoreSelectionsForPopulate: true,
-    // jwt.secret + jwt.refresh.secret come from NSC__JWT__SECRET / NSC__JWT__REFRESH__SECRET
-    jwt: {
-      refresh: { renewal: true, signInOptions: { expiresIn: '7d' } },
-      sameTokenIdPeriod: 2000,
-      signInOptions: { expiresIn: '15m' },
-    },
     logExceptions: true,
     // mongoose.uri comes from NSC__MONGOOSE__URI (no fallback in deployed envs)
     permissions: true,
@@ -269,17 +263,6 @@ function localConfig(
     healthCheck: PROJECT_HEALTH_CHECK,
     // hostname unset → framework default 0.0.0.0 (works on host AND inside containers)
     ignoreSelectionsForPopulate: true,
-    // Public dummy JWT secrets — sufficient for local/test, NEVER in deployments
-    jwt: {
-      refresh: {
-        renewal: true,
-        secret: `SECRET_OR_PRIVATE_KEY_${upper}_REFRESH_32CH`,
-        signInOptions: { expiresIn: '7d' },
-      },
-      sameTokenIdPeriod: 2000,
-      secret: `SECRET_OR_PRIVATE_KEY_${upper}_MIN_32_CHARS`,
-      signInOptions: { expiresIn: '15m' },
-    },
     logExceptions: true,
     mongoose: { uri: `mongodb://127.0.0.1/${options.dbName}` },
     port: 3000,
