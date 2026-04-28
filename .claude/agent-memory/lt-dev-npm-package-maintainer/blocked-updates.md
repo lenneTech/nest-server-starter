@@ -27,6 +27,5 @@ Also: `baseUrl` compiler option is deprecated in TS6 (was restored for tsconfig-
 **Fix needed**: Add `!` to decorated properties, change null assignments in securityCheck to use proper optional types, or suppress with `"strictPropertyInitialization": false`. This is a significant model API change affecting the lenne.tech base model contract.
 
 ## vite-plugin-node 7 → 8
-**Status**: BLOCKED (assessed 2026-04-03)
-**Reason**: v8 requires `vite@^8.0.0` as peer dependency. Currently vitest@4.1.2 uses `vite@7.3.1`. Upgrading vite to v8 would require upgrading vitest to a version that supports vite@8, which is a multi-step major upgrade.
-**Fix needed**: Upgrade vitest (and potentially vite) first, then upgrade vite-plugin-node.
+**Status**: RESOLVED (2026-04-28)
+**Notes**: vitest@4.1.5 now declares peer `vite: '^6.0.0 || ^7.0.0 || ^8.0.0'`, so vite-plugin-node@8 + vite@8.0.10 work together. The pnpm.overrides entry for `vite` was bumped from `7.3.2` to `8.0.10`. Side benefit: vite@8 requires postcss@^8.5.10, fixing the GHSA-qx2v-qp2m-jg93 XSS vulnerability without an extra postcss override.

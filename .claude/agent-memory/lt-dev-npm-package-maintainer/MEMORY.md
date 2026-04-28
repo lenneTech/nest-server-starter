@@ -1,6 +1,15 @@
 # npm-package-maintainer Memory - nest-server-starter
 
-## Key Findings (last updated 2026-04-17, session 6)
+## Key Findings (last updated 2026-04-28, session 7)
+
+### Session 7 Notes (2026-04-28)
+- vite-plugin-node 7→8 BLOCKER REMOVED: vitest@4.1.5 supports `vite ^6 || ^7 || ^8`, so vite-plugin-node@8 + vite@8.0.10 now works together. Previous block (vitest needs vite@7.x) was outdated.
+- `vite` override updated 7.3.2 → 8.0.10. This also resolved the postcss CVE GHSA-qx2v-qp2m-jg93 (XSS in postcss <8.5.10) since vite@8 requires postcss@^8.5.10.
+- `file-type` override REMOVED: @nestjs/common@11.1.19 now directly pins file-type to exact '21.3.4', so override is redundant. Verified: file-type@21.3.4 still installed after removal.
+- `hono` override bumped 4.12.14 → 4.12.15 (latest patch).
+- `ajv` override bumped 8.18.0 → 8.20.0 (latest minor in 8.x).
+- SAFE batch updates: @nestjs/swagger 11.4.1→11.4.2, @swc/core 1.15.30→1.15.32, oxfmt 0.46.0→0.47.0, oxlint 1.61.0→1.62.0.
+- Final state: 100/100 tests pass, build OK, audit clean (0 vulnerabilities).
 
 ### Packages that MUST stay despite appearing unused in grep
 - `supertest` + `@types/supertest`: Required by `@lenne.tech/nest-server/dist/test/test.helper.js` at runtime even though no direct test import. REMOVING BREAKS TESTS.
@@ -15,7 +24,7 @@
 - `cpy-cli` 6→7: v7 throws error when source dir doesn't exist (e.g. ./migrations). `copy:migrations` script fails.
 - `graphql-upload` 15→17: v17 changed all exports from `.js` to `.mjs` only. Breaks `require('graphql-upload/GraphQLUpload.js')` in `src/server/modules/file/file.resolver.ts`.
 - `typescript` 5.x→6.0.3: TypeScript 6.0 stricter type checking breaks 26 errors in 5 files (user.model.ts, meta.model.ts, find-and-count-users-result.output.ts, user.service.ts, config.env.ts). Issues: TS2564 (strict property initialization), TS2322 (null assignments in securityCheck). Also: `baseUrl` is deprecated in TS6 (but was restored for tsconfig-paths compatibility).
-- `vite-plugin-node` 7→8: v8 requires `vite@^8.0.0`, but vitest@4.x needs `vite@7.x`. Incompatible.
+- `vite-plugin-node` 7→8: RESOLVED in session 7 (2026-04-28). vitest@4.1.5 now declares `vite: '^6.0.0 || ^7.0.0 || ^8.0.0'` peer, so vite-plugin-node@8 + vite@8.0.10 works.
 
 ### @nestjs/common + @nestjs/core Overrides (removed 2026-04-04 session 2)
 When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne.tech/nest-server depends on, pnpm creates two instances of @nestjs/schedule (one per @nestjs/core version). This causes TS2415 build error: "Types have separate declarations of a private property 'logger'". Fix: add `@nestjs/common` AND `@nestjs/core` to pnpm.overrides to force single versions. These overrides were REMOVED in session 2 because nest-server 11.22.1 now uses 11.1.18 (same as starter). Add them back if starter is ever upgraded ahead of nest-server again.
