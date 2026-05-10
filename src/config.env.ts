@@ -50,9 +50,15 @@ import { ProjectErrors } from './server/common/errors/project-errors';
  * --------------------------------------------------------------------------
  * - `local`, `ci`, `e2e`: localhost defaults (API:3000, App:3001) — no setup needed.
  *   Override defaults via env vars: PORT, BIND_ADDRESS, BASE_URL, APP_URL,
- *   NSC__MONGOOSE__URI, SMTP_HOST, SMTP_PORT (e.g. for `lt local up` parallel projects).
+ *   NSC__MONGOOSE__URI, SMTP_HOST, SMTP_PORT (e.g. for `lt dev up` parallel projects
+ *   that serve the API as `https://api.<slug>.localhost` behind Caddy).
  * - `develop`, `test`, `production`: set `NSC__BASE_URL`; `appUrl` is auto-derived
  *   (e.g. `https://api.example.com` → `https://example.com`).
+ *
+ * Cross-subdomain cookies (`crossSubDomainCookies: true`) are enabled in
+ * the local baseline whenever `BASE_URL` is set, so Better Auth shares
+ * cookies between `https://api.<slug>.localhost` and `https://<slug>.localhost`
+ * automatically. The cookie `domain` is auto-derived from `appUrl`.
  */
 dotenv.config();
 
@@ -238,8 +244,12 @@ function localConfig(
     automaticObjectIdFiltering: true,
     // Filter BASE_URL against '/' because Vite/Vitest auto-inject process.env.BASE_URL='/' (asset base path default).
     baseUrl: process.env.BASE_URL && process.env.BASE_URL !== '/' ? process.env.BASE_URL : undefined,
-    // Public dummy secret — sufficient for local/test, NEVER in deployments
+    // Public dummy secret — sufficient for local/test, NEVER in deployments.
+    // crossSubDomainCookies enabled when BASE_URL is set (e.g. https://api.<slug>.localhost
+    // from `lt dev up`). Better Auth derives the cookie domain from appUrl/baseUrl
+    // automatically, so cookies are shared across `*.<slug>.localhost`.
     betterAuth: {
+      ...(process.env.BASE_URL && process.env.BASE_URL !== '/' ? { crossSubDomainCookies: true } : {}),
       secret: `BETTER_AUTH_SECRET_${upper}_LOCAL_32_CHARS`,
       twoFactor: { appName: brand },
     },

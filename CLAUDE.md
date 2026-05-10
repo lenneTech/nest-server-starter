@@ -133,30 +133,35 @@ MongoDB must be running locally on default port (27017).
 
 ## Local Development (Parallel Projects)
 
-This starter ships with env-aware port configuration. To run multiple lt-projects on the same machine without colliding on 3000/3001:
+This starter ships with env-aware URL configuration. To run multiple lt-projects on the same machine without colliding on `localhost:3000`/`localhost:3001` and without cross-wiring auth between projects:
 
 ```bash
-lt local init [--patch] [--noConfirm]   # Allocate a port slot (one-time, idempotent)
-lt local up                             # Start API with project-specific port
-lt local down                           # Stop the detached process
-lt local status                         # Show running PIDs + bound ports
-lt ports                                # See all reserved + bound dev ports
+lt dev install                 # one-time per machine: Caddy + local CA
+lt dev migrate                 # once per project: idempotent ENV patches
+lt dev up                      # start API behind Caddy under https://api.<slug>.localhost
+lt dev down                    # stop the detached process + remove Caddy block
+lt dev status                  # show running PIDs + active URLs
+lt dev status --all            # list all registered projects
+lt dev doctor                  # diagnose Caddy / CA / DNS / port issues
 ```
 
-`lt local up` exports the env vars the starter respects:
+`lt dev up` exports the env vars the starter respects:
 
-- `PORT` — API listen port (default: 3000)
+- `PORT` — internal API listen port (auto-allocated 4000+, never 3000)
 - `BIND_ADDRESS` — bind hostname (default: 0.0.0.0)
-- `BASE_URL` / `APP_URL` — used by Better Auth (passkey origin, trusted origins)
+- `BASE_URL` / `APP_URL` (also `NSC__BASE_URL` / `NSC__APP_URL`) — drive Better Auth `trustedOrigins` and `crossSubDomainCookies` automatically
 - `NSC__MONGOOSE__URI` — MongoDB connection string (DB name comes from `lt.config.json` `dbName`)
+- `DATABASE_URL` — Postgres convenience URL (for Postgres-based projects)
 - `SMTP_HOST` / `SMTP_PORT` — optional mail relay overrides
 
-Without `lt local up`, the starter falls back to the hardcoded defaults (port 3000, `mongodb://127.0.0.1/<dbName>`). All env vars are optional — the starter runs without any of them set.
+Without `lt dev up`, the starter falls back to the hardcoded defaults (port 3000, `mongodb://127.0.0.1/<dbName>`). All env vars are optional — the starter runs without any of them set.
 
-**Setting these manually** (e.g. in a non-lt-CLI environment) achieves the same result as `lt local up`:
+**Cross-subdomain cookies** are enabled in the local-baseline config when `BASE_URL` is set (e.g. `https://api.crm.localhost`). Better Auth auto-derives the cookie domain from `appUrl`/`baseUrl` (e.g. `.crm.localhost`), so cookies set on the API are visible to the App.
+
+**Setting these manually** (e.g. in a non-lt-CLI environment) achieves the same result as `lt dev up`:
 
 ```bash
-PORT=3030 BASE_URL=http://localhost:3030 APP_URL=http://localhost:3031 pnpm start
+PORT=4010 BASE_URL=https://api.crm.localhost APP_URL=https://crm.localhost pnpm start
 ```
 
 ## Configuration model — `src/config.env.ts`
