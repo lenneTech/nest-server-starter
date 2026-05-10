@@ -49,6 +49,8 @@ import { ProjectErrors } from './server/common/errors/project-errors';
  * URL configuration
  * --------------------------------------------------------------------------
  * - `local`, `ci`, `e2e`: localhost defaults (API:3000, App:3001) — no setup needed.
+ *   Override defaults via env vars: PORT, BIND_ADDRESS, BASE_URL, APP_URL,
+ *   NSC__MONGOOSE__URI, SMTP_HOST, SMTP_PORT (e.g. for `lt local up` parallel projects).
  * - `develop`, `test`, `production`: set `NSC__BASE_URL`; `appUrl` is auto-derived
  *   (e.g. `https://api.example.com` → `https://example.com`).
  */
@@ -204,7 +206,7 @@ function deployedConfig(
     logExceptions: true,
     // mongoose.uri comes from NSC__MONGOOSE__URI (no fallback in deployed envs)
     permissions: true,
-    port: 3000,
+    port: Number(process.env.PORT) || 3000,
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
     templates: PROJECT_TEMPLATES,
@@ -232,7 +234,10 @@ function localConfig(
   const upper = envName.toUpperCase();
 
   const base: Partial<IServerOptions> = {
+    appUrl: process.env.APP_URL,
     automaticObjectIdFiltering: true,
+    // Filter BASE_URL against '/' because Vite/Vitest auto-inject process.env.BASE_URL='/' (asset base path default).
+    baseUrl: process.env.BASE_URL && process.env.BASE_URL !== '/' ? process.env.BASE_URL : undefined,
     // Public dummy secret — sufficient for local/test, NEVER in deployments
     betterAuth: {
       secret: `BETTER_AUTH_SECRET_${upper}_LOCAL_32_CHARS`,
@@ -244,10 +249,10 @@ function localConfig(
       defaultSender: { email: 'noreply@test.local', name: brand },
       smtp: {
         auth: { pass: '', user: '' },
-        host: 'mailhog.lenne.tech',
+        host: process.env.SMTP_HOST || 'mailhog.lenne.tech',
         // No SMTP host configured? → write mails as JSON to stdout (safe for tests)
         jsonTransport: !process.env.SMTP_HOST || undefined,
-        port: 1025,
+        port: parseInt(process.env.SMTP_PORT || '1025', 10),
         secure: false,
       },
     },
@@ -261,11 +266,12 @@ function localConfig(
     graphQl: { driver: { introspection: true, playground: true }, maxComplexity: 1000 },
     // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
-    // hostname unset → framework default 0.0.0.0 (works on host AND inside containers)
+    // hostname unset → framework default 0.0.0.0; override via BIND_ADDRESS for parallel projects on same port
+    hostname: process.env.BIND_ADDRESS,
     ignoreSelectionsForPopulate: true,
     logExceptions: true,
-    mongoose: { uri: `mongodb://127.0.0.1/${options.dbName}` },
-    port: 3000,
+    mongoose: { uri: process.env.NSC__MONGOOSE__URI || `mongodb://127.0.0.1/${options.dbName}` },
+    port: Number(process.env.PORT) || 3000,
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
     templates: PROJECT_TEMPLATES,

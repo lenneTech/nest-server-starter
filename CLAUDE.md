@@ -131,6 +131,34 @@ pnpm run check:envs:docker # same as above + same checks inside the production D
 
 MongoDB must be running locally on default port (27017).
 
+## Local Development (Parallel Projects)
+
+This starter ships with env-aware port configuration. To run multiple lt-projects on the same machine without colliding on 3000/3001:
+
+```bash
+lt local init [--patch] [--noConfirm]   # Allocate a port slot (one-time, idempotent)
+lt local up                             # Start API with project-specific port
+lt local down                           # Stop the detached process
+lt local status                         # Show running PIDs + bound ports
+lt ports                                # See all reserved + bound dev ports
+```
+
+`lt local up` exports the env vars the starter respects:
+
+- `PORT` — API listen port (default: 3000)
+- `BIND_ADDRESS` — bind hostname (default: 0.0.0.0)
+- `BASE_URL` / `APP_URL` — used by Better Auth (passkey origin, trusted origins)
+- `NSC__MONGOOSE__URI` — MongoDB connection string (DB name comes from `lt.config.json` `dbName`)
+- `SMTP_HOST` / `SMTP_PORT` — optional mail relay overrides
+
+Without `lt local up`, the starter falls back to the hardcoded defaults (port 3000, `mongodb://127.0.0.1/<dbName>`). All env vars are optional — the starter runs without any of them set.
+
+**Setting these manually** (e.g. in a non-lt-CLI environment) achieves the same result as `lt local up`:
+
+```bash
+PORT=3030 BASE_URL=http://localhost:3030 APP_URL=http://localhost:3031 pnpm start
+```
+
 ## Configuration model — `src/config.env.ts`
 
 `src/config.env.ts` is the single source of truth for env-specific server options.

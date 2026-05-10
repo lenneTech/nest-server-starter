@@ -1,6 +1,19 @@
 # npm-package-maintainer Memory - nest-server-starter
 
-## Key Findings (last updated 2026-04-28, session 7)
+## Key Findings (last updated 2026-05-10, session 8)
+
+### Session 8 Notes (2026-05-10)
+- 8 vulnerabilities at start (1 low, 4 moderate, 3 high) - all in transitive deps via @compodoc/compodoc + prisma chain.
+- `hono` override bumped 4.12.15 → 4.12.18 (latest patch, fixes 5 NEW CVEs: bodyLimit bypass, JSX tag injection, CSS Declaration Injection, Vary header bypass, JWT NumericDate validation).
+- `axios` override bumped 1.15.2 → 1.16.0 (latest, no functional impact).
+- `fast-uri` override ADDED at 3.1.2: NEW CVEs GHSA-q3j6-qgpj-74h6 (path traversal) + GHSA-v39h-62p7-jpjc (host confusion) in <=3.1.1. Via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core>ajv>fast-uri. ajv@8.x uses fast-uri@^3 so 3.1.2 works.
+- `@babel/plugin-transform-modules-systemjs` override ADDED at 7.29.4: NEW CVE GHSA-fv7c-fp4j-7gwp (arbitrary code generation) in >=7.12.0 <=7.29.3. Via @compodoc/compodoc>@babel/preset-env. 7.29.4 is latest 7.x.
+- `srvx` override REMOVED: @tus/server@2.4.1 (was 2.3.0 in session 6 memory) now directly requires `srvx: ~0.11.15`, override is redundant. Verified: srvx@0.11.15 still installed.
+- `effect` override RE-VERIFIED: Cannot be removed - @prisma/config@7.4.2 still pins effect to exact 3.18.4 (vulnerable to GHSA-38f7-945m-qr2g). Memory comment was correct.
+- SAFE update: `semver` 7.7.4 → 7.8.0.
+- BLOCKERS unchanged: cpy-cli 6→7, graphql-upload 15→17, typescript 5→6 (all documented).
+- No deprecated packages, no unused packages, no categorization changes needed.
+- Final state: 100/100 tests pass, build OK, audit clean (0 vulnerabilities), `pnpm run check` (incl. local-start) successful.
 
 ### Session 7 Notes (2026-04-28)
 - vite-plugin-node 7→8 BLOCKER REMOVED: vitest@4.1.5 supports `vite ^6 || ^7 || ^8`, so vite-plugin-node@8 + vite@8.0.10 now works together. Previous block (vitest needs vite@7.x) was outdated.
@@ -29,7 +42,7 @@
 ### @nestjs/common + @nestjs/core Overrides (removed 2026-04-04 session 2)
 When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne.tech/nest-server depends on, pnpm creates two instances of @nestjs/schedule (one per @nestjs/core version). This causes TS2415 build error: "Types have separate declarations of a private property 'logger'". Fix: add `@nestjs/common` AND `@nestjs/core` to pnpm.overrides to force single versions. These overrides were REMOVED in session 2 because nest-server 11.22.1 now uses 11.1.18 (same as starter). Add them back if starter is ever upgraded ahead of nest-server again.
 
-### Overrides (pnpm.overrides) - as of 2026-04-17 session 6
+### Overrides (pnpm.overrides) - as of 2026-05-10 session 8
 - `@apollo/server`: Needed for peerDep conflict (@apollo/server-plugin-landing-page-graphql-playground@4.0.1) + security CVE <5.5.0. Currently 5.5.0.
 - `axios`: Security fix (SSRF via NO_PROXY bypass GHSA-3p68-rc4w-qgx5, Cloud Metadata Exfiltration GHSA-fvcv-3m26-pcqx), pinned to 1.15.0. Via @lenne.tech/nest-server>@getbrevo/brevo and >node-mailjet. Added in session 5 on 2026-04-11.
 - `qs`: Security fix for CVE arrayLimit bypass DoS. Updated to 6.15.1 (was 6.15.0).
@@ -62,9 +75,9 @@ When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne
 - `picomatch`: Tested removal in session 5 - @compodoc/compodoc>@angular-devkit/schematics chain still installs vulnerable picomatch. Must keep.
 
 ### Pre-existing Test Failures (Baseline)
-- As of 2026-04-17 session 6: 100 tests pass (10 test files). One new test added in nest-server 11.25.0 (was 99 in session 5).
+- As of 2026-05-10 session 8: 100 tests pass (10 test files). Stable since session 6.
 
 ### Deprecated Packages
-- No deprecated packages found as of 2026-04-17.
+- No deprecated packages found as of 2026-05-10.
 
 See [blocked-updates.md](blocked-updates.md) for detailed notes.
