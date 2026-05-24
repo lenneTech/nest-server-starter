@@ -136,14 +136,18 @@ MongoDB must be running locally on default port (27017).
 This starter ships with env-aware URL configuration. To run multiple lt-projects on the same machine without colliding on `localhost:3000`/`localhost:3001` and without cross-wiring auth between projects:
 
 ```bash
+lt dev init                    # once per project: idempotent ENV patches
+                               # auto-runs `lt dev install` first if the machine
+                               # isn't set up yet (one hop, no recursion)
 lt dev install                 # one-time per machine: Caddy + local CA
-lt dev migrate                 # once per project: idempotent ENV patches
+                               # (inside a project it auto-runs init afterwards)
 lt dev up                      # start API behind Caddy under https://api.<slug>.localhost
 lt dev down                    # stop the detached process + remove Caddy block
 lt dev status                  # show running PIDs + active URLs
 lt dev status --all            # list all registered projects
 lt dev doctor                  # diagnose Caddy / CA / DNS / port issues
 ```
+First run in a fresh project: just `lt dev init` then `lt dev up`. (`lt dev migrate` still works as an alias for `init`.)
 
 `lt dev up` exports the env vars the starter respects:
 
