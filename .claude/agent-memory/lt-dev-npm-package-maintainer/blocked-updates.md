@@ -15,9 +15,12 @@
 **Status**: RESOLVED (updated 2026-03-11)
 **Notes**: Project was updated to 0.15.1. Peer dep warning from `@nestjs/mapped-types@2.1.0` (still declares `^0.13.0 || ^0.14.0`) exists but is suppressed by `strict-peer-dependencies=false`. Tests pass fine at 0.15.1.
 
-## typescript 5.9.3 → 6.0.2
-**Status**: BLOCKED (attempted 2026-04-03)
-**Reason**: TypeScript 6.0 is stricter and produces 26 errors in 5 source files:
+## typescript 5.9.3 → 6.0.3
+**Status**: BLOCKED (re-validated 2026-05-24, session 9)
+**Session 9 update**: Re-attempted with typescript@6.0.3. Error count dropped from 26 to 21 (same 5 files), so the framework type updates have partially helped. Two distinct issues remain:
+1. `baseUrl` now triggers a HARD error TS5101 ("deprecated, will stop functioning in TS7"). Adding `"ignoreDeprecations": "6.0"` to tsconfig.json silences it cleanly — but baseUrl is needed for tsconfig-paths/register at dev runtime, so it cannot simply be removed.
+2. After silencing baseUrl, 21 model errors remain (TS2322 null-not-assignable in user.model.ts securityCheck(), TS2532 in user.service.ts, plus meta.model.ts / find-and-count-users-result.output.ts). These are the real blocker — fixing requires making model property types nullable across framework-extending classes (API-shaped change, >10 edits). Reverted typescript to 5.9.3.
+**Reason (historical, 2026-04-03)**: TypeScript 6.0 is stricter and produces errors in 5 source files:
 - `user.model.ts`: TS2564 (uninitialized decorated properties: avatar, createdBy, updatedBy) + TS2322 (null assigned to string/boolean/Date in securityCheck())
 - `meta.model.ts`: TS2564 for environment, title, package, version properties
 - `find-and-count-users-result.output.ts`: TS2564 for items, totalCount

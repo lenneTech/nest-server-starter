@@ -1,0 +1,131 @@
+# pnpm 11 configuration
+#
+# NOTE: As of pnpm 11 the "pnpm.overrides" and "pnpm.onlyBuiltDependencies"
+# fields in package.json are NO LONGER read. They live here instead:
+#   - overrides:      replaces package.json > pnpm.overrides
+#   - allowBuilds:    replaces package.json > pnpm.onlyBuiltDependencies
+# See https://pnpm.io/settings
+
+# ---------------------------------------------------------------------------
+# Dependency overrides (security fixes / peer-conflict resolution)
+#
+# Override TARGETS (right-hand side) MUST be FIXED versions — never ranges
+# like ">=X" or "^X" (pnpm would silently install newer majors).
+# A range on the LEFT side selects which installed versions are replaced.
+# Each override is documented below with: what / why (CVE) / transitive chain.
+# ---------------------------------------------------------------------------
+overrides:
+  # Peer-conflict + security: @nestjs/apollo pulls in
+  # @apollo/server-plugin-landing-page-graphql-playground@4.0.1 (peerDep
+  # @apollo/server@^4), conflicting with @lenne.tech/nest-server@11.25.6 which
+  # depends on @apollo/server@5.5.1. Forces a single v5 instance. Also covers
+  # security CVE in @apollo/server <5.5.0. Remove once the playground plugin
+  # accepts v5. Keep aligned with nest-server's @apollo/server version.
+  '@apollo/server': 5.5.1
+
+  # Security: SSRF via NO_PROXY bypass (GHSA-3p68-rc4w-qgx5) and Cloud Metadata
+  # Exfiltration via Header Injection (GHSA-fvcv-3m26-pcqx) in axios <1.15.0.
+  # Transitive via @lenne.tech/nest-server>@getbrevo/brevo and >node-mailjet.
+  axios: 1.16.0
+
+  # Security: Multiple CVEs <4.12.18 (Prototype Pollution, bodyLimit bypass,
+  # JSX tag injection, CSS Declaration Injection, Vary header bypass, JWT
+  # NumericDate validation). Latest 4.x patch. Transitive via
+  # @lenne.tech/nest-server>@nestjs/terminus>@prisma/client>prisma>@prisma/dev
+  # (@prisma/dev requires hono ^4.12.8, so 4.12.22 is compatible).
+  hono: 4.12.22
+
+  # Security: Authorization bypass CVE in @hono/node-server <1.19.10.
+  # Transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev
+  # (@prisma/dev pins 1.19.11). 1.19.14 is latest 1.x; 2.x is a major bump.
+  '@hono/node-server': 1.19.14
+
+  # Security: Code Injection and Prototype Pollution in lodash <=4.17.23.
+  # Transitive via multiple chains. 4.18.1 is the patched release line.
+  lodash: 4.18.1
+
+  # Security: ReDoS vulnerability in ajv >=7.0.0-alpha.0 <8.18.0. Transitive
+  # via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core.
+  ajv: 8.20.0
+
+  # Security: AsyncLocalStorage context contamination in effect <3.20.0
+  # (GHSA-38f7-945m-qr2g). @prisma/config@7.4.2 pins effect to exact 3.18.4
+  # (vulnerable), so this override is required. 3.21.2 is latest 3.x.
+  effect: 3.21.2
+
+  # Security: ReDoS via extglob quantifiers (high, >=4.0.0 <4.0.4) AND Method
+  # Injection in POSIX Character Classes (moderate) in picomatch. Transitive
+  # via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core.
+  picomatch: 4.0.4
+
+  # Security: Multiple CVEs in vite (arbitrary file read via WebSocket, fs.deny
+  # bypass, path traversal in .map handling). 8.0.10 aligns with
+  # vite-plugin-node@8 peer (vite@^8) and pulls postcss@^8.5.10
+  # (fix for GHSA-qx2v-qp2m-jg93 XSS in older postcss).
+  vite: 8.0.10
+
+  # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf
+  # is provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via
+  # @compodoc/compodoc (uuid 11.1.0) and >@compodoc/live-server>http-auth
+  # (uuid >=8.3.2 <12). http-auth only uses uuid.v4 (API-stable 8-14), so 14 is
+  # safe. Pinned to 14.0.0 (latest, also patched).
+  uuid: 14.0.0
+
+  # Security: Path traversal via percent-encoded dot segments
+  # (GHSA-q3j6-qgpj-74h6) and host confusion via percent-encoded authority
+  # delimiters (GHSA-v39h-62p7-jpjc) in fast-uri <=3.1.1. Transitive via
+  # @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core>ajv>fast-uri.
+  fast-uri: 3.1.2
+
+  # Security: Arbitrary code generation when compiling malicious input
+  # (GHSA-fv7c-fp4j-7gwp) in @babel/plugin-transform-modules-systemjs
+  # >=7.12.0 <=7.29.3. Transitive via @compodoc/compodoc>@babel/preset-env.
+  # 7.29.4 is latest 7.x.
+  '@babel/plugin-transform-modules-systemjs': 7.29.4
+
+  # Security: Remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26,
+  # >=6.11.1 <=6.15.1). Transitive via @apollo/server>body-parser>qs and
+  # express>body-parser>qs. 6.15.2 is the patched release.
+  qs: 6.15.2
+
+  # Security: Uninitialized memory disclosure in ws >=8.0.0 <8.20.1. Range on
+  # the LEFT only replaces the vulnerable 8.x instance (ws@7.x, unaffected, is
+  # left untouched). Transitive via @nestjs/graphql>graphql-ws>ws and
+  # @nestjs/graphql>ws.
+  'ws@>=8.0.0 <8.20.1': 8.21.0
+
+  # Security: Overlong UTF-8 decoding in @protobufjs/utf8 <=1.1.0. Transitive
+  # via @lenne.tech/nest-server>@apollo/server>@apollo/usage-reporting-protobuf
+  # >@apollo/protobufjs>@protobufjs/utf8.
+  '@protobufjs/utf8': 1.1.1
+
+  # Security: Large numeric range defeats brace-expansion DoS protection
+  # (>=5.0.0 <5.0.6). Transitive via ts-morph>@ts-morph/common>minimatch@10
+  # (requires ^5.0.2, so without override could install vulnerable 5.0.2-5.0.5).
+  'brace-expansion@>=5.0.0 <5.0.6': 5.0.6
+  # Older brace-expansion lines kept defensively (prior CVEs):
+  # <1.1.13 via fork-ts-checker-webpack-plugin>minimatch@3
+  'brace-expansion@<1.1.13': 1.1.14
+  # >=2.0.0 <2.0.3 via @swc/cli>minimatch@9
+  'brace-expansion@>=2.0.0 <2.0.3': 2.1.0
+
+# ---------------------------------------------------------------------------
+# Build script approvals (pnpm 11 replacement for onlyBuiltDependencies).
+# Only these packages are permitted to run install/postinstall scripts.
+# ---------------------------------------------------------------------------
+allowBuilds:
+  '@apollo/protobufjs': true
+  '@compodoc/compodoc': true
+  '@nestjs/core': true
+  '@scarf/scarf': true
+  '@swc/core': true
+  bcrypt: true
+  esbuild: true
+
+# ---------------------------------------------------------------------------
+# Packages excluded from the minimum-release-age gate (allowed even if freshly
+# published) — e.g. the framework itself and a pinned nodemailer.
+# ---------------------------------------------------------------------------
+minimumReleaseAgeExclude:
+  - '@lenne.tech/nest-server@11.25.6'
+  - nodemailer@8.0.8

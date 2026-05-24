@@ -1,6 +1,21 @@
 # npm-package-maintainer Memory - nest-server-starter
 
-## Key Findings (last updated 2026-05-10, session 8)
+## Key Findings (last updated 2026-05-24, session 9)
+
+### Session 9 Notes (2026-05-24) - MAJOR: pnpm 11 overrides migration
+- **CRITICAL ROOT CAUSE**: Project now runs pnpm 11.1.3. pnpm 11 NO LONGER reads `pnpm.overrides` or `pnpm.onlyBuiltDependencies` from package.json (emits "The pnpm field in package.json is no longer read" warning). ALL security overrides were silently INACTIVE. Audit showed 8 vulns (7 moderate, 1 high) - several were exactly the ones the dead overrides should have fixed (picomatch, ajv, uuid, brace-expansion).
+- **FIX**: Migrated everything to `pnpm-workspace.yaml` (top-level `overrides:` map, `allowBuilds:` map of pkg→true replacing `onlyBuiltDependencies`, kept `minimumReleaseAgeExclude`). The pre-existing `pnpm-workspace.yaml` (untracked, from the lt dev Caddy commit) had INVALID placeholder string values `"set this to true or false"` for allowBuilds, which caused `ERR_PNPM_IGNORED_BUILDS` hard-failing every `pnpm install`/build. Set them to real `true` booleans + added `esbuild: true`.
+- Removed the now-dead `pnpm:` block AND the `//overrides` doc block from package.json. Override documentation now lives as YAML comments in pnpm-workspace.yaml.
+- After migration: `pnpm install` clean (build scripts ran: bcrypt/swc/nestjs/scarf), overrides present in lockfile `settings.overrides`, audit = **0 vulnerabilities**.
+- NEW CVE overrides ADDED (were not covered before): `qs: 6.15.2` (DoS GHSA-q8mj-m7cp-5q26), `ws@>=8.0.0 <8.20.1: 8.21.0` (uninitialized memory; scoped left-range so ws@7.x untouched), `@protobufjs/utf8: 1.1.1` (overlong UTF-8), `brace-expansion@>=5.0.0 <5.0.6: 5.0.6` (DoS, bumped from 5.0.5).
+- Override bumps: `@apollo/server` 5.5.0→5.5.1 (nest-server@11.25.6 now deps exactly 5.5.1; playground plugin STILL peers @apollo/server@^4 so override STILL needed), `hono` 4.12.18→4.12.22 (latest 4.x; @prisma/dev needs ^4.12.8).
+- **@nestjs/schedule duplicate-instance bug RETURNED**: nest-server@11.25.6 deps @nestjs/common+core EXACTLY 11.1.23, but starter pinned 11.1.19 → two @nestjs/schedule instances → TS2415 "separate declarations of private property logger". FIX: bumped starter's @nestjs/common, @nestjs/core, @nestjs/platform-express, @nestjs/testing 11.1.19→11.1.23 to match nest-server (NOT via override this time - direct dep alignment is cleaner). Also @nestjs/graphql 13.4.0→13.4.2, @nestjs/swagger 11.4.2→11.4.4.
+- SAFE batch: @types/node 25.6.2→25.9.1, @vitest/coverage-v8+ui+vitest 4.1.5→4.1.7, oxlint 1.63.0→1.66.0, oxfmt 0.48.0→0.51.0, semver 7.8.0→7.8.1.
+- Priority 1 (unused): NONE - every dep verified used in src/tests/config/script-binary. Priority 2 (categorization): NO changes - already optimal.
+- BLOCKERS revalidated (still blocked): cpy-cli 6→7 (errors on missing ./migrations dir - re-tested, still fails), graphql-upload 15→17 (.mjs-only exports), typescript 5→6 (now 21 errors not 26, but model null-assignment errors remain - see blocked-updates.md).
+- Deprecated packages: none.
+
+## Key Findings (session 8, 2026-05-10)
 
 ### Session 8 Notes (2026-05-10)
 - 8 vulnerabilities at start (1 low, 4 moderate, 3 high) - all in transitive deps via @compodoc/compodoc + prisma chain.
@@ -42,7 +57,10 @@
 ### @nestjs/common + @nestjs/core Overrides (removed 2026-04-04 session 2)
 When upgrading @nestjs/common + @nestjs/core to a version NEWER than what @lenne.tech/nest-server depends on, pnpm creates two instances of @nestjs/schedule (one per @nestjs/core version). This causes TS2415 build error: "Types have separate declarations of a private property 'logger'". Fix: add `@nestjs/common` AND `@nestjs/core` to pnpm.overrides to force single versions. These overrides were REMOVED in session 2 because nest-server 11.22.1 now uses 11.1.18 (same as starter). Add them back if starter is ever upgraded ahead of nest-server again.
 
-### Overrides (pnpm.overrides) - as of 2026-05-10 session 8
+### Overrides LOCATION (session 9, 2026-05-24)
+As of pnpm 11, overrides live in `pnpm-workspace.yaml` (top-level `overrides:`), NOT package.json `pnpm.overrides` (ignored). Build approvals are `allowBuilds:` (map pkg→true), NOT `onlyBuiltDependencies` (removed in pnpm 11). Each override is documented with a YAML comment block above it. Current active overrides (18): @apollo/server 5.5.1, axios 1.16.0, hono 4.12.22, @hono/node-server 1.19.14, lodash 4.18.1, ajv 8.20.0, effect 3.21.2, picomatch 4.0.4, vite 8.0.10, uuid 14.0.0, fast-uri 3.1.2, @babel/plugin-transform-modules-systemjs 7.29.4, qs 6.15.2, ws@>=8.0.0 <8.20.1→8.21.0, @protobufjs/utf8 1.1.1, brace-expansion@>=5.0.0 <5.0.6→5.0.6, brace-expansion@<1.1.13→1.1.14, brace-expansion@>=2.0.0 <2.0.3→2.1.0.
+
+### Overrides (pnpm.overrides) - as of 2026-05-10 session 8 (HISTORICAL - now in pnpm-workspace.yaml)
 - `@apollo/server`: Needed for peerDep conflict (@apollo/server-plugin-landing-page-graphql-playground@4.0.1) + security CVE <5.5.0. Currently 5.5.0.
 - `axios`: Security fix (SSRF via NO_PROXY bypass GHSA-3p68-rc4w-qgx5, Cloud Metadata Exfiltration GHSA-fvcv-3m26-pcqx), pinned to 1.15.0. Via @lenne.tech/nest-server>@getbrevo/brevo and >node-mailjet. Added in session 5 on 2026-04-11.
 - `qs`: Security fix for CVE arrayLimit bypass DoS. Updated to 6.15.1 (was 6.15.0).
