@@ -60,7 +60,7 @@ import { ProjectErrors } from './server/common/errors/project-errors';
  * cookies between `https://api.<slug>.localhost` and `https://<slug>.localhost`
  * automatically. The cookie `domain` is auto-derived from `appUrl`.
  */
-dotenv.config();
+dotenv.config({ quiet: true });
 
 // =============================================================================
 // Project-wide constants (paths, errors, demo cron jobs)

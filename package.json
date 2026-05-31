@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.25.6",
+  "version": "11.26.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -100,7 +100,7 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.25.6",
+    "@lenne.tech/nest-server": "11.26.0",
     "@nestjs/common": "11.1.23",
     "@nestjs/core": "11.1.23",
     "@nestjs/graphql": "13.4.2",
@@ -124,7 +124,7 @@
     "@nestjs/schematics": "11.1.0",
     "@nestjs/testing": "11.1.23",
     "@swc/cli": "0.8.1",
-    "@swc/core": "1.15.33",
+    "@swc/core": "1.15.40",
     "@types/compression": "1.8.1",
     "@types/cookie-parser": "1.4.10",
     "@types/express": "5.0.6",
