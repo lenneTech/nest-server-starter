@@ -41,6 +41,7 @@ describe('Auth Integration (e2e)', () => {
   let userAPassword: string;
   let userAId: string;
   let userASessionToken: string;
+  let userACookies: string;
 
   // UserB: IAM registration, session check
   let userBEmail: string;
@@ -225,6 +226,17 @@ describe('Auth Integration (e2e)', () => {
         { _id: new ObjectId(userAId) },
         { $set: { emailVerified: true, verified: true } },
       );
+
+      // Assign a real role so the 11.26.1 roles-exposure fix can be asserted on
+      // sign-in/session below. Match by email (robust regardless of the
+      // users/iam_user id scheme — the mapper looks up via $or:[{email},{iamId}]).
+      //
+      // Cache handling: no invalidation needed. CoreBetterAuthUserMapper sets its
+      // roles-cache TTL to 0 under NODE_ENV=e2e/test (and VITEST), so every
+      // mapSessionUser() reads the user's current roles straight from the DB —
+      // by design, precisely so E2E suites can promote a fresh user to admin via
+      // a direct DB write. The 15s cache only applies to real deployments.
+      await db.collection('users').updateOne({ email: userAEmail }, { $set: { roles: ['admin'] } });
     });
 
     it('should sign in via IAM', async () => {
@@ -241,6 +253,16 @@ describe('Auth Integration (e2e)', () => {
       expect(res).toBeDefined();
       userASessionToken = TestHelper.extractSessionToken(res);
       expect(userASessionToken).toBeDefined();
+
+      // Capture ALL auth cookies (better-auth sets both iam.session_token and
+      // the iam.session_data cookie-cache) so the session request below is
+      // actually authenticated — a single cookie is not enough.
+      const setCookie = (res.headers['set-cookie'] || []) as string[];
+      userACookies = setCookie.map((c: string) => c.split(';')[0]).join('; ');
+
+      // 11.26.1 regression guard: roles are now exposed on the IAM sign-in
+      // response (returnResponse=true → body lives on res.body).
+      expect(res.body?.user?.roles).toContain('admin');
     });
 
     it('should get session via IAM', async () => {
@@ -249,12 +271,15 @@ describe('Auth Integration (e2e)', () => {
       }
 
       const res = await testHelper.rest('/iam/session', {
-        cookies: userASessionToken,
+        cookies: userACookies,
         method: 'GET',
         statusCode: 200,
       });
 
       expect(res).toBeDefined();
+
+      // 11.26.1 regression guard: roles are now exposed on the IAM session response.
+      expect(res.user?.roles).toContain('admin');
     });
 
     it('should sign out via IAM', async () => {

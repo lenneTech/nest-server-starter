@@ -124,8 +124,18 @@ allowBuilds:
 
 # ---------------------------------------------------------------------------
 # Packages excluded from the minimum-release-age gate (allowed even if freshly
-# published) — e.g. the framework itself and a pinned nodemailer.
+# published) — only the first-party framework itself, whose releases we trust
+# and publish. Do NOT add third-party packages here permanently: if a freshly
+# published transitive dep (e.g. nodemailer, bumped by nest-server) ever trips
+# the gate, prefer waiting out the cutoff over a standing exemption.
+#
+# NOTE: use the bare PACKAGE NAME, not `name@version`. pnpm documents
+# version-pinned excludes (e.g. 'nx@21.6.5'), but on pnpm 11.1.3 they are NOT
+# honored by the lockfile supply-chain verification that runs at the start of
+# `pnpm install` (see github.com/pnpm/pnpm/issues/10361) — a version-pinned
+# '@lenne.tech/nest-server@11.26.1' was present yet still tripped
+# ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION. The bare name IS honored and also
+# drops the per-bump maintenance: freshly published releases are always allowed.
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
-  - '@lenne.tech/nest-server@11.26.0'
-  - nodemailer@8.0.8
+  - '@lenne.tech/nest-server'
