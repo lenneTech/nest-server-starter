@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.26.2",
+  "version": "11.26.3",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -100,7 +100,7 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.26.2",
+    "@lenne.tech/nest-server": "11.26.3",
     "@nestjs/common": "11.1.23",
     "@nestjs/core": "11.1.23",
     "@nestjs/graphql": "13.4.2",
