@@ -5,6 +5,26 @@
 Starter template for `@lenne.tech/nest-server` based NestJS applications. Used by `lt server create` and
 `lt fullstack init` to scaffold new projects.
 
+## Framework Mode (npm vs. vendor) — read first
+
+This project consumes `@lenne.tech/nest-server` in one of two modes. Detect it:
+
+- **vendor mode** if `src/core/VENDOR.md` exists → the framework core is vendored into
+  `src/core/` as first-class project code (no npm dependency). Read framework code from
+  `src/core/`, not `node_modules/`.
+- **npm mode** otherwise → the framework is the `@lenne.tech/nest-server` dependency in
+  `node_modules/`.
+
+| Action | vendor mode | npm mode |
+|---|---|---|
+| Update framework | `/lt-dev:backend:update-nest-server-core` (also raises npm packages to at least the upstream baseline via `/lt-dev:maintenance:maintain`) | `/lt-dev:backend:update-nest-server` |
+| Contribute a generally-useful core fix upstream | `/lt-dev:backend:contribute-nest-server-core` | open a PR on `@lenne.tech/nest-server` |
+
+In vendor mode, `src/core/` mirrors upstream — edit it **only** for changes useful to
+every consumer, and send them upstream so they survive the next sync. Project-specific
+code stays outside `src/core/`. Full details in the "Framework: @lenne.tech/nest-server"
+section below and in `src/core/VENDOR.md`.
+
 ## Structure
 
 ```
