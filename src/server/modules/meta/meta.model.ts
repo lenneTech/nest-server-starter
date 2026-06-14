@@ -12,6 +12,21 @@ export class Meta extends CoreModel {
   // ===================================================================================================================
 
   /**
+   * Git commit SHA the running API build was produced from.
+   *
+   * Baked into the image at build time (Docker `APP_VERSION_COMMIT` ARG, fed
+   * from the CI commit SHA — the same value typically used as the image tag).
+   * Unlike `version` (a rarely-bumped semver, versioned independently per
+   * component) the commit uniquely identifies the exact deployed build, so a
+   * frontend and backend deployed together can be compared to detect a
+   * mismatched / stale container after a partial rollout. Falls back to
+   * `'unknown'` for local / un-tagged builds.
+   */
+  @Field({ description: 'Git commit SHA of the running API build' })
+  @Restricted(RoleEnum.S_EVERYONE)
+  commit: string;
+
+  /**
    * Environment of API
    */
   @Field({ description: 'Environment of API' })

@@ -5,6 +5,8 @@ import { join } from 'path';
 
 import { ProjectErrors } from './server/common/errors/project-errors';
 
+import metaData = require('./meta.json');
+
 /**
  * Configuration for the different environments.
  *
@@ -216,6 +218,9 @@ function deployedConfig(
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
     templates: PROJECT_TEMPLATES,
+    // Feeds the health check's build identity (`/health-check` → build.version),
+    // kept in sync with the `version` GET /meta reports (both read meta.json).
+    version: metaData.version,
   };
 
   return options?.config ? merge({}, base, options.config) : base;

@@ -49,6 +49,14 @@ ARG API_DIR=.
 WORKDIR /app
 ENV NODE_ENV=production
 
+# Bake the build's git commit SHA into the image so GET /meta and the health
+# check can report exactly which build is running — letting App and API be
+# compared to detect a mismatched / stale container after a partial rollout.
+# Read at runtime (process.env), so it belongs in the final image. Fed from the
+# CI commit SHA via docker build args; defaults to "unknown" for local builds.
+ARG APP_VERSION_COMMIT=unknown
+ENV APP_VERSION_COMMIT=$APP_VERSION_COMMIT
+
 # Non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
