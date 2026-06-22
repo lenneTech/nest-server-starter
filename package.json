@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.27.0",
+  "version": "11.27.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -33,7 +33,8 @@
     "build:docs": "rimraf dist && tsc -p tsconfig.build.json && pnpm run docs:ci && pnpm run copy",
     "build:test": "pnpm run build",
     "c": "pnpm run check",
-    "check": "pnpm audit && pnpm run format:check && pnpm run lint && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
+    "check": "node scripts/check.mjs",
+    "check:raw": "pnpm audit && pnpm run format:check && pnpm run lint && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
     "check:envs": "bash scripts/check-envs.sh",
     "check:envs:docker": "bash scripts/check-envs.sh --docker",
     "check:fix": "pnpm install && pnpm audit --fix && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
@@ -100,7 +101,7 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.27.0",
+    "@lenne.tech/nest-server": "11.27.1",
     "@nestjs/common": "11.1.23",
     "@nestjs/core": "11.1.23",
     "@nestjs/graphql": "13.4.2",

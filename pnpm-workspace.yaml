@@ -33,7 +33,7 @@ overrides:
   # NumericDate validation). Latest 4.x patch. Transitive via
   # @lenne.tech/nest-server>@nestjs/terminus>@prisma/client>prisma>@prisma/dev
   # (@prisma/dev requires hono ^4.12.8, so 4.12.22 is compatible).
-  hono: 4.12.22
+  hono: 4.12.25
 
   # Security: Authorization bypass CVE in @hono/node-server <1.19.10.
   # Transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev
@@ -59,10 +59,10 @@ overrides:
   picomatch: 4.0.4
 
   # Security: Multiple CVEs in vite (arbitrary file read via WebSocket, fs.deny
-  # bypass, path traversal in .map handling). 8.0.10 aligns with
-  # vite-plugin-node@8 peer (vite@^8) and pulls postcss@^8.5.10
-  # (fix for GHSA-qx2v-qp2m-jg93 XSS in older postcss).
-  vite: 8.0.10
+  # bypass, path traversal in .map handling, plus GHSA fs.deny bypass on Windows
+  # alternate paths fixed in 8.0.16). 8.0.16 still satisfies vite-plugin-node@8
+  # peer (vite@^8) and pulls postcss@^8.5.10 (fix for GHSA-qx2v-qp2m-jg93).
+  vite: 8.0.16
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf
   # is provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via
@@ -88,11 +88,14 @@ overrides:
   # express>body-parser>qs. 6.15.2 is the patched release.
   qs: 6.15.2
 
-  # Security: Uninitialized memory disclosure in ws >=8.0.0 <8.20.1. Range on
-  # the LEFT only replaces the vulnerable 8.x instance (ws@7.x, unaffected, is
-  # left untouched). Transitive via @nestjs/graphql>graphql-ws>ws and
-  # @nestjs/graphql>ws.
-  'ws@>=8.0.0 <8.20.1': 8.21.0
+  # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
+  # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Range on the LEFT only replaces the
+  # vulnerable 8.x instance (ws@7.x, unaffected, is left untouched). Transitive
+  # via @nestjs/graphql>graphql-ws>ws and @nestjs/graphql>ws.
+  'ws@>=8.0.0 <8.21.0': 8.21.0
+  # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — bump
+  # to the patched 7.5.11 so the deprecated lib keeps its expected major.
+  'ws@>=7.0.0 <7.5.11': 7.5.11
 
   # Security: Overlong UTF-8 decoding in @protobufjs/utf8 <=1.1.0. Transitive
   # via @lenne.tech/nest-server>@apollo/server>@apollo/usage-reporting-protobuf
@@ -108,6 +111,33 @@ overrides:
   'brace-expansion@<1.1.13': 1.1.14
   # >=2.0.0 <2.0.3 via @swc/cli>minimatch@9
   'brace-expansion@>=2.0.0 <2.0.3': 2.1.0
+
+  # Security: CRLF injection via unescaped multipart field names/filenames in
+  # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
+  # @lenne.tech/nest-server>@getbrevo/brevo>axios and >node-mailjet>axios.
+  form-data: '>=4.0.6'
+
+  # Security: Prototype pollution / special-character handling in js-yaml
+  # <4.1.2. Transitive via the toolchain. 4.1.2 is the patched release.
+  js-yaml: '>=4.1.2'
+
+  # Security: Email injection / header-related CVEs in nodemailer <9.0.1
+  # (high). Transitive via @lenne.tech/nest-server. 9.0.1 is the patched line.
+  nodemailer: '>=9.0.1'
+
+  # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high).
+  # Transitive via @lenne.tech/nest-server (and @nestjs/platform-express).
+  multer: '>=2.2.0'
+
+  # Security: various undici CVEs <7.28.0 (incl. high) - transitive via
+  # @lenne.tech/nest-server>@compodoc/compodoc and better-auth.
+  'undici@>=7.0.0 <7.28.0': 7.28.0
+
+  # Security: high CVE in piscina <4.9.3 - transitive via the build/test toolchain.
+  'piscina@<4.9.3': 4.9.3
+
+  # Security: @babel/core <7.29.6 advisory - transitive via @compodoc/compodoc>@babel/preset-env.
+  '@babel/core@<7.29.6': 7.29.6
 
 # ---------------------------------------------------------------------------
 # Build script approvals (pnpm 11 replacement for onlyBuiltDependencies).
