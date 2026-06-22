@@ -169,3 +169,24 @@ allowBuilds:
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
   - '@lenne.tech/nest-server'
+
+# ---------------------------------------------------------------------------
+# Peer dependency rules — silence KNOWN-BENIGN unmet-peer warnings only.
+# Scope every entry to its parent (`parent>peer`); never blanket-ignore a peer
+# globally. Each entry documents what / why / when-to-drop. Verify with
+# `pnpm peers check` after changing.
+# ---------------------------------------------------------------------------
+peerDependencyRules:
+  allowedVersions:
+    # @swc/cli@0.8.1 peer-wants chokidar ^5, but the tree resolves chokidar@4
+    # next to it (via @nestjs/cli>@angular-devkit/core@19). chokidar's watch()
+    # API is compatible 4↔5 and @swc/cli only uses it for --watch. A global
+    # `overrides: chokidar` would break nodemon (^3) and @angular-devkit (^4),
+    # so scope-allow 4 here. Drop once @nestjs/cli ships chokidar 5.
+    '@swc/cli>chokidar': '4'
+
+    # graphql-upload@15.0.2 peer-wants @types/express ^4, but this project runs
+    # express@5 (direct dep) with @types/express@5 to match. The peer range is
+    # stale and graphql-upload's express typing surface stays compatible.
+    # Type-only, dev-time mismatch. Drop once graphql-upload widens its peer.
+    'graphql-upload>@types/express': '5'
