@@ -11,11 +11,16 @@ export default defineConfig({
     environment: 'node',
     globalSetup: ['tests/global-setup.ts'],
     include: ['tests/**/*.ts'],
-    exclude: ['tests/vitest-reporter.ts', 'tests/helpers/**/*', 'tests/global-setup.ts'],
+    exclude: ['tests/vitest-reporter.ts', 'tests/helpers/**/*', 'tests/global-setup.ts', 'tests/db-lifecycle.reporter.ts'],
     root: './',
-    reporters: ['default'],
+    // db-lifecycle: drops this run's unique DB on success (+ collects stale
+    // run DBs), keeps it for debugging on failure — see tests/db-lifecycle.reporter.ts
+    reporters: ['default', './tests/db-lifecycle.reporter.ts'],
     testTimeout: 30000,
-    hookTimeout: 60000,
+    // Hooks are NOT covered by `retry` (tests only) — a beforeAll that boots a
+    // full Nest app can exceed 60s under load (parallel transform/import),
+    // which failed whole files without any retry. Be generous here.
+    hookTimeout: 120000,
     teardownTimeout: 30000,
     // Use forks instead of threads for better NestJS performance
     pool: 'forks',
