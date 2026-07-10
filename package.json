@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.27.4",
+  "version": "11.27.5",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -86,8 +86,8 @@
     "start:nodemon": "ts-node -r tsconfig-paths/register src/main.ts",
     "start:prod": "NODE_ENV=production node dist/src/main.js",
     "strip-markers": "node scripts/strip-api-mode-markers.mjs",
-    "test": "pnpm run vitest",
-    "test:ci": "pnpm run vitest:ci",
+    "test": "pnpm run vitest:unit && pnpm run vitest",
+    "test:ci": "pnpm run vitest:unit && pnpm run vitest:ci",
     "test:cleanup": "find tests -type f \\( -name '*.txt' -o -name '*.bin' \\) -not -name '.gitkeep' -delete && echo 'Test artifacts cleaned up'",
     "test:e2e": "pnpm run vitest",
     "unlink:nest-server": "pnpm unlink @lenne.tech/nest-server && pnpm install",
@@ -101,7 +101,7 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.27.4",
+    "@lenne.tech/nest-server": "11.27.5",
     "@nestjs/common": "11.1.23",
     "@nestjs/core": "11.1.23",
     "@nestjs/graphql": "13.4.2",

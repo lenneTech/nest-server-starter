@@ -139,6 +139,14 @@ overrides:
   # Security: @babel/core <7.29.6 advisory - transitive via @compodoc/compodoc>@babel/preset-env.
   '@babel/core@<7.29.6': 7.29.6
 
+  # Security: Zip-Slip — archive extraction can create files and links outside
+  # the target directory (critical, >=11.0.0 <11.1.3). Transitive via
+  # @swc/cli>@xhmikosr/bin-wrapper>@xhmikosr/downloader>@xhmikosr/decompress
+  # and the same chain under @nestjs/cli. @swc/cli@0.8.1 is already latest, so
+  # the fix can only come from an override. @xhmikosr/downloader requires
+  # ^11.1.1, so the patched 11.1.3 satisfies it (patch bump, same engines).
+  '@xhmikosr/decompress': 11.1.3
+
 # ---------------------------------------------------------------------------
 # Build script approvals (pnpm 11 replacement for onlyBuiltDependencies).
 # Only these packages are permitted to run install/postinstall scripts.

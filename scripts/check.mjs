@@ -122,16 +122,28 @@ function toFixCommand(kind, cmd) {
 }
 
 // ── metric parsers ─────────────────────────────────────────────────────────
+// A single test step may invoke vitest more than once (`test` is `vitest:unit && vitest`),
+// emitting one summary block per run. Sum them all — reading only the first silently
+// under-reports every later run, and the test count is the only visible evidence in the
+// report that a suite ran at all.
+function sumMatches(clean, re) {
+  let total = null;
+  for (const m of clean.matchAll(re)) {
+    const n = Number(m[1]);
+    if (Number.isFinite(n)) total = (total ?? 0) + n;
+  }
+  return total;
+}
 function parseVitest(out) {
   const clean = stripAnsi(out);
-  const tests = clean.match(/Tests\s+(?:(\d+)\s+failed[^\n]*?)?(\d+)\s+passed/i);
-  const files = clean.match(/Test Files\s+(?:(\d+)\s+failed[^\n]*?)?(\d+)\s+passed/i);
-  const failed = clean.match(/Tests\s+(\d+)\s+failed/i);
-  if (!tests && !files) return null;
+  const passed = sumMatches(clean, /Tests\s+(?:\d+\s+failed[^\n]*?)?(\d+)\s+passed/gi);
+  const files = sumMatches(clean, /Test Files\s+(?:\d+\s+failed[^\n]*?)?(\d+)\s+passed/gi);
+  const failed = sumMatches(clean, /Tests\s+(\d+)\s+failed/gi);
+  if (passed == null && files == null) return null;
   return {
-    failed: failed ? Number(failed[1]) : 0,
-    files: files ? Number(files[2]) : null,
-    passed: tests ? Number(tests[2]) : null,
+    failed: failed ?? 0,
+    files,
+    passed,
   };
 }
 function parseLint(out) {

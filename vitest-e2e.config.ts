@@ -31,8 +31,13 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     globalSetup: ['tests/global-setup.ts'],
-    include: ['tests/**/*.ts'],
-    exclude: ['tests/vitest-reporter.ts', 'tests/helpers/**/*', 'tests/global-setup.ts', 'tests/db-lifecycle.reporter.ts'],
+    // Suites that need the mongod + globalSetup this config provides: e2e specs (see the
+    // `*.e2e-spec.ts` convention in CLAUDE.md) and story tests, which TDD workflows create
+    // under tests/stories/. Naming the patterns explicitly (instead of `tests/**/*.ts`)
+    // keeps helpers, global-setup and reporters out without an exclude list — and, crucially,
+    // keeps `tests/unit/**` out: those run via vitest.config.ts and would otherwise execute
+    // twice, here against a database they neither need nor use.
+    include: ['tests/**/*.e2e-spec.ts', 'tests/stories/**/*.story.test.ts'],
     root: './',
     // db-lifecycle: drops this run's unique DB on success (+ collects stale
     // run DBs), keeps it for debugging on failure — see tests/db-lifecycle.reporter.ts
