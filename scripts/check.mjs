@@ -26,7 +26,7 @@
  * lt-dev `running-check-script` skill relies on: non-zero === failed).
  */
 import { execSync, spawn } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -474,9 +474,56 @@ async function runGroup(group, states, results, abort) {
   st.total = Date.now() - startedAt;
 }
 
+// ── dependency-tree self-heal ────────────────────────────────────────────────
+// A `pnpm install --prod` inside the project (e.g. while trying out the
+// Dockerfile's production-prune line) deletes every devDependency from
+// node_modules AND records that mode in node_modules/.modules.yaml. pnpm then
+// considers the pruned tree complete: a plain `pnpm install` — including the
+// auto-install pnpm runs in front of `pnpm run check` — answers "Already up to
+// date" and restores nothing. The run then dies on `oxfmt: command not found`
+// with no hint at the real cause. Detect that state and repair it up front.
+//
+// Costs one file read on the happy path and stays silent there. A missing
+// .modules.yaml (no node_modules yet, or a non-pnpm install) is not our case:
+// a regular install follows and brings the full tree.
+function healPrunedDevDependencies() {
+  const modulesYaml = join(ROOT, "node_modules", ".modules.yaml");
+  const isPruned = () => {
+    if (!existsSync(modulesYaml)) return false;
+    try {
+      // pnpm writes the `included` map as inline JSON or as a YAML block, so
+      // match both. The key occurs nowhere else in the file — no parser needed.
+      return /"?devDependencies"?\s*:\s*false/.test(readFileSync(modulesYaml, "utf8"));
+    } catch {
+      return false;
+    }
+  };
+  if (!isPruned()) return;
+
+  console.log(
+    C.yellow("node_modules carries production dependencies only (pruned by a `--prod` install)."),
+  );
+  console.log(C.dim("Restoring devDependencies — pnpm reports this tree as up to date.\n"));
+
+  const repair = "pnpm install --prod=false";
+  try {
+    execSync(repair, { cwd: ROOT, stdio: VERBOSE ? "inherit" : "ignore" });
+  } catch {
+    /* fall through to the verification below — it owns the error message */
+  }
+  // Verify rather than trust the exit code: an install that succeeds but leaves
+  // the tree pruned would otherwise fail later as a confusing "command not found".
+  if (isPruned()) {
+    console.error(C.red(`Could not restore devDependencies. Run \`${repair}\` manually.`));
+    process.exit(1);
+  }
+  console.log(C.green("devDependencies restored.\n"));
+}
+
 // ── main ─────────────────────────────────────────────────────────────────────
 async function main() {
   const started = Date.now();
+  healPrunedDevDependencies();
   const projects = discoverProjects();
   if (projects.length === 0) {
     console.error(C.red("No workspace projects with a `check` script found."));

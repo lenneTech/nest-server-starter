@@ -40,8 +40,28 @@ COPY ${API_DIR}/ ./${API_DIR}/
 
 RUN cd ${API_DIR} && pnpm run build
 
-# Remove devDependencies after build
-RUN CI=true pnpm install --frozen-lockfile --prod --ignore-scripts
+# Produce a self-contained production node_modules. The approach differs by mode
+# because pnpm lays out node_modules differently:
+#   * Monorepo (API_DIR=projects/api): the project's dependency symlinks live in
+#     its OWN node_modules (pointing into the shared .pnpm store); the
+#     workspace-root /app/node_modules has 0 top-level entries. Copying the root
+#     would ship an empty tree → boot crash "Cannot find module '@nestjs/apollo'".
+#     `pnpm deploy` resolves the project's full prod tree into a standalone dir.
+#   * Standalone (API_DIR=.): a single package whose prod deps (incl. transitive
+#     framework peers like @nestjs/apollo) are already flattened into
+#     /app/node_modules by shamefully-hoist. `pnpm deploy` would DROP those hoisted
+#     transitive peers here, so prune in place and reuse the tree verbatim.
+# --legacy is required for `pnpm deploy` on pnpm 9+/11; the package name is derived
+# from the project package.json (never hardcoded) so the Dockerfile stays generic.
+RUN if [ "$API_DIR" = "." ]; then \
+      CI=true pnpm install --frozen-lockfile --prod --ignore-scripts \
+      && mkdir -p /app/deploy \
+      && cp -a node_modules /app/deploy/node_modules \
+      && cp package.json /app/deploy/package.json; \
+    else \
+      PKG=$(cd "$API_DIR" && node -p "require('./package.json').name") \
+      && pnpm --filter="$PKG" deploy --prod --legacy /app/deploy; \
+    fi
 
 # Stage 3: Production runner
 FROM node:22-alpine@sha256:8094c002d08262dba12645a3b4a15cd6cd627d30bc782f53229a2ec13ee22a00
@@ -63,10 +83,11 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 # Create writable directories for runtime files (TUS uploads, GraphQL schema)
 RUN mkdir -p /app/uploads && chown -R nodejs:nodejs /app
 
-# Copy built application and production-only dependencies
+# Copy built application and the self-contained production dependencies
+# (package.json + node_modules come from the `pnpm deploy` output, dist from build)
 COPY --from=builder --chown=nodejs:nodejs /app/${API_DIR}/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/${API_DIR}/package.json ./
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/deploy/package.json ./
+COPY --from=builder --chown=nodejs:nodejs /app/deploy/node_modules ./node_modules
 COPY --chown=nodejs:nodejs --chmod=755 ./${API_DIR}/docker-entrypoint.sh /app/docker-entrypoint.sh
 
 USER nodejs
