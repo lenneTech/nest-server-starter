@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.27.5",
+  "version": "11.27.6",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -41,15 +41,17 @@
     "check:naf": "pnpm install && pnpm run format && pnpm run lint:fix && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
     "cf": "pnpm run check:fix",
     "cnaf": "pnpm run check:naf",
-    "copy": "pnpm run copy:assets && pnpm run copy:config && pnpm run copy:extras && pnpm run copy:meta && pnpm run copy:migrations && pnpm run copy:public && pnpm run copy:scripts && pnpm run copy:spectaql",
+    "copy": "pnpm run copy:assets && pnpm run copy:bin && pnpm run copy:config && pnpm run copy:extras && pnpm run copy:meta && pnpm run copy:migrations && pnpm run prune:migrations && pnpm run copy:public && pnpm run copy:scripts && pnpm run copy:spectaql",
     "copy:assets": "cpy ./src/assets  assets/**/* ./dist/",
+    "copy:bin": "cpy ./bin ./dist/ || true",
     "copy:config": "cpy ./src/config.env.ts ./dist/",
     "copy:extras": "cpy ./extras ./dist/",
     "copy:meta": "rimraf .dist/meta.json && cpy ./package.json --rename=meta.json ./dist/",
-    "copy:migrations": "cpy ./migrations ./dist/ && cpy ./migrations-utils ./dist/ && cpy ./tsconfig.json ./dist/",
+    "copy:migrations": "cpy \"./migrations-utils/*.js\" ./dist/migrations-utils/ && cpy ./tsconfig.json ./dist/",
     "copy:public": "cpy ./public ./dist/ || true",
     "copy:scripts": "cpy ./scripts ./dist/",
     "copy:spectaql": "cpy ./spectaql.yml ./dist/",
+    "prune:migrations": "rimraf --glob \"./dist/migrations/*.d.ts\" \"./dist/migrations/*.js.map\"",
     "dp:dev": "pnpm run migrate:develop:up && NODE_ENV=develop node ./dist/src/main.js",
     "dp:test": "pnpm run migrate:test:up && NODE_ENV=test node ./dist/src/main.js",
     "dp:prod": "pnpm run migrate:prod:up && NODE_ENV=production node ./dist/src/main.js",
@@ -101,7 +103,7 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.27.5",
+    "@lenne.tech/nest-server": "11.27.6",
     "@nestjs/common": "11.1.23",
     "@nestjs/core": "11.1.23",
     "@nestjs/graphql": "13.4.2",

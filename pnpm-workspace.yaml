@@ -139,6 +139,12 @@ overrides:
   # Security: @babel/core <7.29.6 advisory - transitive via @compodoc/compodoc>@babel/preset-env.
   '@babel/core@<7.29.6': 7.29.6
 
+  # Security: Log Forging via unneutralized control characters in :remote-user
+  # (GHSA-4vj7-5mj6-jm8m, moderate, <1.10.2). Transitive via
+  # @compodoc/compodoc>@compodoc/live-server>morgan. live-server requires
+  # ^1.10.0, so the patched 1.11.0 satisfies it.
+  morgan: 1.11.0
+
   # Security: Zip-Slip — archive extraction can create files and links outside
   # the target directory (critical, >=11.0.0 <11.1.3). Transitive via
   # @swc/cli>@xhmikosr/bin-wrapper>@xhmikosr/downloader>@xhmikosr/decompress
