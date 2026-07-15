@@ -1,3 +1,7 @@
+# Migrated from .npmrc (pnpm 11: .npmrc is auth/registry only)
+shamefullyHoist: true
+strictPeerDependencies: false
+
 # pnpm 11 configuration
 #
 # NOTE: As of pnpm 11 the "pnpm.overrides" and "pnpm.onlyBuiltDependencies"

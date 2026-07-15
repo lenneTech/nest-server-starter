@@ -31,6 +31,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     globalSetup: ['tests/global-setup.ts'],
+    // Per-worker database isolation: appends the vitest pool id to NSC__MONGOOSE__URI in each fork
+    // so parallel spec files never share one database (prevents the shared-DB 401 flake).
+    setupFiles: ['tests/setup.ts'],
     // Suites that need the mongod + globalSetup this config provides: e2e specs (see the
     // `*.e2e-spec.ts` convention in CLAUDE.md) and story tests, which TDD workflows create
     // under tests/stories/. Naming the patterns explicitly (instead of `tests/**/*.ts`)
