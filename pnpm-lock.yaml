@@ -39,8 +39,8 @@ importers:
   .:
     dependencies:
       '@lenne.tech/nest-server':
-        specifier: 11.27.7
-        version: 11.27.7(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.7)(zod@4.4.3)
+        specifier: 11.28.0
+        version: 11.28.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.7)(zod@4.4.3)
       '@nestjs/common':
         specifier: 11.1.23
         version: 11.1.23(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -1230,8 +1230,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lenne.tech/nest-server@11.27.7':
-    resolution: {integrity: sha512-ckZlCueoU8a1v9i+NmWNq8lfuaMvfyY+SCeq6gC7hcI1W+aj4S1SpenJ7PUOqzySkwRDyC/NJi7jeK4ZrA1XEA==}
+  '@lenne.tech/nest-server@11.28.0':
+    resolution: {integrity: sha512-+wQrx5vuuPSDZsqXp3XECeOixbipF4gm5c/CgDc6BM0HnB9nexr04CqF1g97n2fLdnJy2yi5k8groxgIph099g==}
     engines: {node: '>= 22'}
     hasBin: true
 
@@ -6552,7 +6552,7 @@ snapshots:
       '@babel/code-frame': 7.29.0
       '@babel/generator': 7.29.7
       '@babel/helper-compilation-targets': 7.28.6
-      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6)
+      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6(supports-color@5.5.0))
       '@babel/helpers': 7.29.7
       '@babel/parser': 7.29.7
       '@babel/template': 7.28.6
@@ -6642,7 +6642,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@babel/helper-module-transforms@7.28.6(@babel/core@7.29.6)':
+  '@babel/helper-module-transforms@7.28.6(@babel/core@7.29.6(supports-color@5.5.0))':
     dependencies:
       '@babel/core': 7.29.6(supports-color@5.5.0)
       '@babel/helper-module-imports': 7.28.6
@@ -6923,7 +6923,7 @@ snapshots:
   '@babel/plugin-transform-modules-amd@7.27.1(@babel/core@7.29.6(supports-color@5.5.0))':
     dependencies:
       '@babel/core': 7.29.6(supports-color@5.5.0)
-      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6)
+      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6(supports-color@5.5.0))
       '@babel/helper-plugin-utils': 7.28.6
     transitivePeerDependencies:
       - supports-color
@@ -6931,7 +6931,7 @@ snapshots:
   '@babel/plugin-transform-modules-commonjs@7.28.6(@babel/core@7.29.6(supports-color@5.5.0))':
     dependencies:
       '@babel/core': 7.29.6(supports-color@5.5.0)
-      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6)
+      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6(supports-color@5.5.0))
       '@babel/helper-plugin-utils': 7.28.6
     transitivePeerDependencies:
       - supports-color
@@ -6939,7 +6939,7 @@ snapshots:
   '@babel/plugin-transform-modules-systemjs@7.29.4(@babel/core@7.29.6(supports-color@5.5.0))':
     dependencies:
       '@babel/core': 7.29.6(supports-color@5.5.0)
-      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6)
+      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6(supports-color@5.5.0))
       '@babel/helper-plugin-utils': 7.28.6
       '@babel/helper-validator-identifier': 7.28.5
       '@babel/traverse': 7.29.0(supports-color@5.5.0)
@@ -6949,7 +6949,7 @@ snapshots:
   '@babel/plugin-transform-modules-umd@7.27.1(@babel/core@7.29.6(supports-color@5.5.0))':
     dependencies:
       '@babel/core': 7.29.6(supports-color@5.5.0)
-      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6)
+      '@babel/helper-module-transforms': 7.28.6(@babel/core@7.29.6(supports-color@5.5.0))
       '@babel/helper-plugin-utils': 7.28.6
     transitivePeerDependencies:
       - supports-color
@@ -7653,7 +7653,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lenne.tech/nest-server@11.27.7(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.7)(zod@4.4.3)':
+  '@lenne.tech/nest-server@11.28.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.7)(zod@4.4.3)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.0)
       '@as-integrations/express5': 1.1.2(@apollo/server@5.5.1(graphql@16.14.0))(express@5.2.1)

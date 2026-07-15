@@ -1,6 +1,7 @@
 import {
   ComparisonOperatorEnum,
   ConfigService,
+  ErrorCode,
   HttpExceptionLogFilter,
   TestGraphQLType,
   TestHelper,
@@ -258,8 +259,9 @@ describe('User Module GraphQL (e2e)', () => {
     );
 
     expect(res.errors.length).toBeGreaterThanOrEqual(1);
-    expect(res.errors[0].extensions.originalError.statusCode).toEqual(401);
-    expect(res.errors[0].message).toEqual('The current user has no access rights for roles of UserInput');
+    // Authenticated user without sufficient rights → 403 Forbidden (RFC 9110), message is the translatable ErrorCode constant
+    expect(res.errors[0].extensions.originalError.statusCode).toEqual(403);
+    expect(res.errors[0].message).toEqual(ErrorCode.ACCESS_DENIED);
     expect(res.data).toBe(null);
   });
 
