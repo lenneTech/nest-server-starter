@@ -554,9 +554,9 @@ async function main() {
     if (!TTY) process.stdout.write(`  ${C.dim("→")} audit\n`);
     else drawLive([`${C.cyan(FRAMES[0])} audit`]);
     const audit = await runAudit(auditCmd);
-    liveCount = 0;
     const dur = Date.now() - t;
     if (audit.blocking) {
+      liveCount = 0; // the failure line must survive — nothing may overwrite it
       const summary = audit.counts
         ? `${audit.total} vuln (${renderVulnLine(audit.counts)})`
         : "failed";
@@ -567,10 +567,16 @@ async function main() {
         started,
       );
     }
-    console.log(
-      `${C.green("✓")} audit  ${audit.counts ? renderVulnLine(audit.counts) : C.dim("0")} ${C.dim(`(${fmtDuration(dur)})`)}`,
-    );
+    if (!TTY) {
+      process.stdout.write(
+        `  ${C.green("✓")} audit  ${audit.counts ? renderVulnLine(audit.counts) : C.dim("0")} ${C.dim(`(${fmtDuration(dur)})`)}\n`,
+      );
+    }
+    // TTY success: NO permanent line — the live status view overwrites the audit
+    // row (like every other step); the result lands in the report twice: the
+    // Steps list (entry below) and the Vulnerabilities section.
     results.push({ audit, kind: "audit" });
+    results.push({ dur, kind: "step", label: "audit", project: "." });
   }
 
   // Per-project steps — parallel by default, serial with --sequential.

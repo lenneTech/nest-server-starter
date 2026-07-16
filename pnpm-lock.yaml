@@ -36,8 +36,8 @@ importers:
   .:
     dependencies:
       '@lenne.tech/nest-server':
-        specifier: 11.28.1
-        version: 11.28.1(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(supports-color@5.5.0)(vitest@4.1.10)(zod@4.4.3)
+        specifier: 11.29.0
+        version: 11.29.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)
       '@nestjs/common':
         specifier: 11.1.28
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -732,9 +732,9 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lenne.tech/nest-server@11.28.1':
-    resolution: {integrity: sha512-ydAqTuwRyveTlzY8eTzxAgQH+sy18OWO3+6iUaTxQcRl2tRBZDS1hNtN47Ns/cUlioXEpHbNNt/X9ZpjYRZ04g==}
-    engines: {node: '>= 22'}
+  '@lenne.tech/nest-server@11.29.0':
+    resolution: {integrity: sha512-Tu/jWwkF/ncr/fVmCqzYvTXxkFqQr6gpv7jJbyUaW5h77HNOKeYH3rBN9MnszNJ/GpNrUtyNM/qglqRtmt1wpw==}
+    engines: {node: '>= 22', pnpm: ^11.0.0}
     hasBin: true
 
   '@levischuck/tiny-cbor@0.2.11':
@@ -759,9 +759,6 @@ packages:
 
   '@mongodb-js/saslprep@1.4.12':
     resolution: {integrity: sha512-QAfAMwNgnYxZ2C6D1HgeP7Gc4i/uvJRim415PCIL9ptRxWMNbWeLBYb2/9R4pGKny/s1FVu2JA2cxCUBUOggrA==}
-
-  '@mongodb-js/saslprep@1.4.6':
-    resolution: {integrity: sha512-y+x3H1xBZd38n10NZF/rEBlvDOOMQ6LKUTHqr8R9VkJ+mmQOYtJFxIlkkK8fZrtOiL6VixbOBWMbZGBdal3Z1g==}
 
   '@napi-rs/nice-android-arm-eabi@1.1.1':
     resolution: {integrity: sha512-kjirL3N6TnRPv5iuHw36wnucNqXAO46dzK9oPb0wj076R5Xm8PfUVA9nAFB5ZNMmfJQJVKACAPd/Z2KYMppthw==}
@@ -5770,7 +5767,7 @@ snapshots:
       '@apollo/utils.withrequired': 3.0.0
       '@graphql-tools/schema': 10.0.33(graphql@16.14.0)
       async-retry: 1.3.3
-      body-parser: 2.2.2
+      body-parser: 2.3.0(supports-color@5.5.0)
       content-type: 1.0.5
       cors: 2.8.6
       finalhandler: 2.1.1
@@ -6015,14 +6012,14 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@eslint-community/eslint-utils@4.9.1(eslint@8.57.1(supports-color@5.5.0))':
+  '@eslint-community/eslint-utils@4.9.1(eslint@8.57.1)':
     dependencies:
-      eslint: 8.57.1(supports-color@5.5.0)
+      eslint: 8.57.1
       eslint-visitor-keys: 3.4.3
 
   '@eslint-community/regexpp@4.12.2': {}
 
-  '@eslint/eslintrc@2.1.4(supports-color@5.5.0)':
+  '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 8.20.0
       debug: 4.4.3(supports-color@5.5.0)
@@ -6038,11 +6035,11 @@ snapshots:
 
   '@eslint/js@8.57.1': {}
 
-  '@getbrevo/brevo@3.0.1(supports-color@5.5.0)':
+  '@getbrevo/brevo@3.0.1':
     dependencies:
       axios: 1.16.0
       bluebird: 3.7.2
-      rewire: 7.0.0(supports-color@5.5.0)
+      rewire: 7.0.0
     transitivePeerDependencies:
       - debug
       - supports-color
@@ -6078,7 +6075,7 @@ snapshots:
     dependencies:
       hono: 4.12.25
 
-  '@humanwhocodes/config-array@0.13.0(supports-color@5.5.0)':
+  '@humanwhocodes/config-array@0.13.0':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
       debug: 4.4.3(supports-color@5.5.0)
@@ -6266,12 +6263,12 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lenne.tech/nest-server@11.28.1(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(supports-color@5.5.0)(vitest@4.1.10)(zod@4.4.3)':
+  '@lenne.tech/nest-server@11.29.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.0)
       '@as-integrations/express5': 1.1.2(@apollo/server@5.5.1(graphql@16.14.0))(express@5.2.1)
       '@better-auth/passkey': 1.6.23(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-auth@1.6.23(mongodb@7.2.0)(vitest@4.1.10))(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)
-      '@getbrevo/brevo': 3.0.1(supports-color@5.5.0)
+      '@getbrevo/brevo': 3.0.1
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       '@nestjs/apollo': 13.4.2(@apollo/server@5.5.1(graphql@16.14.0))(@as-integrations/express5@1.1.2(@apollo/server@5.5.1(graphql@16.14.0))(express@5.2.1))(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(@nestjs/graphql@13.4.2(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(class-transformer@0.5.1)(class-validator@0.15.1)(graphql@16.14.0)(reflect-metadata@0.2.2)(ts-morph@27.0.2))(graphql@16.14.0)
       '@nestjs/common': 11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -6285,8 +6282,8 @@ snapshots:
       '@nestjs/swagger': 11.4.2(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)
       '@nestjs/terminus': 11.1.1(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(@nestjs/mongoose@11.0.4(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(mongoose@9.7.4)(rxjs@7.8.2))(mongoose@9.7.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/websockets': 11.1.28(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@tus/file-store': 2.1.0(supports-color@5.5.0)
-      '@tus/server': 2.4.1(supports-color@5.5.0)
+      '@tus/file-store': 2.1.0
+      '@tus/server': 2.4.1
       '@types/supertest': 7.2.1
       bcrypt: 6.0.0
       better-auth: 1.6.23(mongodb@7.2.0)(vitest@4.1.10)
@@ -6410,10 +6407,6 @@ snapshots:
       - supports-color
 
   '@mongodb-js/saslprep@1.4.12':
-    dependencies:
-      sparse-bitfield: 3.0.3
-
-  '@mongodb-js/saslprep@1.4.6':
     dependencies:
       sparse-bitfield: 3.0.3
 
@@ -7180,7 +7173,7 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
-  '@tus/file-store@2.1.0(supports-color@5.5.0)':
+  '@tus/file-store@2.1.0':
     dependencies:
       '@tus/utils': 0.7.0
       debug: 4.4.3(supports-color@5.5.0)
@@ -7191,7 +7184,7 @@ snapshots:
       - '@opentelemetry/api'
       - supports-color
 
-  '@tus/server@2.4.1(supports-color@5.5.0)':
+  '@tus/server@2.4.1':
     dependencies:
       '@tus/utils': 0.7.0
       debug: 4.4.3(supports-color@5.5.0)
@@ -7200,7 +7193,7 @@ snapshots:
       srvx: 0.11.16
     optionalDependencies:
       '@redis/client': 5.12.1
-      ioredis: 5.11.0(supports-color@5.5.0)
+      ioredis: 5.11.0
     transitivePeerDependencies:
       - '@node-rs/xxhash'
       - '@opentelemetry/api'
@@ -8490,13 +8483,13 @@ snapshots:
 
   eslint-visitor-keys@3.4.3: {}
 
-  eslint@8.57.1(supports-color@5.5.0):
+  eslint@8.57.1:
     dependencies:
-      '@eslint-community/eslint-utils': 4.9.1(eslint@8.57.1(supports-color@5.5.0))
+      '@eslint-community/eslint-utils': 4.9.1(eslint@8.57.1)
       '@eslint-community/regexpp': 4.12.2
-      '@eslint/eslintrc': 2.1.4(supports-color@5.5.0)
+      '@eslint/eslintrc': 2.1.4
       '@eslint/js': 8.57.1
-      '@humanwhocodes/config-array': 0.13.0(supports-color@5.5.0)
+      '@humanwhocodes/config-array': 0.13.0
       '@humanwhocodes/module-importer': 1.0.1
       '@nodelib/fs.walk': 1.2.8
       '@ungap/structured-clone': 1.3.1
@@ -9097,7 +9090,7 @@ snapshots:
     dependencies:
       kind-of: 6.0.3
 
-  ioredis@5.11.0(supports-color@5.5.0):
+  ioredis@5.11.0:
     dependencies:
       '@ioredis/commands': 1.10.0
       cluster-key-slot: 1.1.1
@@ -9592,7 +9585,7 @@ snapshots:
 
   mongodb@7.2.0:
     dependencies:
-      '@mongodb-js/saslprep': 1.4.6
+      '@mongodb-js/saslprep': 1.4.12
       bson: 7.2.0
       mongodb-connection-string-url: 7.0.1
 
@@ -10140,9 +10133,9 @@ snapshots:
 
   reusify@1.1.0: {}
 
-  rewire@7.0.0(supports-color@5.5.0):
+  rewire@7.0.0:
     dependencies:
-      eslint: 8.57.1(supports-color@5.5.0)
+      eslint: 8.57.1
     transitivePeerDependencies:
       - supports-color
 

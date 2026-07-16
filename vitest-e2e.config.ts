@@ -3,23 +3,55 @@ import os from 'node:os';
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
-// Opt-in low-resource mode — for running MANY e2e suites at once on one machine
-// (e.g. several parallel `lt dev` / `lt ticket` environments). Set
-// CHECK_LOW_RESOURCE=1 to cap parallel forks and raise timeouts so the suites
-// share CPU/mongod without starving each other into request timeouts (the
-// failure mode observed when 2+ full e2e runs overlap — tests hang past the
-// 30s testTimeout and auth queries fail as 401s). Unset (default) = full speed,
-// no cap. Optionally pin the fork cap with CHECK_LOW_RESOURCE_FORKS=<n>.
+import { countOtherActiveRuns } from './tests/e2e-run-slots';
+
+// Low-resource mode — caps parallel forks and raises timeouts so many e2e suites can share one
+// machine's CPU and mongod without starving each other (e.g. several parallel `lt dev` /
+// `lt ticket` environments). The failure mode it prevents: when 2+ full e2e runs overlap,
+// requests queue past the 30s testTimeout and auth queries fail as spurious 401s.
+//
+// AUTO-ENABLES on either of two signals. Explicit settings still win, in both directions:
+//
+//   CHECK_LOW_RESOURCE=1 / true  -> force on   (CI, or a machine you know is busy)
+//   CHECK_LOW_RESOURCE=0 / false -> force off  (benchmarking; never auto-throttle)
+//   unset                        -> auto       (on iff another e2e run is active OR load is high)
+//
+// Signal 1 — another e2e run is ACTIVE right now (slot files of tests/e2e-run-slots.ts, checked
+// by PID-liveness). This is the deterministic signal: a single full-speed run only drives the
+// 1-minute load average up near its END, so a second run starting a few seconds in still sees a
+// "calm" machine — the load heuristic alone structurally cannot catch overlapping starts.
+//
+// Signal 2 — the 1-minute load average normalised per core is already high (>= LOAD_THRESHOLD).
+// This catches machine pressure from anything that is NOT an e2e run (builds, dev servers, other
+// tools). Load average is unavailable on Windows (os.loadavg() returns zeros), where this signal
+// simply stays off — the slot signal and the explicit flag remain available.
+//
+// Optionally pin the fork cap with CHECK_LOW_RESOURCE_FORKS=<n>.
+const LOAD_THRESHOLD = 0.7;
+
+const CORES = os.availableParallelism?.() ?? os.cpus()?.length ?? 4;
+const NORMALISED_LOAD = (os.loadavg()?.[0] ?? 0) / CORES;
+const ACTIVE_E2E_RUNS = countOtherActiveRuns();
+
 const LOW_RESOURCE_RAW = process.env.CHECK_LOW_RESOURCE;
-const LOW_RESOURCE = !!LOW_RESOURCE_RAW && LOW_RESOURCE_RAW !== '0' && LOW_RESOURCE_RAW !== 'false';
+const LOW_RESOURCE_FORCED_OFF = LOW_RESOURCE_RAW === '0' || LOW_RESOURCE_RAW === 'false';
+const LOW_RESOURCE_FORCED_ON = !!LOW_RESOURCE_RAW && !LOW_RESOURCE_FORCED_OFF;
+const LOW_RESOURCE_AUTO =
+  LOW_RESOURCE_RAW === undefined && (ACTIVE_E2E_RUNS > 0 || NORMALISED_LOAD >= LOAD_THRESHOLD);
+const LOW_RESOURCE = LOW_RESOURCE_FORCED_ON || LOW_RESOURCE_AUTO;
 const LOW_RESOURCE_FORKS = (() => {
   if (!LOW_RESOURCE) return undefined;
   const explicit = Number(process.env.CHECK_LOW_RESOURCE_FORKS);
   if (Number.isInteger(explicit) && explicit > 0) return explicit;
-  return Math.max(2, Math.floor((os.cpus()?.length || 4) / 3));
+  return Math.max(2, Math.floor(CORES / 3));
 })();
 if (LOW_RESOURCE) {
-  process.stderr.write(`[e2e] low-resource mode active: maxForks=${LOW_RESOURCE_FORKS}, timeouts raised\n`);
+  const why = LOW_RESOURCE_FORCED_ON
+    ? 'CHECK_LOW_RESOURCE set'
+    : ACTIVE_E2E_RUNS > 0
+      ? `${ACTIVE_E2E_RUNS} other e2e run(s) active on this machine`
+      : `machine is busy (load ${NORMALISED_LOAD.toFixed(2)}/core >= ${LOAD_THRESHOLD})`;
+  process.stderr.write(`[e2e] low-resource mode: ${why} -> maxForks=${LOW_RESOURCE_FORKS}, timeouts raised\n`);
 }
 
 export default defineConfig({
@@ -65,9 +97,12 @@ export default defineConfig({
     fileParallelism: true,
     // Allow multiple files to run concurrently
     maxConcurrency: 4,
-    // Retry flaky tests up to 3 times before failing
-    // This handles intermittent MongoDB race conditions
-    retry: 3,
+    // Retry flaky tests before failing (intermittent MongoDB race conditions).
+    // Deliberately LOW: retry multiplies worst-case runtime per test — a spec file
+    // whose app/socket state broke under resource pressure grinds through
+    // (1+retry) attempts × testTimeout × tests, which looks like a deadlock. The
+    // e2e-run governor removes the pressure trigger; retry: 2 caps the multiplier.
+    retry: 2,
     // Optimize file watching (not needed in CI)
     watch: false,
   },
