@@ -1,9 +1,9 @@
 # Blocked Package Updates
 
 ## cpy-cli 6 → 7
-**Status**: BLOCKED
-**Reason**: v7 throws a fatal error when source directory doesn't exist. The `copy:migrations` script (`cpy ./migrations ./dist/`) fails because the `migrations/` directory doesn't exist in a fresh build. v6 silently skipped missing sources.
-**Fix needed**: Add `|| true` to migrations copy or create migrations dir, then upgrade.
+**Status**: RESOLVED (2026-07-16, session 11)
+**Notes**: Upgraded to 7.0.0 and validated — build EXIT 0. The original blocker no longer applies: the copy scripts were restructured so none hit a missing source dir. `copy:bin` and `copy:public` carry `|| true` (bin/ legitimately absent → caught), `copy:migrations` now targets `./migrations-utils/*.js` (present) instead of `./migrations`, and `migrations/` exists. No `cpy` call fails hard.
+**Historical reason (BLOCKED until session 10)**: v7 threw a fatal error when a source directory didn't exist; the old `copy:migrations` (`cpy ./migrations ./dist/`) failed on fresh builds. v6 silently skipped missing sources.
 
 ## graphql-upload 15 → 16/17
 **Status**: BLOCKED

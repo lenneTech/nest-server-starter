@@ -70,9 +70,8 @@ overrides:
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf
   # is provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via
-  # @compodoc/compodoc (uuid 11.1.0) and >@compodoc/live-server>http-auth
-  # (uuid >=8.3.2 <12). http-auth only uses uuid.v4 (API-stable 8-14), so 14 is
-  # safe. Pinned to 14.0.0 (latest, also patched).
+  # @compodoc/compodoc (uuid 11.1.0, directly and via >vis-network>vis-data).
+  # Pinned to 14.0.0 (latest, also patched). API used (uuid.v4) is stable 8-14.
   uuid: 14.0.0
 
   # Security: Path traversal via percent-encoded dot segments
@@ -80,12 +79,6 @@ overrides:
   # delimiters (GHSA-v39h-62p7-jpjc) in fast-uri <=3.1.1. Transitive via
   # @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core>ajv>fast-uri.
   fast-uri: 3.1.2
-
-  # Security: Arbitrary code generation when compiling malicious input
-  # (GHSA-fv7c-fp4j-7gwp) in @babel/plugin-transform-modules-systemjs
-  # >=7.12.0 <=7.29.3. Transitive via @compodoc/compodoc>@babel/preset-env.
-  # 7.29.4 is latest 7.x.
-  '@babel/plugin-transform-modules-systemjs': 7.29.4
 
   # Security: Remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26,
   # >=6.11.1 <=6.15.1). Transitive via @apollo/server>body-parser>qs and
@@ -119,19 +112,27 @@ overrides:
   # Security: CRLF injection via unescaped multipart field names/filenames in
   # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
   # @lenne.tech/nest-server>@getbrevo/brevo>axios and >node-mailjet>axios.
-  form-data: '>=4.0.6'
+  # 4.0.6 is the patched release (fixed target, latest 4.x).
+  form-data: 4.0.6
 
   # Security: Prototype pollution / special-character handling in js-yaml
-  # <4.1.2. Transitive via the toolchain. 4.1.2 is the patched release.
-  js-yaml: '>=4.1.2'
+  # <4.1.2. Transitive via eslint, @nestjs/swagger and cosmiconfig — all of
+  # which declare js-yaml ^4. NOTE: js-yaml never published a 4.1.2; the 4.x
+  # line ends at 4.3.0, so the fixed target is 4.3.0 (the earlier '>=4.1.2'
+  # range silently pulled a 5.0.0 major, which this pin reverts).
+  js-yaml: 4.3.0
 
   # Security: Email injection / header-related CVEs in nodemailer <9.0.1
-  # (high). Transitive via @lenne.tech/nest-server. 9.0.1 is the patched line.
-  nodemailer: '>=9.0.1'
+  # (high). Transitive via @lenne.tech/nest-server (declares 9.0.3). 9.0.3 is
+  # the patched release (fixed target — the earlier '>=9.0.1' range pinned
+  # 9.0.1, below the framework's 9.0.3).
+  nodemailer: 9.0.3
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high).
   # Transitive via @lenne.tech/nest-server (and @nestjs/platform-express).
-  multer: '>=2.2.0'
+  # 2.2.0 is the patched release (fixed target, aligned with the framework's
+  # exact 2.2.0).
+  multer: 2.2.0
 
   # Security: various undici CVEs <7.28.0 (incl. high) - transitive via
   # @lenne.tech/nest-server>@compodoc/compodoc and better-auth.
@@ -139,15 +140,6 @@ overrides:
 
   # Security: high CVE in piscina <4.9.3 - transitive via the build/test toolchain.
   'piscina@<4.9.3': 4.9.3
-
-  # Security: @babel/core <7.29.6 advisory - transitive via @compodoc/compodoc>@babel/preset-env.
-  '@babel/core@<7.29.6': 7.29.6
-
-  # Security: Log Forging via unneutralized control characters in :remote-user
-  # (GHSA-4vj7-5mj6-jm8m, moderate, <1.10.2). Transitive via
-  # @compodoc/compodoc>@compodoc/live-server>morgan. live-server requires
-  # ^1.10.0, so the patched 1.11.0 satisfies it.
-  morgan: 1.11.0
 
   # Security: Zip-Slip — archive extraction can create files and links outside
   # the target directory (critical, >=11.0.0 <11.1.3). Transitive via
