@@ -36,8 +36,8 @@ importers:
   .:
     dependencies:
       '@lenne.tech/nest-server':
-        specifier: 11.29.0
-        version: 11.29.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)
+        specifier: 11.29.1
+        version: 11.29.1(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)
       '@nestjs/common':
         specifier: 11.1.28
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -732,8 +732,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lenne.tech/nest-server@11.29.0':
-    resolution: {integrity: sha512-Tu/jWwkF/ncr/fVmCqzYvTXxkFqQr6gpv7jJbyUaW5h77HNOKeYH3rBN9MnszNJ/GpNrUtyNM/qglqRtmt1wpw==}
+  '@lenne.tech/nest-server@11.29.1':
+    resolution: {integrity: sha512-8Nr7APR1ZXes+5Iquc/6Y+8ABKOm/jKaS4SLdIw4SL1xhI14k+fsYo6taD94iLyRrNi4dIfVERCJ2GkwwFMHuA==}
     engines: {node: '>= 22', pnpm: ^11.0.0}
     hasBin: true
 
@@ -6263,7 +6263,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lenne.tech/nest-server@11.29.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)':
+  '@lenne.tech/nest-server@11.29.1(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.0)
       '@as-integrations/express5': 1.1.2(@apollo/server@5.5.1(graphql@16.14.0))(express@5.2.1)
