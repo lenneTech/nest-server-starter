@@ -36,8 +36,8 @@ importers:
   .:
     dependencies:
       '@lenne.tech/nest-server':
-        specifier: 11.30.0
-        version: 11.30.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(supports-color@5.5.0)(vitest@4.1.10)(zod@4.4.3)
+        specifier: 11.31.0
+        version: 11.31.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)
       '@nestjs/common':
         specifier: 11.1.28
         version: 11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -732,8 +732,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lenne.tech/nest-server@11.30.0':
-    resolution: {integrity: sha512-PcX5s42shjNDfPV/uWy6JMUdNYVIhDriW6/0bxe9eJYT9s/+0zxHl7/XV2Hzj4s5dRWBF45F3DDXOTyviZecQw==}
+  '@lenne.tech/nest-server@11.31.0':
+    resolution: {integrity: sha512-ovfYXn9gslpuGQ+Zq39H5ZgLPgmRLhrbaOCXCUqGggGDUjcGi/u3Er+k/z051tTP5nKla9CjOYa2R/1wHIzXXw==}
     engines: {node: '>= 22', pnpm: ^11.0.0}
     hasBin: true
 
@@ -6013,12 +6013,12 @@ snapshots:
 
   '@eslint-community/eslint-utils@4.9.1(eslint@8.57.1)':
     dependencies:
-      eslint: 8.57.1(supports-color@5.5.0)
+      eslint: 8.57.1
       eslint-visitor-keys: 3.4.3
 
   '@eslint-community/regexpp@4.12.2': {}
 
-  '@eslint/eslintrc@2.1.4(supports-color@5.5.0)':
+  '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 8.20.0
       debug: 4.4.3(supports-color@5.5.0)
@@ -6034,11 +6034,11 @@ snapshots:
 
   '@eslint/js@8.57.1': {}
 
-  '@getbrevo/brevo@3.0.4(supports-color@5.5.0)':
+  '@getbrevo/brevo@3.0.4':
     dependencies:
       axios: 1.16.0
       bluebird: 3.7.2
-      rewire: 7.0.0(supports-color@5.5.0)
+      rewire: 7.0.0
     transitivePeerDependencies:
       - debug
       - supports-color
@@ -6074,7 +6074,7 @@ snapshots:
     dependencies:
       hono: 4.12.25
 
-  '@humanwhocodes/config-array@0.13.0(supports-color@5.5.0)':
+  '@humanwhocodes/config-array@0.13.0':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
       debug: 4.4.3(supports-color@5.5.0)
@@ -6262,12 +6262,12 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lenne.tech/nest-server@11.30.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(supports-color@5.5.0)(vitest@4.1.10)(zod@4.4.3)':
+  '@lenne.tech/nest-server@11.31.0(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)(vitest@4.1.10)(zod@4.4.3)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.0)
       '@as-integrations/express5': 1.1.2(@apollo/server@5.5.1(graphql@16.14.0))(express@5.2.1)
       '@better-auth/passkey': 1.6.23(@better-auth/core@1.6.23(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.3)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-auth@1.6.23(mongodb@7.2.0)(vitest@4.1.10))(better-call@1.3.7(zod@4.4.3))(nanostores@1.3.0)
-      '@getbrevo/brevo': 3.0.4(supports-color@5.5.0)
+      '@getbrevo/brevo': 3.0.4
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       '@nestjs/apollo': 13.4.2(@apollo/server@5.5.1(graphql@16.14.0))(@as-integrations/express5@1.1.2(@apollo/server@5.5.1(graphql@16.14.0))(express@5.2.1))(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(@nestjs/graphql@13.4.2(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(class-transformer@0.5.1)(class-validator@0.15.1)(graphql@16.14.0)(reflect-metadata@0.2.2)(ts-morph@28.0.0))(graphql@16.14.0)
       '@nestjs/common': 11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -6280,8 +6280,8 @@ snapshots:
       '@nestjs/schedule': 6.1.3(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)
       '@nestjs/swagger': 11.4.6(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)
       '@nestjs/terminus': 11.1.1(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(@nestjs/mongoose@11.0.4(@nestjs/common@11.1.28(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.28)(mongoose@9.7.4)(rxjs@7.8.2))(mongoose@9.7.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@tus/file-store': 2.1.0(supports-color@5.5.0)
-      '@tus/server': 2.4.1(supports-color@5.5.0)
+      '@tus/file-store': 2.1.0
+      '@tus/server': 2.4.1
       '@types/supertest': 7.2.1
       bcrypt: 6.0.0
       better-auth: 1.6.23(mongodb@7.2.0)(vitest@4.1.10)
@@ -7151,7 +7151,7 @@ snapshots:
 
   '@tsconfig/node16@1.0.4': {}
 
-  '@tus/file-store@2.1.0(supports-color@5.5.0)':
+  '@tus/file-store@2.1.0':
     dependencies:
       '@tus/utils': 0.7.0
       debug: 4.4.3(supports-color@5.5.0)
@@ -7162,7 +7162,7 @@ snapshots:
       - '@opentelemetry/api'
       - supports-color
 
-  '@tus/server@2.4.1(supports-color@5.5.0)':
+  '@tus/server@2.4.1':
     dependencies:
       '@tus/utils': 0.7.0
       debug: 4.4.3(supports-color@5.5.0)
@@ -7171,7 +7171,7 @@ snapshots:
       srvx: 0.11.16
     optionalDependencies:
       '@redis/client': 5.12.1
-      ioredis: 5.11.0(supports-color@5.5.0)
+      ioredis: 5.11.0
     transitivePeerDependencies:
       - '@node-rs/xxhash'
       - '@opentelemetry/api'
@@ -8461,13 +8461,13 @@ snapshots:
 
   eslint-visitor-keys@3.4.3: {}
 
-  eslint@8.57.1(supports-color@5.5.0):
+  eslint@8.57.1:
     dependencies:
       '@eslint-community/eslint-utils': 4.9.1(eslint@8.57.1)
       '@eslint-community/regexpp': 4.12.2
-      '@eslint/eslintrc': 2.1.4(supports-color@5.5.0)
+      '@eslint/eslintrc': 2.1.4
       '@eslint/js': 8.57.1
-      '@humanwhocodes/config-array': 0.13.0(supports-color@5.5.0)
+      '@humanwhocodes/config-array': 0.13.0
       '@humanwhocodes/module-importer': 1.0.1
       '@nodelib/fs.walk': 1.2.8
       '@ungap/structured-clone': 1.3.1
@@ -9074,7 +9074,7 @@ snapshots:
     dependencies:
       kind-of: 6.0.3
 
-  ioredis@5.11.0(supports-color@5.5.0):
+  ioredis@5.11.0:
     dependencies:
       '@ioredis/commands': 1.10.0
       cluster-key-slot: 1.1.1
@@ -10116,9 +10116,9 @@ snapshots:
 
   reusify@1.1.0: {}
 
-  rewire@7.0.0(supports-color@5.5.0):
+  rewire@7.0.0:
     dependencies:
-      eslint: 8.57.1(supports-color@5.5.0)
+      eslint: 8.57.1
     transitivePeerDependencies:
       - supports-color
 
