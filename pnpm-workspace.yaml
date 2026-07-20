@@ -27,10 +27,13 @@ overrides:
   # accepts v5. Keep aligned with nest-server's @apollo/server version.
   '@apollo/server': 5.5.1
 
-  # Security: SSRF via NO_PROXY bypass (GHSA-3p68-rc4w-qgx5) and Cloud Metadata
-  # Exfiltration via Header Injection (GHSA-fvcv-3m26-pcqx) in axios <1.15.0.
-  # Transitive via @lenne.tech/nest-server>@getbrevo/brevo and >node-mailjet.
-  axios: 1.16.0
+  # Security: SSRF via NO_PROXY bypass (GHSA-3p68-rc4w-qgx5), Cloud Metadata
+  # Exfiltration via Header Injection (GHSA-fvcv-3m26-pcqx) in axios <1.15.0, AND
+  # formDataToJSON recursion DoS + prototype pollution in auth subfields (3x
+  # moderate) in axios <1.18.0. Transitive via @lenne.tech/nest-server>@getbrevo/
+  # brevo and >node-mailjet. 1.18.1 is the patched release (>=1.18.0), aligned
+  # with nest-server's own override.
+  axios: 1.18.1
 
   # Security: Multiple CVEs <4.12.18 (Prototype Pollution, bodyLimit bypass,
   # JSX tag injection, CSS Declaration Injection, Vary header bypass, JWT
@@ -99,15 +102,14 @@ overrides:
   # >@apollo/protobufjs>@protobufjs/utf8.
   '@protobufjs/utf8': 1.1.1
 
-  # Security: Large numeric range defeats brace-expansion DoS protection
-  # (>=5.0.0 <5.0.6). Transitive via ts-morph>@ts-morph/common>minimatch@10
-  # (requires ^5.0.2, so without override could install vulnerable 5.0.2-5.0.5).
-  'brace-expansion@>=5.0.0 <5.0.6': 5.0.6
-  # Older brace-expansion lines kept defensively (prior CVEs):
-  # <1.1.13 via fork-ts-checker-webpack-plugin>minimatch@3
-  'brace-expansion@<1.1.13': 1.1.14
-  # >=2.0.0 <2.0.3 via @swc/cli>minimatch@9
-  'brace-expansion@>=2.0.0 <2.0.3': 2.1.0
+  # Security: brace-expansion RegExp DoS via exponential-time expansion (high).
+  # A newer advisory raised the patched floors across all major lines, so the
+  # earlier pins (1.1.14 / 2.1.0 / 5.0.6) are no longer sufficient. Patched:
+  # >=1.1.16 (1.x), >=2.1.2 (2.x), >=5.0.7 (5.x). Transitive via minimatch under
+  # ts-morph@10, @swc/cli@9 and fork-ts-checker-webpack-plugin@3.
+  'brace-expansion@>=5.0.0 <5.0.7': 5.0.7
+  'brace-expansion@<1.1.16': 1.1.16
+  'brace-expansion@>=2.0.0 <2.1.2': 2.1.2
 
   # Security: CRLF injection via unescaped multipart field names/filenames in
   # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
