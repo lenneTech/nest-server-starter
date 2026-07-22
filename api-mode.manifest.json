@@ -13,8 +13,11 @@
         "extras/update-spectaql-version.mjs",
         "scripts/run-spectaql.mjs"
       ],
-      "scripts": ["docs", "docs:bootstrap", "docs:ci", "copy:spectaql"],
+      "scripts": ["docs", "docs:bootstrap", "docs:ci", "copy:spectaql", "spectaql:sync"],
       "scriptEdits": {
+        "check:fix": { "remove": " && pnpm run spectaql:sync" },
+        "check:naf": { "remove": " && pnpm run spectaql:sync" },
+        "check:raw": { "remove": " && pnpm run spectaql:sync" },
         "copy": { "remove": " && pnpm run copy:spectaql" }
       }
     },

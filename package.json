@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.32.0",
+  "version": "11.32.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -105,7 +105,7 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.32.0",
+    "@lenne.tech/nest-server": "11.32.1",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@nestjs/graphql": "13.4.2",
@@ -120,7 +120,7 @@
     "express": "5.2.1",
     "graphql-subscriptions": "3.0.0",
     "graphql-upload": "15.0.2",
-    "mongoose": "9.7.4",
+    "mongoose": "9.8.0",
     "multer": "2.2.0"
   },
   "devDependencies": {

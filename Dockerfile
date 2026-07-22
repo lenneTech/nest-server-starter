@@ -89,6 +89,14 @@ ENV APP_VERSION_COMMIT=$APP_VERSION_COMMIT
 # Non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
+# tini as PID 1. Without a real init, node itself becomes PID 1 — and a PID-namespace init is
+# SIGNAL_UNKILLABLE, so a default-disposition signal sent from userspace is silently discarded by
+# the kernel. The listening HTTP server keeps the event loop busy, so `docker stop` then waits out
+# its whole grace period and SIGKILLs: in-flight requests dropped, every onModuleDestroy() skipped.
+# tini forwards signals properly and reaps orphans. (`server.enableShutdownHooks()` in main.ts is
+# the other half — it is what actually drains the loop.)
+RUN apk add --no-cache tini
+
 # Create writable directories for runtime files (TUS uploads, GraphQL schema)
 RUN mkdir -p /app/uploads && chown -R nodejs:nodejs /app
 
@@ -101,4 +109,4 @@ COPY --chown=nodejs:nodejs --chmod=755 ./${API_DIR}/docker-entrypoint.sh /app/do
 
 USER nodejs
 EXPOSE 3000
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
+ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]

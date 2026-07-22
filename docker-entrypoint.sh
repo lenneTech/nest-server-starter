@@ -46,5 +46,26 @@ else
   echo "[entrypoint] migrate CLI not present in image — skipping migrations."
 fi
 
+# The entry point differs by build layout, and guessing wrong yields a bare MODULE_NOT_FOUND plus a
+# healthcheck timeout — an expensive way to learn about a path. This project's tsconfig spans
+# migrations/ too, so it emits dist/src/main.js; a standalone nest-server build emits dist/main.js.
+if [ -z "$SERVER_CMD" ]; then
+  if [ -f "$DIST/src/main.js" ]; then
+    SERVER_CMD="node $DIST/src/main.js"
+  elif [ -f "$DIST/main.js" ]; then
+    SERVER_CMD="node $DIST/main.js"
+  else
+    echo "[entrypoint] ERROR: no server entry point found ($DIST/src/main.js or $DIST/main.js)."
+    exit 1
+  fi
+fi
+
+# NOTE: no NODE_OPTIONS=--max-old-space-size here, and that is DELIBERATE.
+# Node sizes its default heap from the cgroup memory limit (uv_get_constrained_memory) — but only
+# while the flag is UNSET. Pinning a literal disables that auto-sizing, so on a memory-limited
+# container the cgroup OOM-killer (SIGKILL, exit 137, no stacktrace) fires before V8's own graceful
+# "JavaScript heap out of memory" FATAL. Declare a memory limit on the service instead and let Node
+# derive from it; if you ever genuinely need a ceiling, compute it (~75% of the limit).
+
 echo "[entrypoint] Starting server..."
-exec ${SERVER_CMD:-node "$DIST/src/main.js"}
+exec $SERVER_CMD
