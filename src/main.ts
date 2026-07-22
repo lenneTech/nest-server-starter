@@ -4,7 +4,9 @@ import {
   CorePersistenceModel,
   CoreUserModel,
   FilterArgs,
+  handleFatalBootstrapError,
   HttpExceptionLogFilter,
+  installProcessDiagnostics,
   isCookiesEnabled,
   isCorsDisabled,
 } from '@lenne.tech/nest-server';
@@ -29,6 +31,11 @@ import { ServerModule } from './server/server.module';
  * Preparations for server start
  */
 async function bootstrap() {
+  // Make the exit reason diagnosable: log unhandled rejections without crashing, log uncaught
+  // exceptions before the restart, and label external termination signals so a silent
+  // "app crashed" always has a reason. See process-diagnostics.ts for the rationale.
+  installProcessDiagnostics();
+
   // Create a new server based on express
   const server = await NestFactory.create<NestExpressApplication>(
     // Include server module, with all necessary modules for the project
@@ -108,9 +115,20 @@ async function bootstrap() {
   // Set global prefix (if server runs in subdirectory, e.g. /api)
   // server.setGlobalPrefix('api');
 
+  // Drain the event loop on SIGTERM/SIGINT so the process actually exits.
+  //
+  // This is load-bearing in a container, where `docker-entrypoint.sh` runs node under `exec` and it
+  // therefore becomes PID 1. A PID-namespace init is SIGNAL_UNKILLABLE: a userspace signal whose
+  // disposition is the default is silently discarded by the kernel, so re-raising is a no-op there.
+  // Meanwhile the listening HTTP server keeps the event loop non-empty, so nothing exits on its own
+  // and `docker stop` waits out its full grace period before SIGKILL — dropping in-flight requests
+  // and skipping every onModuleDestroy(). enableShutdownHooks() is what closes the app and drains
+  // the loop; installProcessDiagnostics() then correctly defers to it instead of re-raising.
+  server.enableShutdownHooks();
+
   // Start server on configured port
   await server.listen(envConfig.port, envConfig.hostname);
-  console.debug(`Server startet at ${await server.getUrl()}`);
+  console.debug(`Server started at ${await server.getUrl()}`);
 
   // Run command after server init
   if (envConfig.execAfterInit) {
@@ -128,5 +146,7 @@ async function bootstrap() {
   }
 }
 
-// Start server
-bootstrap();
+// Start server. A rejection here is a fatal startup failure (e.g. port already in use, DB
+// unreachable) — surface it and exit rather than let it become a silent unhandledRejection
+// that leaves a zombie process "alive" but listening on nothing.
+bootstrap().catch(handleFatalBootstrapError);

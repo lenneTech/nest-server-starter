@@ -178,10 +178,20 @@ function deployedConfig(
       ? {
           brevo: {
             apiKey: process.env.BREVO_API_KEY,
+            // The SDK would otherwise retry twice, honouring Retry-After with a 60 s cap PER
+            // attempt and no timeout at all — and sendMail() is awaited inside request handlers
+            // (e.g. the BetterAuth email-verification hook), so a rate-limited Brevo could park a
+            // user-facing request for ~2 minutes. The framework defaults to 0/10; raise them here
+            // only if you deliberately want SDK-level retrying.
+            maxRetries: Number(process.env.BREVO_MAX_RETRIES ?? 0),
             sender: {
               email: process.env.EMAIL_DEFAULT_SENDER || 'noreply@example.com',
               name: process.env.EMAIL_DEFAULT_SENDER_NAME || brand,
             },
+            // A failed send resolves to `null` rather than throwing. Set this to true on
+            // security-critical delivery paths where the caller must not proceed silently.
+            throwOnError: process.env.BREVO_THROW_ON_ERROR === 'true',
+            timeoutInSeconds: Number(process.env.BREVO_TIMEOUT_SECONDS ?? 10),
           },
         }
       : {}),

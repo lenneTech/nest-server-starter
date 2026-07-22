@@ -77,11 +77,6 @@ overrides:
   # Pinned to 14.0.0 (latest, also patched). API used (uuid.v4) is stable 8-14.
   uuid: 14.0.0
 
-  # Security: Path traversal via percent-encoded dot segments
-  # (GHSA-q3j6-qgpj-74h6) and host confusion via percent-encoded authority
-  # delimiters (GHSA-v39h-62p7-jpjc) in fast-uri <=3.1.1. Transitive via
-  # @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core>ajv>fast-uri.
-  fast-uri: 3.1.2
 
   # Security: Remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26,
   # >=6.11.1 <=6.15.1). Transitive via @apollo/server>body-parser>qs and
@@ -96,6 +91,51 @@ overrides:
   # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — bump
   # to the patched 7.5.11 so the deprecated lib keeps its expected major.
   'ws@>=7.0.0 <7.5.11': 7.5.11
+
+  # Security: @hono/node-server path traversal in the static-file handler
+  # (GHSA-frvp-7c67-39w9, patched >=2.0.5) plus an unauthenticated memory leak
+  # in the 2.x line itself (GHSA-9mqv-5hh9-4cgg, patched >=2.0.10); both moderate.
+  # Transitive via @lenne.tech/nest-server>@modelcontextprotocol/sdk, which
+  # declares ^1.19.9 and ships NO 1.x fix line — so this is deliberately a
+  # CROSS-MAJOR override. Verified safe upstream: the SDK's only consumed symbol
+  # is `getRequestListener`, unchanged in 2.x as `(fetchCallback, options?)`;
+  # engines >=20 and peer hono@^4 both fit.
+  # NOTE: pnpm `overrides:` are NOT inherited from a dependency, so nest-server's
+  # own copy of this entry does nothing here — see
+  # node_modules/@lenne.tech/nest-server/docs/security-overrides.md.
+  # Drop once @modelcontextprotocol/sdk moves its own range to ^2.
+  '@hono/node-server@<2.0.10': 2.0.11
+
+  # Security: 3x Hono, all moderate, all patched >=4.12.27 — GHSA-xgm2-5f3f-mvvc
+  # (API-Gateway adapter), GHSA-hvrm-45r6-mjfj (jsx request-context bleed),
+  # GHSA-w62v-xxxg-mg59 (cx() XSS bypass). Transitive via
+  # @lenne.tech/nest-server>@modelcontextprotocol/sdk.
+  # Target is the LATEST 4.x, not the minimum patch: an override is a hard PIN,
+  # not a floor, so targeting 4.12.27 would hold the package back from every
+  # later patch. Re-point or drop once the SDK requests >=4.12.27 itself.
+  'hono@>=4.0.0 <4.12.27': 4.12.31
+
+  # Security: fast-uri — FOUR advisories, all covered by 3.1.4:
+  #   <=3.1.1  path traversal via percent-encoded dot segments (GHSA-q3j6-qgpj-74h6)
+  #   <=3.1.1  host confusion via percent-encoded authority delimiters (GHSA-v39h-62p7-jpjc)
+  #   <3.1.3   host confusion via failed IDN canonicalization (GHSA-4c8g-83qw-93j6, high)
+  #   <=3.1.3  host confusion via literal backslash delimiter (GHSA-v2hh-gcrm-f6hx, high)
+  # Transitive via @compodoc/compodoc>@angular-devkit/*>ajv>fast-uri and
+  # @lenne.tech/nest-server>@modelcontextprotocol/sdk>ajv.
+  #
+  # This REPLACES an earlier unqualified `fast-uri: 3.1.2` entry. That one fixed the first two
+  # advisories and then became a DOWNGRADE-LOCK: an unqualified key matches every version and
+  # pins it, so when the two 2026 advisories landed it actively held the package on a vulnerable
+  # 3.1.2 — and, being unqualified, it silently overruled the bounded entry added next to it.
+  # Keep the key bounded so it can only ever raise a vulnerable version, never cap a patched one.
+  # Drop once ajv / ajv-formats request >=3.1.4 themselves.
+  'fast-uri@>=3.0.0 <3.1.4': 3.1.4
+
+  # Security: body-parser DoS on malformed urlencoded input
+  # (GHSA-v422-hmwv-36x6, low, patched >=2.3.0). Transitive via
+  # @lenne.tech/nest-server>@as-integrations/express5 and express itself.
+  # Drop once express / @apollo/server request >=2.3.0.
+  'body-parser@>=2.0.0 <2.3.0': 2.3.0
 
   # Security: Overlong UTF-8 decoding in @protobufjs/utf8 <=1.1.0. Transitive
   # via @lenne.tech/nest-server>@apollo/server>@apollo/usage-reporting-protobuf
