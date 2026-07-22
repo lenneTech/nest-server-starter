@@ -10,7 +10,7 @@ export default defineConfig({
       adapter: 'nest',
       appPath: './src/main.ts',
       exportName: 'viteNodeApp',
-      tsCompiler: 'esbuild',
+      tsCompiler: 'swc',
     }),
   ],
   optimizeDeps: {
