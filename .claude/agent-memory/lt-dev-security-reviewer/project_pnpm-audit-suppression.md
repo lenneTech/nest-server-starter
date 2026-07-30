@@ -36,5 +36,7 @@ Traps verified 2026-07-30 (re-verify, these move):
 - **Version-pinned `minimumReleaseAgeExclude` entries**: the file's comment says they were not
   honored on pnpm 11.1.3 (pnpm issue #10361). pnpm 11.13.1 (the pinned `packageManager`) shipped
   fixes #12463 / fbdc0eb that make them work, so that comment is now outdated.
-- **`format:check` only covers `src/`**, so reformatting under `tests/` slips past CI even when
-  `oxfmt --check` would reject it. Project formatter is `singleQuote: true` (`.oxfmtrc.jsonc`).
+- **`format` / `format:check` now cover `src/` AND `tests/`** (changed in 11.32.4; they were `src/`
+  only, so reformatting under `tests/` used to slip past CI even when `oxfmt --check` would reject
+  it). Project formatter is `singleQuote: true` (`.oxfmtrc.jsonc`). Note `.claude/` is outside both
+  paths, so agent-memory Markdown is NOT formatter-checked here.

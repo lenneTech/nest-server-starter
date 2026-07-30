@@ -9,12 +9,15 @@ Comments in this repo's `Dockerfile` and `.dockerignore` routinely assert things
 image builds *inside an lt-monorepo*. None of that is verifiable from this repo alone. The
 authoritative sources live in a sibling repo:
 
-- `/Users/kaihaase/code/lenneTech/lt-monorepo/.dockerignore` — the ignore file that is actually
-  consulted in monorepo builds (uses `**/` prefixed patterns).
-- `/Users/kaihaase/code/lenneTech/lt-monorepo/docker-compose.yml` — shows `context: .` (monorepo
-  root) plus `API_DIR: projects/api` for the api service, which is what makes this repo's own
-  `.dockerignore` inert in monorepo mode.
-- `/Users/kaihaase/code/lenneTech/lt-monorepo/.gitlab-ci.yml` — CI build context.
+The authority is the `lt-monorepo` repository (github.com/lenneTech/lt-monorepo), checked out as a
+sibling directory in an lt working setup — do not hardcode a machine path, this repo is cloned into
+every customer project:
+
+- `lt-monorepo/.dockerignore` — the ignore file that is actually consulted in monorepo builds (uses
+  `**/` prefixed patterns).
+- `lt-monorepo/docker-compose.yml` — shows `context: .` (monorepo root) plus `API_DIR: projects/api`
+  for the api service, which is what makes this repo's own `.dockerignore` inert in monorepo mode.
+- `lt-monorepo/.gitlab-ci.yml` — CI build context.
 
 Useful local checks in this repo:
 - `pnpm why <pkg>` is authoritative for "which paths remain vulnerable"; `node_modules/.pnpm/`
