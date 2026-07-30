@@ -122,7 +122,7 @@ docker build --build-arg API_DIR=projects/api -t api .
 
 **Key files:**
 - `Dockerfile` — 3-stage build (deps → build → production runner), Node 24 Alpine pinned by digest, non-root user, `HEALTHCHECK` on `/health-check`
-- `docker-entrypoint.sh` — Runs database migrations before server start via `migrate up`
+- `docker-entrypoint.sh` — Runs database migrations before server start via `migrate up`. A **failed** migration follows `MIGRATE_FAILURE_POLICY`: `warn` (default — start anyway) or `abort` (refuse to start). Prefer `abort` in production; a missing migration step never blocks the start either way
 - `.dockerignore` — Keeps build context lean
 
 **Environment:** The migration store reads MongoDB URI from `NSC__MONGOOSE__URI` env var (not `config.env.ts`), so it works in Docker production where TypeScript source is not available.

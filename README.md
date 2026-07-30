@@ -134,6 +134,12 @@ docker build --build-arg API_DIR=projects/api -t api .
 
 The migration store reads the MongoDB URI from the `NSC__MONGOOSE__URI` environment variable, so it works in Docker production where `config.env.ts` is not available as TypeScript source.
 
+| Variable | Default | Effect |
+|----------|---------|--------|
+| `MIGRATE_FAILURE_POLICY` | `warn` | What a **failed** migration does. `warn` starts the server anyway (the historical behaviour). `abort` refuses the start, so the container never serves against a possibly half-applied schema. A missing migration step — nothing bundled, no CLI in the image — never blocks the start under either value. |
+
+Which one is right depends on the service: `abort` turns a broken migration into a failed deploy you notice immediately, `warn` keeps an availability-first service up at the price of serving a stale or partial schema. Set it per stage — `abort` in production is the safer default, and it is what `@lenne.tech/nest-server`'s own entrypoint uses.
+
 ## Debugging
 
 Configuration for debugging is:

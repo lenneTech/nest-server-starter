@@ -1,15 +1,21 @@
 /**
  * Unit test for docker-entrypoint.sh — the API container entrypoint.
  *
- * The entrypoint runs DB migrations BEST-EFFORT and must NEVER let the migration step
- * crash-loop the container. Regression guard for the "migrate: not found" / crash-loop
- * bug that blocked the first deploy, and for the silent skip that made migrations never
- * run at all (nothing bundled / CLI looked up in the wrong layout).
+ * A MISSING migration step must never crash-loop the container. Regression guard for the
+ * "migrate: not found" / crash-loop bug that blocked the first deploy, and for the silent
+ * skip that made migrations never run at all (nothing bundled / CLI looked up in the wrong
+ * layout).
  *
- * The script exposes three test seams that default to the real container values:
- *   APP_DIST     compiled output directory
- *   MIGRATE_BIN  path to the npm-mode migrate CLI
- *   SERVER_CMD   command used to start the server (stubbed here with an echo marker)
+ * A FAILED migration follows MIGRATE_FAILURE_POLICY: `warn` (the default kept by this
+ * template — start the server anyway) or `abort` (refuse to start). Both paths are
+ * asserted, because the default is the one that lets a broken schema reach traffic and
+ * therefore must never change by accident.
+ *
+ * The script exposes four test seams that default to the real container values:
+ *   APP_DIST                compiled output directory
+ *   MIGRATE_BIN             path to the npm-mode migrate CLI
+ *   SERVER_CMD              command used to start the server (stubbed here with an echo marker)
+ *   MIGRATE_FAILURE_POLICY  `warn` (default) or `abort`
  */
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -35,7 +41,7 @@ function writeStub(path: string, body: string): void {
   chmodSync(path, 0o755);
 }
 
-describe('docker-entrypoint.sh (best-effort migrations)', () => {
+describe('docker-entrypoint.sh (migrations before server start)', () => {
   let dir: string;
   /** A dist layout that contains one compiled migration. */
   let dist: string;
@@ -74,6 +80,47 @@ describe('docker-entrypoint.sh (best-effort migrations)', () => {
     const stdout = runEntrypoint({ APP_DIST: dist, MIGRATE_BIN: bin });
     expect(stdout).toContain('WARNING: migration step failed');
     expect(stdout).toContain('[entrypoint] Starting server...');
+    expect(stdout).toContain(SERVER_MARKER);
+  });
+
+  it('refuses to start after a failed migration under MIGRATE_FAILURE_POLICY=abort', () => {
+    const bin = join(dir, 'migrate');
+    writeStub(bin, '#!/bin/sh\nexit 1\n');
+
+    // execFileSync throws on a non-zero exit — that IS the assertion. Its stdout still
+    // carries what the entrypoint printed before it gave up.
+    let error: { status?: number; stdout?: string } | undefined;
+    try {
+      runEntrypoint({ APP_DIST: dist, MIGRATE_BIN: bin, MIGRATE_FAILURE_POLICY: 'abort' });
+    } catch (e) {
+      error = e as { status?: number; stdout?: string };
+    }
+
+    expect(error?.status).toBe(1);
+    expect(error?.stdout).toContain('refusing to start against a possibly half-applied schema');
+    // The point of the policy: the server must NOT have been reached.
+    expect(error?.stdout).not.toContain(SERVER_MARKER);
+  });
+
+  it('starts the server normally under abort when the migration succeeds', () => {
+    const bin = join(dir, 'migrate');
+    writeStub(bin, '#!/bin/sh\nexit 0\n');
+
+    const stdout = runEntrypoint({ APP_DIST: dist, MIGRATE_BIN: bin, MIGRATE_FAILURE_POLICY: 'abort' });
+    expect(stdout).toContain('[entrypoint] Migrations applied.');
+    expect(stdout).toContain(SERVER_MARKER);
+  });
+
+  it('falls back to warn on an unknown policy value, and says so up front', () => {
+    const bin = join(dir, 'migrate');
+    writeStub(bin, '#!/bin/sh\nexit 1\n');
+
+    // A typo'd `abort` must not silently behave like the strict setting the operator
+    // asked for — nor fail the boot. It degrades to warn and reports the typo before
+    // the migration runs, so it is visible even when nothing fails.
+    const stdout = runEntrypoint({ APP_DIST: dist, MIGRATE_BIN: bin, MIGRATE_FAILURE_POLICY: 'abrot' });
+    expect(stdout).toContain("unknown MIGRATE_FAILURE_POLICY 'abrot' — using 'warn'");
+    expect(stdout).toContain('WARNING: migration step failed');
     expect(stdout).toContain(SERVER_MARKER);
   });
 
