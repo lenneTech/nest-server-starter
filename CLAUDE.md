@@ -121,7 +121,7 @@ docker build --build-arg API_DIR=projects/api -t api .
 ```
 
 **Key files:**
-- `Dockerfile` — 3-stage build (deps → build → production runner), pinned Node 22 Alpine, non-root user
+- `Dockerfile` — 3-stage build (deps → build → production runner), Node 24 Alpine pinned by digest, non-root user, `HEALTHCHECK` on `/health-check`
 - `docker-entrypoint.sh` — Runs database migrations before server start via `migrate up`
 - `.dockerignore` — Keeps build context lean
 

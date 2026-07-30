@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import fs = require('fs');
 import { MongoClient, ObjectId } from 'mongodb';
+import os = require('os');
 import path = require('path');
 
 import envConfig from '../../src/config.env';
@@ -38,6 +39,9 @@ describe('File Module REST (e2e)', () => {
   let fileInfo: FileInfo;
   let fileContent: string;
 
+  // Per-run private directory for upload fixtures (see beforeAll)
+  let fixtureDir: string;
+
   // ===================================================================================================================
   // Preparations
   // ===================================================================================================================
@@ -48,10 +52,7 @@ describe('File Module REST (e2e)', () => {
   beforeAll(async () => {
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [
-          ...imports,
-          ServerModule,
-        ],
+        imports: [...imports, ServerModule],
         providers: [
           {
             provide: 'PUB_SUB',
@@ -69,6 +70,14 @@ describe('File Module REST (e2e)', () => {
       // Connection to database
       connection = await MongoClient.connect(envConfig.mongoose.uri);
       db = await connection.db();
+
+      // Upload fixtures need a real path on disk (TestHelper takes file paths, not
+      // buffers). They must not live next to this spec: the cleanup below is skipped
+      // whenever an upload throws, and every such run left a stray .txt in the source
+      // tree. mkdtemp gives each run its own 0700 directory, so concurrent runs — the
+      // e2e run governor allows several machine-wide — cannot collide on a fixed name,
+      // and no other user can pre-create a symlink at the fixture path.
+      fixtureDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'nss-file-rest-'));
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -88,6 +97,12 @@ describe('File Module REST (e2e)', () => {
         }
       }
     }
+    // Remove the fixture directory. Unlike the previous inline unlink this also runs
+    // when a test threw, so a failed run cannot leave fixtures behind.
+    if (fixtureDir) {
+      await fs.promises.rm(fixtureDir, { force: true, recursive: true });
+    }
+
     await connection.close();
     await app.close();
   });
@@ -103,7 +118,7 @@ describe('File Module REST (e2e)', () => {
     const userCount = 2;
     for (let i = 0; i < userCount; i++) {
       const random = Math.random().toString(36).substring(7);
-      const password = `${random  }P1!`;
+      const password = `${random}P1!`;
       const input = {
         email: `${random}@testusers.com`,
         name: `Test${random}`,
@@ -120,9 +135,10 @@ describe('File Module REST (e2e)', () => {
 
       expect(res).toBeDefined();
 
-      // Get user from database
+      // Get user from database. findOne returns null when nothing matches, and
+      // toBeDefined() would pass on null — assert not-null instead.
       const user = await db.collection('users').findOne({ email: input.email });
-      expect(user).toBeDefined();
+      expect(user).not.toBeNull();
 
       users.push({
         email: input.email,
@@ -132,10 +148,9 @@ describe('File Module REST (e2e)', () => {
       });
 
       // Verify user in database
-      await db.collection('users').updateOne(
-        { _id: new ObjectId(user._id) },
-        { $set: { emailVerified: true, verified: true } },
-      );
+      await db
+        .collection('users')
+        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
   });
@@ -178,19 +193,16 @@ describe('File Module REST (e2e)', () => {
     const filename = `${Math.random().toString(36).substring(7)}.txt`;
     fileContent = 'Hello REST';
 
-    // Set paths
-    const local = path.join(__dirname, filename);
+    // Set paths (fixtureDir is per-run and removed in afterAll, so no unlink here)
+    const local = path.join(fixtureDir, filename);
 
-    // Write and send file
-    await fs.promises.writeFile(local, fileContent);
+    // Write and send file. Flag 'wx' fails instead of following a pre-existing symlink.
+    await fs.promises.writeFile(local, fileContent, { flag: 'wx' });
     const res = await testHelper.rest('/files/upload', {
       attachments: { file: local },
       cookies: users[0].token,
       statusCode: 201,
     });
-
-    // Remove file
-    await fs.promises.unlink(local);
 
     // Test response
     expect(res.id.length).toBeGreaterThan(0);
@@ -220,6 +232,62 @@ describe('File Module REST (e2e)', () => {
   it('getRESTFileInfo', async () => {
     const res = await testHelper.rest(`/files/info/${fileInfo.id}`, { cookies: users[0].token });
     expect(res).toEqual(null);
+  });
+
+  // ===================================================================================================================
+  // Permission tests
+  //
+  // The admin endpoints are guarded by @Roles(RoleEnum.ADMIN) (file.controller.ts).
+  // users[0] was promoted to ADMIN in prepareUsers; users[1] stays a plain user, so
+  // it is the least-privilege probe. Without these the suite only ever exercised the
+  // happy path as an admin and would not notice a dropped guard.
+  // ===================================================================================================================
+
+  describe('permissions', () => {
+    // A syntactically valid id that does not exist — the guard must reject before the
+    // handler ever looks it up, so the response must not depend on the id existing.
+    const foreignId = '000000000000000000000000';
+    let probeFile: string;
+
+    beforeAll(async () => {
+      // The attachment has to exist on disk for the request to be built at all;
+      // the point of these tests is that it must never be stored.
+      probeFile = path.join(fixtureDir, 'permission-probe.txt');
+      await fs.promises.writeFile(probeFile, 'must not be stored', { flag: 'wx' });
+    });
+
+    it('rejects upload without authentication', async () => {
+      await testHelper.rest('/files/upload', {
+        attachments: { file: probeFile },
+        method: 'POST',
+        statusCode: 401,
+      });
+    });
+
+    it('rejects upload for a non-admin user', async () => {
+      await testHelper.rest('/files/upload', {
+        attachments: { file: probeFile },
+        cookies: users[1].token,
+        method: 'POST',
+        statusCode: 403,
+      });
+    });
+
+    it('rejects file info without authentication', async () => {
+      await testHelper.rest(`/files/info/${foreignId}`, { statusCode: 401 });
+    });
+
+    it('rejects file info for a non-admin user', async () => {
+      await testHelper.rest(`/files/info/${foreignId}`, { cookies: users[1].token, statusCode: 403 });
+    });
+
+    it('rejects delete for a non-admin user', async () => {
+      await testHelper.rest(`/files/${foreignId}`, {
+        cookies: users[1].token,
+        method: 'DELETE',
+        statusCode: 403,
+      });
+    });
   });
 
   // ===================================================================================================================

@@ -1,8 +1,4 @@
-import {
-  HttpExceptionLogFilter,
-  RoleEnum,
-  TestHelper,
-} from '@lenne.tech/nest-server';
+import { HttpExceptionLogFilter, RoleEnum, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import { MongoClient, ObjectId } from 'mongodb';
@@ -47,10 +43,7 @@ describe('Project (e2e)', () => {
   beforeAll(async () => {
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [
-          ...imports,
-          ServerModule,
-        ],
+        imports: [...imports, ServerModule],
         providers: [
           {
             provide: 'PUB_SUB',
@@ -92,10 +85,10 @@ describe('Project (e2e)', () => {
     const userCount = 5;
     const random = Math.random().toString(36).substring(7);
     for (let i = 0; i < userCount; i++) {
-      const password = `${random + i  }P1!`;
+      const password = `${random + i}P1!`;
       const input = {
         email: `${random + i}@testusers.com`,
-        name: `Test${'0'.repeat((`${userCount}`).length - (`${i}`).length)}${i}${random}`,
+        name: `Test${'0'.repeat(`${userCount}`.length - `${i}`.length)}${i}${random}`,
         password: hashPassword(password),
         termsAndPrivacyAccepted: true,
       };
@@ -121,10 +114,9 @@ describe('Project (e2e)', () => {
       });
 
       // Verify user in database
-      await db.collection('users').updateOne(
-        { _id: new ObjectId(user._id) },
-        { $set: { emailVerified: true, verified: true } },
-      );
+      await db
+        .collection('users')
+        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
   });

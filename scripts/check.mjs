@@ -26,7 +26,7 @@
  * lt-dev `running-check-script` skill relies on: non-zero === failed).
  */
 import { execSync, spawn } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -168,13 +168,30 @@ async function runAudit(auditCmd) {
   const cmd = /(^|\s)--json(\s|$)/.test(auditCmd) ? auditCmd : `${auditCmd} --json`;
   const { code, out } = await capture(cmd, ROOT);
   let counts = null;
+  let ignored = 0;
   try {
-    counts = JSON.parse(out.slice(out.indexOf("{")))?.metadata?.vulnerabilities ?? null;
+    const parsed = JSON.parse(out.slice(out.indexOf("{")));
+    // `metadata.vulnerabilities` is the RAW tally — pnpm deliberately leaves it
+    // unfiltered so it can report "(N ignored)" separately. `advisories` is the
+    // filtered set, i.e. what `auditConfig.ignoreGhsas` did NOT suppress.
+    // Reporting the raw tally would print a green check next to "high 1", which
+    // reads as an unaddressed finding and trains the reader to ignore the number.
+    const raw = parsed?.metadata?.vulnerabilities ?? null;
+    const advisories = Object.values(parsed?.advisories ?? {});
+    if (raw) {
+      counts = { critical: 0, high: 0, info: 0, low: 0, moderate: 0 };
+      for (const advisory of advisories) {
+        if (advisory?.severity in counts) {
+          counts[advisory.severity] += 1;
+        }
+      }
+      ignored = Math.max(0, SEVERITIES.reduce((n, s) => n + (raw[s] || 0), 0) - advisories.length);
+    }
   } catch {
     /* fall through to raw reason */
   }
   const total = counts ? SEVERITIES.reduce((n, s) => n + (counts[s] || 0), 0) : 0;
-  return { auditCmd, blocking: code !== 0, counts, reason: counts ? null : out, total };
+  return { auditCmd, blocking: code !== 0, counts, ignored, reason: counts ? null : out, total };
 }
 
 // ── command runner ─────────────────────────────────────────────────────────
@@ -586,18 +603,18 @@ async function main() {
     if (audit.blocking) {
       liveCount = 0; // the failure line must survive — nothing may overwrite it
       const summary = audit.counts
-        ? `${audit.total} vuln (${renderVulnLine(audit.counts)})`
+        ? `${audit.total} vuln (${renderVulnLine(audit.counts, audit.ignored)})`
         : "failed";
       console.log(`${C.red("✗")} audit  ${C.red(summary)} ${C.dim(`(${fmtDuration(dur)})`)}`);
       return fail(
         `audit (${auditCmd})`,
-        audit.counts ? renderVulnLine(audit.counts) : audit.reason,
+        audit.counts ? renderVulnLine(audit.counts, audit.ignored) : audit.reason,
         started,
       );
     }
     if (!TTY) {
       process.stdout.write(
-        `  ${C.green("✓")} audit  ${audit.counts ? renderVulnLine(audit.counts) : C.dim("0")} ${C.dim(`(${fmtDuration(dur)})`)}\n`,
+        `  ${C.green("✓")} audit  ${audit.counts ? renderVulnLine(audit.counts, audit.ignored) : C.dim("0")} ${C.dim(`(${fmtDuration(dur)})`)}\n`,
       );
     }
     // TTY success: NO permanent line — the live status view overwrites the audit
@@ -633,13 +650,16 @@ async function main() {
 }
 
 // ── rendering helpers ─────────────────────────────────────────────────────────
-function renderVulnLine(counts) {
-  return SEVERITIES.map((s) => {
+function renderVulnLine(counts, ignored = 0) {
+  const line = SEVERITIES.map((s) => {
     const n = counts[s] || 0;
     const txt = `${s} ${n}`;
     if (n > 0 && (s === "critical" || s === "high")) return C.red(txt);
     return n > 0 ? C.yellow(txt) : C.dim(txt);
   }).join(C.dim(" · "));
+  // Never hide a suppression: a silently filtered advisory is indistinguishable
+  // from one that never existed, which is exactly what makes `ignoreGhsas` risky.
+  return ignored > 0 ? `${line}${C.dim(" · ")}${C.yellow(`${ignored} ignored`)}` : line;
 }
 
 function metricSuffix(r) {
@@ -712,7 +732,7 @@ function report(started, results) {
     `\n${C.bold("Vulnerabilities")} ${C.dim(audit ? `(${audit.auditCmd})` : "(no audit step)")}`,
   );
   console.log(
-    `  ${audit?.counts ? renderVulnLine(audit.counts) : C.dim(audit ? "counts unavailable" : "—")}`,
+    `  ${audit?.counts ? renderVulnLine(audit.counts, audit.ignored) : C.dim(audit ? "counts unavailable" : "—")}`,
   );
 
   console.log(`\n${C.bold("Tests")}`);
@@ -738,7 +758,34 @@ function report(started, results) {
   console.log(`\n${C.green("All checks passed.")}\n`);
 }
 
-main().catch((err) => {
-  console.error(C.red(`\ncheck.mjs crashed: ${err?.stack || err}`));
-  process.exit(1);
-});
+// Run only when invoked as the CLI (`node scripts/check.mjs`). Without this gate,
+// merely IMPORTING this module — which a unit test wanting to assert one of its pure
+// helpers would do — kicks off a full check run as a side effect: the suite then
+// installs, builds and boots a server instead of returning, and in CI that is a
+// timeout with no diagnosis. Kept in sync with the nuxt-base-template copy.
+function isCliEntry() {
+  const entry = process.argv[1];
+  // No argv[1] means node was started WITHOUT a script path (`node -e "…"`, which is
+  // how a test imports this module). That is not a "cannot tell" — `node
+  // scripts/check.mjs` always sets argv[1] — so it is safe to answer "not the entry".
+  // Exiting here instead would kill every legitimate importer, including a test
+  // runner, which is a worse failure than the theoretical wrapper it would protect.
+  if (!entry) return false;
+  try {
+    // `realpathSync` on both sides so a symlinked entry still matches.
+    return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
+  } catch (err) {
+    // "Cannot tell" must never be reported as "everything passed".
+    process.stderr.write(
+      `[check] cannot resolve the CLI entry (${err?.code || err}) — refusing to report success\n`,
+    );
+    process.exit(1);
+  }
+}
+
+if (isCliEntry()) {
+  main().catch((err) => {
+    console.error(C.red(`\ncheck.mjs crashed: ${err?.stack || err}`));
+    process.exit(1);
+  });
+}

@@ -2,6 +2,84 @@
 shamefullyHoist: true
 strictPeerDependencies: false
 
+# ----------------------------------------------------------------------------------
+# Accepted, individually justified advisories.
+#
+# This list exists so `pnpm audit` — and with it `pnpm run check` — can exit 0 without
+# a blanket escape hatch (a non-blocking CI job, or people learning to skip a
+# permanently red check). An entry here suppresses exactly ONE advisory, so anything
+# new still turns the audit red.
+#
+# Rules for adding one — all FOUR, or do not add it:
+#   1. name the advisory,
+#   2. state why it is here: either the dependency provably cannot be fixed, OR the
+#      code IS fixed and the advisory is a false positive (an upstream range that was
+#      never narrowed). Those are different claims — do not blur them.
+#   3. say why the residual risk is acceptable,
+#   4. date the verification.
+# Exhaust the fix first — see the `overrides` below, where the same advisory IS closed
+# for every path that can be moved.
+#
+# The full policy, including the ignoreGhsas scoping trap and how to verify a patch
+# claim at a package's `main` entry point, lives in /SECURITY.md.
+#
+# NOTE on the report line: `pnpm audit` COUNTS ignored advisories in its summary, so it
+# prints "1 high (1 ignored)" and still exits 0. The count is informational; the exit
+# code is the gate. Do not chase the number to zero by widening this list.
+# ----------------------------------------------------------------------------------
+auditConfig:
+  ignoreGhsas:
+    # brace-expansion DoS via unbounded expansion — GHSA-mh99-v99m-4gvg /
+    # CVE-2026-14257 (HIGH).
+    #
+    # FALSE POSITIVE, not an accepted vulnerability. The fix was backported across
+    # every release line, and the `overrides` below pin a patched release on each.
+    # Measured at each package's `main` entry point:
+    #   1.1.16 vulnerable → 1.1.17+ patched      (pinned: 1.1.17)
+    #   2.1.2  vulnerable → 2.1.4  patched       (pinned: 2.1.4)
+    #   5.0.7  vulnerable → 5.0.8  patched       (pinned: 5.0.8)
+    # Note 1.1.16 and 2.1.2 SHIP a stray `dist/` that does contain the fix, but their
+    # `main` points at the unpatched root `index.js` — grep the whole package and you
+    # will conclude they are patched when they are not.
+    #
+    # It still fires because GitHub's advisory range is a blanket `<= 5.0.7` with
+    # `first_patched: 5.0.8` — a single range across ALL majors, never narrowed for the
+    # backports. So the installed 1.1.17 matches `<= 5.0.7` as a semver range and gets
+    # flagged despite carrying the fix.
+    #
+    # Why some paths stay on the old lines at all: two consumers are stuck on
+    # minimatch@3 —
+    #   @nestjs/cli > fork-ts-checker-webpack-plugin > minimatch > brace-expansion
+    #   standard-version > dotgitignore > minimatch > brace-expansion
+    # they `require('minimatch')` and call the result, while brace-expansion@5 and
+    # minimatch@10 export a namespace object instead of a callable, so lifting either
+    # throws at require time. The 1.x backport is what closes those.
+    #
+    # Residual: none from this advisory — every path carries the fix.
+    #
+    # SCOPE WARNING, and the reason this entry needs re-checking rather than trusting:
+    # `ignoreGhsas` is keyed on the GHSA id ALONE. pnpm applies no package, version or
+    # path filter, so this line hides the advisory EVERYWHERE in the graph,
+    # permanently — not just on the two dev-only paths reasoned about above.
+    #
+    # That matters because brace-expansion is NOT dev-only here. It has a live
+    # production path:
+    #   @lenne.tech/nest-server > ts-morph > @ts-morph/common > minimatch > brace-expansion
+    # `ts-morph` is a prod `dependencies` entry of nest-server (not a devDep), so this
+    # ships in the production image. It is patched today (brace-expansion@5.0.8) only
+    # because the minimatch override below lifts it onto the 5.x line. If a future
+    # nest-server bump moves it back onto a vulnerable line, `pnpm audit` — and with it
+    # `pnpm run check` — stays GREEN while a HIGH advisory ships.
+    #
+    # So after every @lenne.tech/nest-server bump, re-run:
+    #   pnpm list --prod --depth Infinity | grep -A1 minimatch
+    # and confirm the resolved brace-expansion is still on a patched release before
+    # trusting a green audit.
+    #
+    # Re-verify when the upstream range is narrowed — then delete this entry.
+    # Verified 2026-07-30.
+    - GHSA-mh99-v99m-4gvg
+
 # pnpm 11 configuration
 #
 # NOTE: As of pnpm 11 the "pnpm.overrides" and "pnpm.onlyBuiltDependencies"
@@ -142,14 +220,79 @@ overrides:
   # >@apollo/protobufjs>@protobufjs/utf8.
   '@protobufjs/utf8': 1.1.1
 
-  # Security: brace-expansion RegExp DoS via exponential-time expansion (high).
-  # A newer advisory raised the patched floors across all major lines, so the
-  # earlier pins (1.1.14 / 2.1.0 / 5.0.6) are no longer sufficient. Patched:
-  # >=1.1.16 (1.x), >=2.1.2 (2.x), >=5.0.7 (5.x). Transitive via minimatch under
-  # ts-morph@10, @swc/cli@9 and fork-ts-checker-webpack-plugin@3.
-  'brace-expansion@>=5.0.0 <5.0.7': 5.0.7
-  'brace-expansion@<1.1.16': 1.1.16
-  'brace-expansion@>=2.0.0 <2.1.2': 2.1.2
+  # Security: brace-expansion DoS via unbounded expansion (GHSA-mh99-v99m-4gvg /
+  # CVE-2026-14257, high). The fix was backported to EVERY release line, so all three
+  # pins below land on patched code — this used to say "patched only in 5.0.8, no
+  # 1.x/2.x backport", which was wrong and left two lines pinned short of the fix.
+  #
+  # Patch status measured at each package's `main` entry point:
+  #   1.1.16 vulnerable → 1.1.17, 1.1.18 patched
+  #   2.1.2  vulnerable → 2.1.4        patched
+  #   5.0.7  vulnerable → 5.0.8, 5.0.9 patched
+  # CAUTION when re-verifying: 1.1.16 and 2.1.2 ship a stray `dist/` that DOES contain
+  # the fix while `main` points at the unpatched root `index.js`. Grepping the whole
+  # package says "patched"; only the entry point tells the truth.
+  #
+  # Which line a path gets is decided by its `minimatch`, so that is the real lever:
+  #   minimatch@10 -> brace-expansion@5
+  #   minimatch@9  -> brace-expansion@2
+  #   minimatch@3  -> brace-expansion@1
+  # See the `minimatch` override below, which lifts every 9.x consumer onto 10.x. The
+  # 1.x line cannot be lifted (its consumers call the require() result, and 5.x exports
+  # a namespace object) — which is exactly why the 1.x backport matters.
+  #
+  # Targets are the NEWEST patched release that also clears the minimumReleaseAge gate
+  # (see bottom of this file) — not the minimum that merely clears the advisory,
+  # because an override is a hard PIN and would hold the package back (the `hono` rule
+  # above), and not the absolute latest either, because a release younger than the
+  # cutoff fails `pnpm install` with ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION.
+  # Concretely on 2026-07-30: 1.1.18 and 5.0.9 exist and are patched, but were
+  # published ~10h earlier and trip the gate; 1.1.17 (2026-07-29) and 5.0.8
+  # (2026-07-23) are equally patched and pass. Taking the newer ones would have forced
+  # a standing `minimumReleaseAgeExclude` exemption to paper over the age gate —
+  # exactly the trade the policy at the bottom of this file tells us not to make.
+  # When bumping these, check `npm view <pkg> time` against the cutoff first.
+  #
+  # The `>=3.0.0` lower bound also sweeps in 3.x/4.x. Those are ESM-only
+  # (`type: module`), so lifting them to 5.x (dual ESM+CJS) is a widening, not a break.
+  # Nothing in the tree uses them today.
+  'brace-expansion@>=3.0.0 <5.0.8': 5.0.8
+  'brace-expansion@<1.1.17': 1.1.17
+  # Matches nothing today (the minimatch 9 -> 10 lift removed the only 2.x consumer),
+  # and is kept deliberately: the advisory is suppressed repo-wide via ignoreGhsas at
+  # the top of this file, so a 2.x path reappearing later would NOT turn the audit red.
+  # This pin is what keeps that silent case patched. Cheap insurance — do not tidy away.
+  'brace-expansion@>=2.0.0 <2.1.4': 2.1.4
+
+  # Security: lifts every minimatch 9.x consumer onto 10.x so it inherits the PATCHED
+  # brace-expansion 5.x. 10.2.6 REQUESTS ^5.0.8 itself, so the fix arrives through the
+  # dependency graph rather than only via the companion brace-expansion override.
+  # Closes the @swc/cli paths.
+  #
+  # THE LOWER BOUND OF 9.0.0 IS LOAD-BEARING — do not widen it. Verified 2026-07-30 by
+  # requiring each published major:
+  #   minimatch@3.1.5   typeof 'function'  callable
+  #   minimatch@5.1.6   typeof 'function'  callable
+  #   minimatch@7.4.6   typeof 'function'  callable
+  #   minimatch@8.0.4   typeof 'function'  callable
+  #   minimatch@9.0.9   typeof 'object'    NOT callable
+  #   minimatch@10.2.6  typeof 'object'    NOT callable
+  # The namespace-object shape starts at 9, so 9 -> 10 is shape-preserving and safe.
+  # Majors 5-8 are callable exactly like the 3.x deliberately excluded below; lifting
+  # them to 10 would throw `TypeError: minimatch is not a function` at require time —
+  # inside a Docker build or CI job, not on a developer machine. This bound used to
+  # read `>=5.0.0`, which covered them.
+  #
+  # minimatch@3 is deliberately NOT touched: its consumers (dotgitignore,
+  # fork-ts-checker-webpack-plugin) DO call it as a callable and would throw.
+  'minimatch@>=9.0.0 <10.2.6': 10.2.6
+
+  # Security: postcss <=8.5.17 (GHSA-r28c-9q8g-f849, high), patched >=8.5.18.
+  # Dev/test only: the dominant path is this project's own `vitest` devDependency
+  # (vitest > @vitest/mocker > vite > postcss). A secondary path runs through
+  # better-auth > vitest, but that peer is optional and pruned by `--prod`, so no
+  # postcss reaches the production image either way.
+  'postcss@<8.5.25': 8.5.25
 
   # Security: CRLF injection via unescaped multipart field names/filenames in
   # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
@@ -218,6 +361,14 @@ allowBuilds:
 # '@lenne.tech/nest-server@11.26.1' was present yet still tripped
 # ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION. The bare name IS honored and also
 # drops the per-bump maintenance: freshly published releases are always allowed.
+#
+# WATCH OUT: `pnpm audit --fix` (which `pnpm run check:fix` runs) auto-appends entries
+# here in exactly the `name@version` form this note warns against. Those are
+# machine-written, not decisions — delete them again rather than leaving them. They
+# read as permanent policy when they really mean "one package was fresh on the day
+# someone ran --fix", and they decay into no-ops once the version clears the cutoff,
+# which is why nobody notices they were wrong. If an override target trips the gate,
+# pin a slightly older PATCHED release instead of adding an exemption here.
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
   - '@lenne.tech/nest-server'

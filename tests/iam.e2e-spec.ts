@@ -162,10 +162,9 @@ describe('Auth Integration (e2e)', () => {
         statusCode: 201,
       });
       const user = await db.collection('users').findOne({ email });
-      await db.collection('users').updateOne(
-        { _id: new ObjectId(user._id) },
-        { $set: { emailVerified: true, verified: true } },
-      );
+      await db
+        .collection('users')
+        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
 
       const res = await testHelper.rest('/iam/sign-in/email', {
         method: 'POST',
@@ -196,7 +195,7 @@ describe('Auth Integration (e2e)', () => {
 
   describe('UserA: IAM registration → IAM login → IAM logout', () => {
     it('should sign up via IAM', async () => {
-      userAPassword = `${Math.random().toString(36).substring(7)  }A1!`;
+      userAPassword = `${Math.random().toString(36).substring(7)}A1!`;
       userAEmail = generateTestEmail('usera');
 
       const res = await testHelper.rest('/iam/sign-up/email', {
@@ -222,10 +221,9 @@ describe('Auth Integration (e2e)', () => {
       }
 
       // Verify email for BetterAuth
-      await db.collection('users').updateOne(
-        { _id: new ObjectId(userAId) },
-        { $set: { emailVerified: true, verified: true } },
-      );
+      await db
+        .collection('users')
+        .updateOne({ _id: new ObjectId(userAId) }, { $set: { emailVerified: true, verified: true } });
 
       // Assign a real role so the 11.26.1 roles-exposure fix can be asserted on
       // sign-in/session below. Match by email (robust regardless of the
@@ -303,7 +301,7 @@ describe('Auth Integration (e2e)', () => {
 
   describe('UserB: IAM registration → Session verification', () => {
     it('should sign up via IAM', async () => {
-      userBPassword = `${Math.random().toString(36).substring(7)  }B2!`;
+      userBPassword = `${Math.random().toString(36).substring(7)}B2!`;
       userBEmail = generateTestEmail('userb');
 
       const res = await testHelper.rest('/iam/sign-up/email', {
@@ -328,10 +326,9 @@ describe('Auth Integration (e2e)', () => {
       }
 
       // Verify email for BetterAuth
-      await db.collection('users').updateOne(
-        { _id: new ObjectId(userBId) },
-        { $set: { emailVerified: true, verified: true } },
-      );
+      await db
+        .collection('users')
+        .updateOne({ _id: new ObjectId(userBId) }, { $set: { emailVerified: true, verified: true } });
     });
 
     it('should sign in and receive session via IAM', async () => {

@@ -1,7 +1,4 @@
-import {
-  HttpExceptionLogFilter,
-  TestHelper,
-} from '@lenne.tech/nest-server';
+import { HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PubSub } from 'graphql-subscriptions';
 
@@ -24,10 +21,7 @@ describe('Common GraphQL (e2e)', () => {
     try {
       // Start server for testing
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [
-          ...imports,
-          ServerModule,
-        ],
+        imports: [...imports, ServerModule],
         providers: [
           {
             provide: 'PUB_SUB',

@@ -92,7 +92,10 @@ describe('docker-entrypoint.sh (best-effort migrations)', () => {
   it('falls back to the vendored dist/bin/migrate.js when no npm CLI exists', () => {
     mkdirSync(join(dist, 'bin'), { recursive: true });
     // `node <file> up …` — the shim just echoes what it received.
-    writeFileSync(join(dist, 'bin', 'migrate.js'), 'console.log("__VENDOR_MIGRATE_RAN__", process.argv.slice(2).join(" "));\n');
+    writeFileSync(
+      join(dist, 'bin', 'migrate.js'),
+      'console.log("__VENDOR_MIGRATE_RAN__", process.argv.slice(2).join(" "));\n',
+    );
 
     const stdout = runEntrypoint({ APP_DIST: dist, MIGRATE_BIN: '/nonexistent/migrate' });
     expect(stdout).toContain('__VENDOR_MIGRATE_RAN__ up');

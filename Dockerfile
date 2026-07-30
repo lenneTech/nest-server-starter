@@ -17,13 +17,46 @@ RUN apk add --no-cache python3 make g++
 # Copy all manifests for dependency resolution.
 # In monorepo mode pnpm needs workspace config + all project manifests;
 # copying everything and then installing is the simplest cross-mode approach.
+#
+# `patches/` is copied too, but ONLY as provision for downstream projects: this
+# starter declares no `patchedDependencies` and ships no `patches/` directory. A
+# project generated from this template may add both, and pnpm reads the patch files
+# during install — without them `pnpm install --frozen-lockfile` dies with
+# `ENOENT: … patches/<pkg>.patch` inside the Docker build, long after the test suite
+# reported green. The `[ ! -d ] ||` guard below keeps "absent" a normal case while
+# still letting a real I/O error fail the build.
+#
+# KNOWN TRADE-OFF — `COPY . /tmp/src` costs the dependency-layer cache. COPY is its own
+# layer, keyed on the content of every non-ignored context file, so editing one line in
+# src/ invalidates it and re-runs `pnpm install` AND the native bcrypt compile below.
+# The manifest extraction controls what lands in /app, not what the cache key depends on,
+# so it buys correctness across both modes but no caching.
+# The clean fix is a manifest-only copy:
+#   # syntax=docker/dockerfile:1.7-labs
+#   COPY --parents package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc \
+#        */package.json */*/package.json patches* /app/
+# Deliberately NOT applied here: `--parents` requires pinning a *labs* Dockerfile
+# frontend, which this template would then fetch over the network on every build in every
+# downstream project — an unstable, remotely-resolved build dependency is a worse default
+# for a template than a cold dependency layer. Revisit once `--parents` reaches the
+# stable frontend. Note the `.dockerignore` additions (`uploads`, `.lt-dev`) already
+# remove the most frequent trigger: `.lt-dev` gets a log line per served request, so any
+# local dev session used to invalidate this layer.
+#
+# `set -e` is deliberate. The previous form chained `cmd || true` between every copy;
+# because `&&` and `||` are left-associative at equal precedence, each `|| true`
+# reset the status of everything to its left, so the RUN's exit code was that of the
+# final `rm` alone. A failing `find` — the load-bearing step — was swallowed and only
+# surfaced two layers later as `Cannot find module './package.json'`.
 COPY . /tmp/src
-RUN find /tmp/src -maxdepth 3 -name "package.json" -not -path "*/node_modules/*" \
-      -exec sh -c 'dir=$(dirname "$1" | sed "s|^/tmp/src|.|"); mkdir -p "/app/$dir"; cp "$1" "/app/$dir/"' _ {} \; \
-    && cp -f /tmp/src/pnpm-lock.yaml /app/ 2>/dev/null || true \
-    && cp -f /tmp/src/pnpm-workspace.yaml /app/ 2>/dev/null || true \
-    && cp -f /tmp/src/.npmrc /app/ 2>/dev/null || true \
-    && rm -rf /tmp/src
+RUN set -e; \
+    find /tmp/src -maxdepth 3 -name "package.json" -not -path "*/node_modules/*" \
+      -exec sh -c 'dir=$(dirname "$1" | sed "s|^/tmp/src|.|"); mkdir -p "/app/$dir"; cp "$1" "/app/$dir/"' _ {} \; ; \
+    for f in pnpm-lock.yaml pnpm-workspace.yaml .npmrc; do \
+      [ ! -f "/tmp/src/$f" ] || cp -f "/tmp/src/$f" /app/; \
+    done; \
+    [ ! -d /tmp/src/patches ] || cp -rf /tmp/src/patches /app/; \
+    rm -rf /tmp/src
 
 # Provision the exact pnpm declared in package.json (single source of truth).
 # No corepack: Node >= 25 no longer ships it. The +sha512 suffix is stripped;
@@ -109,4 +142,14 @@ COPY --chown=nodejs:nodejs --chmod=755 ./${API_DIR}/docker-entrypoint.sh /app/do
 
 USER nodejs
 EXPOSE 3000
+
+# Health signal for a plain `docker run` / swarm deploy. The lt-monorepo compose file
+# defines an equivalent probe at the orchestrator layer, but a standalone container
+# had none — it reported "up" as soon as the process existed, even if Nest never
+# finished booting or lost its Mongo connection.
+# 127.0.0.1 rather than localhost: on dual-stack the latter can resolve to ::1 while
+# the server listens on IPv4 only. No curl in the base image, so probe via node.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/health-check').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 ENTRYPOINT ["/sbin/tini", "--", "/app/docker-entrypoint.sh"]

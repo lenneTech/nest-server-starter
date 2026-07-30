@@ -1,10 +1,11 @@
-import { HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
+import { ErrorCode, HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import fs = require('fs');
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
 import { Db, MongoClient, ObjectId } from 'mongodb';
+import os = require('os');
 import path = require('path');
 
 import envConfig from '../../src/config.env';
@@ -76,6 +77,9 @@ describe('File Module GraphQL (e2e)', () => {
   // TUS test data
   let tusTestFile: { content: string; filename: string; gridFsId: string };
 
+  // Per-run private directory for upload fixtures (see beforeAll)
+  let fixtureDir: string;
+
   // ===================================================================================================================
   // TUS Helper Functions
   // ===================================================================================================================
@@ -139,7 +143,7 @@ describe('File Module GraphQL (e2e)', () => {
       if (file) {
         return file;
       }
-      await new Promise(resolve => setTimeout(resolve, GRIDFS_MIGRATION_INTERVAL));
+      await new Promise((resolve) => setTimeout(resolve, GRIDFS_MIGRATION_INTERVAL));
     }
 
     return null;
@@ -158,8 +162,10 @@ describe('File Module GraphQL (e2e)', () => {
     const { response: patchResponse } = await patchTusUpload(location, content);
     expect(patchResponse.status).toBe(204);
 
+    // waitForGridFsMigration returns null on timeout, and toBeDefined() would pass
+    // on null — assert not-null so a failed migration actually fails the test.
     const gridFsFile = await waitForGridFsMigration(filename);
-    expect(gridFsFile).toBeDefined();
+    expect(gridFsFile).not.toBeNull();
 
     return {
       filename,
@@ -178,10 +184,7 @@ describe('File Module GraphQL (e2e)', () => {
   beforeAll(async () => {
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [
-          ...imports,
-          ServerModule,
-        ],
+        imports: [...imports, ServerModule],
         providers: [
           {
             provide: 'PUB_SUB',
@@ -210,6 +213,14 @@ describe('File Module GraphQL (e2e)', () => {
       // Connection to database
       connection = await MongoClient.connect(envConfig.mongoose.uri);
       db = connection.db();
+
+      // Upload fixtures need a real path on disk (TestHelper takes file paths, not
+      // buffers). They must not live next to this spec: the cleanup below is skipped
+      // whenever an upload throws, and every such run left a stray .txt in the source
+      // tree. mkdtemp gives each run its own 0700 directory, so concurrent runs — the
+      // e2e run governor allows several machine-wide — cannot collide on the fixed
+      // names test1.txt / test2.txt, and no other user can pre-create a symlink there.
+      fixtureDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'nss-file-gql-'));
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -241,6 +252,12 @@ describe('File Module GraphQL (e2e)', () => {
       }
     }
 
+    // Remove the fixture directory. Unlike the previous inline unlinks this also runs
+    // when a test threw, so a failed run cannot leave fixtures behind.
+    if (fixtureDir) {
+      await fs.promises.rm(fixtureDir, { force: true, recursive: true });
+    }
+
     await connection.close();
     await app.close();
   });
@@ -256,7 +273,7 @@ describe('File Module GraphQL (e2e)', () => {
     const userCount = 2;
     for (let i = 0; i < userCount; i++) {
       const random = Math.random().toString(36).substring(7);
-      const password = `${random  }P1!`;
+      const password = `${random}P1!`;
       const input = {
         email: `${random}@testusers.com`,
         name: `Test${random}`,
@@ -273,9 +290,10 @@ describe('File Module GraphQL (e2e)', () => {
 
       expect(res).toBeDefined();
 
-      // Get user from database
+      // Get user from database. findOne returns null when nothing matches, and
+      // toBeDefined() would pass on null — assert not-null instead.
       const user = await db.collection('users').findOne({ email: input.email });
-      expect(user).toBeDefined();
+      expect(user).not.toBeNull();
 
       users.push({
         email: input.email,
@@ -285,10 +303,9 @@ describe('File Module GraphQL (e2e)', () => {
       });
 
       // Verify user in database
-      await db.collection('users').updateOne(
-        { _id: new ObjectId(user._id) },
-        { $set: { emailVerified: true, verified: true } },
-      );
+      await db
+        .collection('users')
+        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
   });
@@ -331,11 +348,11 @@ describe('File Module GraphQL (e2e)', () => {
     const filename = `${Math.random().toString(36).substring(7)}.txt`;
     fileContent = 'Hello GraphQL';
 
-    // Set paths
-    const local = path.join(__dirname, filename);
+    // Set paths (fixtureDir is per-run and removed in afterAll, so no unlink here)
+    const local = path.join(fixtureDir, filename);
 
-    // Write and send file
-    await fs.promises.writeFile(local, fileContent);
+    // Write and send file. Flag 'wx' fails instead of following a pre-existing symlink.
+    await fs.promises.writeFile(local, fileContent, { flag: 'wx' });
     const res: any = await testHelper.graphQl(
       {
         arguments: { file: new VariableType('file') },
@@ -346,9 +363,6 @@ describe('File Module GraphQL (e2e)', () => {
       },
       { cookies: users[0].token, variables: { file: { type: 'attachment', value: local } } },
     );
-
-    // Remove file
-    await fs.promises.unlink(local);
 
     // Test response
     expect(res.id.length).toBeGreaterThan(0);
@@ -405,13 +419,14 @@ describe('File Module GraphQL (e2e)', () => {
   });
 
   it('uploadFilesViaGraphQL', async () => {
-    // Set paths
-    const local1 = path.join(__dirname, 'test1.txt');
-    const local2 = path.join(__dirname, 'test2.txt');
+    // Set paths. The basenames stay fixed because the assertions below check them;
+    // fixtureDir is what makes them unique per run (see beforeAll).
+    const local1 = path.join(fixtureDir, 'test1.txt');
+    const local2 = path.join(fixtureDir, 'test2.txt');
 
-    // Write and send files
-    await fs.promises.writeFile(local1, 'Hello GraphQL 1');
-    await fs.promises.writeFile(local2, 'Hello GraphQL 2');
+    // Write and send files. Flag 'wx' fails instead of following a pre-existing symlink.
+    await fs.promises.writeFile(local1, 'Hello GraphQL 1', { flag: 'wx' });
+    await fs.promises.writeFile(local2, 'Hello GraphQL 2', { flag: 'wx' });
     const res: any = await testHelper.graphQl(
       {
         arguments: { files: new VariableType('files') },
@@ -423,10 +438,6 @@ describe('File Module GraphQL (e2e)', () => {
       { cookies: users[0].token, variables: { files: { type: 'attachment', value: [local1, local2] } } },
     );
 
-    // Remove local files
-    await fs.promises.unlink(local1);
-    await fs.promises.unlink(local2);
-
     // Test response - should return array of file info
     expect(Array.isArray(res)).toBe(true);
     expect(res.length).toBe(2);
@@ -435,11 +446,12 @@ describe('File Module GraphQL (e2e)', () => {
     expect(res[1].id).toBeDefined();
     expect(res[1].filename).toBe('test2.txt');
 
-    // Verify files exist in GridFS
+    // Verify files exist in GridFS. findOne returns null when nothing matches, and
+    // toBeDefined() would pass on null — assert the filename so the check has teeth.
     const file1 = await db.collection('fs.files').findOne({ _id: new ObjectId(res[0].id) });
-    expect(file1).toBeDefined();
+    expect(file1?.filename).toBe('test1.txt');
     const file2 = await db.collection('fs.files').findOne({ _id: new ObjectId(res[1].id) });
-    expect(file2).toBeDefined();
+    expect(file2?.filename).toBe('test2.txt');
 
     // Clean up - delete files from GridFS
     for (const file of res) {
@@ -476,6 +488,66 @@ describe('File Module GraphQL (e2e)', () => {
       expect(res.filename).toBe(tusTestFile.filename);
       expect(res.contentType).toBe('text/plain');
       expect(res.length).toBe(Buffer.byteLength(tusTestFile.content));
+    });
+  });
+
+  // ===================================================================================================================
+  // Permission tests
+  //
+  // Every file resolver is guarded by @Roles(RoleEnum.ADMIN) (file.resolver.ts).
+  // users[0] was promoted to ADMIN in prepareUsers; users[1] is still a plain user and
+  // serves as the least-privilege probe. These must run BEFORE deleteUsers, which
+  // promotes the last user to admin.
+  // ===================================================================================================================
+
+  describe('permissions', () => {
+    // getFileInfo is declared `nullable: true`, and TestHelper unwraps a nullable
+    // query field to its value — so a denied call arrives here as plain `null` and the
+    // GraphQL `errors` array is not observable through the helper. These two tests
+    // therefore assert the security property differentially: the very same query
+    // returns data for the admin and null for everyone else. The error shape itself is
+    // covered by the deleteFile mutation below, which is non-nullable and does surface
+    // `errors`.
+    function infoQuery() {
+      return {
+        arguments: { filename: tusTestFile.filename },
+        fields: ['id', 'filename'],
+        name: 'getFileInfo',
+        type: TestGraphQLType.QUERY,
+      };
+    }
+
+    it('denies getFileInfo to a non-admin user', async () => {
+      const asAdmin: any = await testHelper.graphQl(infoQuery(), { cookies: users[0].token });
+      expect(asAdmin.filename).toBe(tusTestFile.filename);
+
+      const asUser: any = await testHelper.graphQl(infoQuery(), { cookies: users[1].token });
+      expect(asUser).toEqual(null);
+    });
+
+    it('denies getFileInfo to an unauthenticated caller', async () => {
+      const anonymous: any = await testHelper.graphQl(infoQuery());
+      expect(anonymous).toEqual(null);
+    });
+
+    it('denies deleteFile to a non-admin user', async () => {
+      const res: any = await testHelper.graphQl(
+        {
+          arguments: { filename: tusTestFile.filename },
+          fields: ['id'],
+          name: 'deleteFile',
+          type: TestGraphQLType.MUTATION,
+        },
+        { cookies: users[1].token, statusCode: 200 },
+      );
+
+      expect(res.errors.length).toBeGreaterThanOrEqual(1);
+      expect(res.errors[0].extensions.originalError.statusCode).toEqual(403);
+      expect(res.errors[0].message).toEqual(ErrorCode.ACCESS_DENIED);
+
+      // The file must still be there — a denied mutation must not have side effects.
+      const stillThere = await db.collection('fs.files').findOne({ _id: new ObjectId(tusTestFile.gridFsId) });
+      expect(stillThere).not.toBeNull();
     });
   });
 

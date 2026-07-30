@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.32.3",
+  "version": "11.32.4",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -59,8 +59,8 @@
     "docs": "pnpm run docs:ci && open http://127.0.0.1:8080/ && open ./public/index.html && compodoc -p tsconfig.json -s",
     "docs:bootstrap": "node extras/update-spectaql-version.mjs && node scripts/run-spectaql.mjs",
     "docs:ci": "ts-node ./scripts/init-server.ts && pnpm run docs:bootstrap && compodoc -p tsconfig.json",
-    "format": "oxfmt --write src/",
-    "format:check": "oxfmt --check src/",
+    "format": "oxfmt --write src/ tests/",
+    "format:check": "oxfmt --check src/ tests/",
     "link:nest-server": "pnpm link ${NEST_SERVER_PATH:-../nest-server}",
     "lint": "oxlint --ignore-path .oxlintignore src/ tests/",
     "lint:fix": "oxlint --fix --fix-suggestions --ignore-path .oxlintignore src/ tests/",
@@ -105,7 +105,7 @@
     "vitest:unit:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@lenne.tech/nest-server": "11.32.3",
+    "@lenne.tech/nest-server": "11.32.4",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@nestjs/graphql": "13.4.2",

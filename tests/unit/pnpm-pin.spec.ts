@@ -87,7 +87,7 @@ describe('pnpm pin (packageManager as single source of truth)', () => {
   });
 
   it('Dockerfile provisions pnpm via the derive-line in every pnpm-running stage', () => {
-    const deriveLines = dockerfile.split('\n').filter(line => line.includes(DERIVE_EXPRESSION));
+    const deriveLines = dockerfile.split('\n').filter((line) => line.includes(DERIVE_EXPRESSION));
     // Stage 1 (deps) and stage 2 (builder) run pnpm; the runner stage does not.
     expect(deriveLines).toHaveLength(2);
     for (const line of deriveLines) {
@@ -116,7 +116,9 @@ describe('pnpm pin (packageManager as single source of truth)', () => {
       const prefix = mkdtempSync(join(tmpdir(), 'pnpm-pin-'));
       try {
         execFileSync('npm', ['install', '-g', '--prefix', prefix, derived], { encoding: 'utf-8', stdio: 'pipe' });
-        const version = execFileSync(process.execPath, [join(prefix, 'bin', 'pnpm'), '--version'], { encoding: 'utf-8' }).trim();
+        const version = execFileSync(process.execPath, [join(prefix, 'bin', 'pnpm'), '--version'], {
+          encoding: 'utf-8',
+        }).trim();
         expect(`pnpm@${version}`).toBe(derived);
       } finally {
         rmSync(prefix, { force: true, recursive: true });

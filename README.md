@@ -128,7 +128,7 @@ docker build --build-arg API_DIR=projects/api -t api .
 |------|---------|
 | `Dockerfile` | Multi-stage production build |
 | `docker-entrypoint.sh` | Runs DB migrations before server start |
-| `.dockerignore` | Excludes node_modules, dist, tests, etc. from build context |
+| `.dockerignore` | Excludes node_modules, dist, tests, key material, `.env*`, and local runtime state (`uploads` — the TUS staging dir holding real user documents — plus `.lt-dev`) from the build context. Inert in an lt-monorepo: see the file's header. |
 
 ### Environment
 

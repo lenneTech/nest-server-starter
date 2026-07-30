@@ -1,3 +1,19 @@
+# Patterns match the full path RELATIVE TO THE BUILD CONTEXT ROOT, and `*` does not
+# cross `/`. So a bare name matches only at the root — unlike `.gitignore`, where a
+# slash-free pattern matches at every depth. (Explicit depth patterns are valid, e.g.
+# `projects/api/uploads`; what a bare name cannot do is reach depth implicitly.)
+# The bare names below are therefore correct for the STANDALONE build this file
+# serves: context = this repo root, single package, no nested copies.
+#
+# In an lt-monorepo this file is INERT. `lt fullstack init` places this project at
+# `projects/api/`, and both images build with the monorepo root as context — BuildKit
+# looks for `<dockerfile-path>.dockerignore` first and then `<context>/.dockerignore`,
+# neither of which is this file. Put rules in the monorepo's `/.dockerignore` (see
+# lt-monorepo), in `**/` form. Note the trap: renaming this file to
+# `Dockerfile.dockerignore` WOULD revive it, but its bare patterns would then anchor
+# at the MONOREPO root — `tests` would target `<monorepo>/tests`, not this project's.
+# Inert is the safer of the two failure modes; do not "fix" it that way.
+
 # Dependencies
 node_modules
 .pnpm-store
@@ -16,13 +32,41 @@ dist
 *.swo
 
 # Environment
-.env
-.env.*
+# `.env*` rather than `.env` + `.env.*`: also covers `.envrc` (direnv) and `.env-local`,
+# matching lt-monorepo's `**/.env*`.
+.env*
+
+# Key material — none of these exist today; excluded pre-emptively because this file
+# is a template and the cost of finding out the hard way is a key in an image layer.
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+
+# NOT excluded, deliberately: `.npmrc`. Its own header declares it the auth/registry
+# file, and the deps stage copies it into /app, so excluding it would silently drop
+# registry auth. It never reaches the final image (stage 3 copies only dist/ and the
+# pruned node_modules) — but a token WOULD land in the `deps` layer, which survives in
+# the local builder cache and in any exported BuildKit cache. If this project ever
+# needs real registry auth, use `--secret id=npmrc` instead of committing a token.
 
 # Logs
 *.log
+# Rotated too: `*.log` only matches a name ENDING in `.log`, so `api.log.1` from
+# a rotating logger would sail past it.
+*.log.*
 npm-debug.log*
 .pnpm-debug.log*
+
+# Runtime state — written while the server runs locally, never read by a build.
+# `uploads` is the TUS staging directory, i.e. real user documents (it is in
+# .gitignore for the same reason, which also means it never shows up in
+# `git status` to remind anyone it is sitting in the build context).
+uploads
+# `lt dev`'s directory: detached server logs + scratch state. The API logs every
+# request it serves into it.
+.lt-dev
 
 # Testing
 tests

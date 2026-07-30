@@ -1,7 +1,4 @@
-import {
-  HttpExceptionLogFilter,
-  TestHelper,
-} from '@lenne.tech/nest-server';
+import { HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
@@ -53,10 +50,7 @@ describe('User Module REST (e2e)', () => {
     try {
       // Start server for testing
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [
-          ...imports,
-          ServerModule,
-        ],
+        imports: [...imports, ServerModule],
         providers: [
           {
             provide: 'PUB_SUB',
@@ -128,7 +122,7 @@ describe('User Module REST (e2e)', () => {
   it('REST: prepare user for testing', async () => {
     // Create new admin user for REST tests via IAM
     const random = Math.random().toString(36).substring(7);
-    const password = `${random  }R1!`;
+    const password = `${random}R1!`;
     const email = `rest-${random}@rest-test.com`;
 
     await testHelper.rest('/iam/sign-up/email', {
@@ -147,10 +141,12 @@ describe('User Module REST (e2e)', () => {
     gRestPrepareUserId = user._id.toString();
 
     // Set admin role and verify email
-    await db.collection('users').updateOne(
-      { _id: new ObjectId(gRestPrepareUserId) },
-      { $set: { emailVerified: true, roles: ['admin'], verified: true } },
-    );
+    await db
+      .collection('users')
+      .updateOne(
+        { _id: new ObjectId(gRestPrepareUserId) },
+        { $set: { emailVerified: true, roles: ['admin'], verified: true } },
+      );
 
     // Sign in to get session token
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
@@ -184,7 +180,7 @@ describe('User Module REST (e2e)', () => {
       email: `${random}@rest-test.com`,
       firstName: 'RestTest',
       lastName: 'User',
-      password: `${random  }P1!`,
+      password: `${random}P1!`,
     };
 
     const res = await testHelper.rest('/users', {

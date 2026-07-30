@@ -60,10 +60,7 @@ describe('User Module GraphQL (e2e)', () => {
     try {
       // Start server for testing
       const moduleFixture: TestingModule = await Test.createTestingModule({
-        imports: [
-          ...imports,
-          ServerModule,
-        ],
+        imports: [...imports, ServerModule],
         providers: [
           {
             provide: 'PUB_SUB',
@@ -131,7 +128,7 @@ describe('User Module GraphQL (e2e)', () => {
    */
   it('IAM: signUp', async () => {
     const random = Math.random().toString(36).substring(7);
-    gPassword = `${random  }A1!`;
+    gPassword = `${random}A1!`;
     gEmail = `user-${random}@testuser.com`;
 
     const res = await testHelper.rest('/iam/sign-up/email', {
@@ -153,10 +150,9 @@ describe('User Module GraphQL (e2e)', () => {
     gId = user._id.toString();
 
     // Verify email for BetterAuth
-    await db.collection('users').updateOne(
-      { _id: new ObjectId(gId) },
-      { $set: { emailVerified: true, verified: true } },
-    );
+    await db
+      .collection('users')
+      .updateOne({ _id: new ObjectId(gId) }, { $set: { emailVerified: true, verified: true } });
   });
 
   /**

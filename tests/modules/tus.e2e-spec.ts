@@ -189,7 +189,7 @@ describe('TUS Module (e2e)', () => {
       if (file) {
         return file;
       }
-      await new Promise(resolve => setTimeout(resolve, GRIDFS_MIGRATION_INTERVAL));
+      await new Promise((resolve) => setTimeout(resolve, GRIDFS_MIGRATION_INTERVAL));
     }
 
     return null;
@@ -263,9 +263,7 @@ describe('TUS Module (e2e)', () => {
     try {
       const moduleFixture: TestingModule = await Test.createTestingModule({
         imports: [...imports, ServerModule],
-        providers: [
-          { provide: 'PUB_SUB', useValue: { publish: async () => {} } },
-        ],
+        providers: [{ provide: 'PUB_SUB', useValue: { publish: async () => {} } }],
       }).compile();
 
       app = moduleFixture.createNestApplication();
@@ -332,7 +330,7 @@ describe('TUS Module (e2e)', () => {
 
     for (let i = 0; i < userCount; i++) {
       const random = Math.random().toString(36).substring(7);
-      const password = `${random  }P1!`;
+      const password = `${random}P1!`;
       const input = {
         email: `${random}@testusers.com`,
         name: `Test${random}`,
@@ -361,10 +359,9 @@ describe('TUS Module (e2e)', () => {
       });
 
       // Verify user in database
-      await db.collection('users').updateOne(
-        { _id: new ObjectId(user._id) },
-        { $set: { emailVerified: true, verified: true } },
-      );
+      await db
+        .collection('users')
+        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
     }
 
     expect(users.length).toBeGreaterThanOrEqual(userCount);
@@ -389,10 +386,9 @@ describe('TUS Module (e2e)', () => {
   });
 
   it('prepareUsers', async () => {
-    await db.collection('users').findOneAndUpdate(
-      { _id: new ObjectId(users[0].id) },
-      { $set: { roles: [RoleEnum.ADMIN] } },
-    );
+    await db
+      .collection('users')
+      .findOneAndUpdate({ _id: new ObjectId(users[0].id) }, { $set: { roles: [RoleEnum.ADMIN] } });
   });
 
   // ===================================================================================================================
@@ -601,10 +597,12 @@ describe('TUS Module (e2e)', () => {
       ];
 
       const results = await Promise.all(
-        files.map(file => uploadViaTusClient({
-          content: file.content,
-          filename: file.name,
-        })),
+        files.map((file) =>
+          uploadViaTusClient({
+            content: file.content,
+            filename: file.name,
+          }),
+        ),
       );
 
       for (const result of results) {
@@ -665,7 +663,6 @@ describe('TUS Module (e2e)', () => {
       expect(res.statusCode).toBe(200);
       expect(res.data).toBe(testFile.content);
     });
-
   });
 
   // ===================================================================================================================
@@ -687,10 +684,9 @@ describe('TUS Module (e2e)', () => {
       uploadedFiles.push(result);
 
       // Download and verify binary content
-      const downloadedBuffer = await testHelper.downloadBuffer(
-        `/files/id/${result.gridFsId}`,
-        { cookies: users[0].token },
-      );
+      const downloadedBuffer = await testHelper.downloadBuffer(`/files/id/${result.gridFsId}`, {
+        cookies: users[0].token,
+      });
       expect(Buffer.compare(downloadedBuffer, binaryData)).toBe(0);
     });
 

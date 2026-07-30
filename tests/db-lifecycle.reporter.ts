@@ -96,9 +96,7 @@ export function isStaleTestDb(name: string, base: string, now: number = Date.now
     // Another run's DB (or a DB derived from it): stale when its creating
     // process is dead or it exceeded the age cap.
     const match = name.match(/-run-(\d+)-p(\d+)/);
-    return match
-      ? !isPidAlive(Number(match[2])) || now - Number(match[1]) > STALE_MAX_AGE_MS
-      : false;
+    return match ? !isPidAlive(Number(match[2])) || now - Number(match[1]) > STALE_MAX_AGE_MS : false;
   }
   // Legacy pre-unique-scheme leftovers carrying a trailing timestamp,
   // e.g. `<base>-setup-1783062745355` from aborted runs of older code.
@@ -158,9 +156,9 @@ export default class DbLifecycleReporter {
         /* count stays 0 — the pattern line below is still correct */
       }
       console.info(
-        `\n⚠ Test databases kept for debugging: ${serverUri}/${dbName}-w<N>`
-        + (forkCount > 0 ? ` (${forkCount} databases, one per worker fork + derived)` : '')
-        + '\n  Removed automatically when the next test run starts (startup sweep).',
+        `\n⚠ Test databases kept for debugging: ${serverUri}/${dbName}-w<N>` +
+          (forkCount > 0 ? ` (${forkCount} databases, one per worker fork + derived)` : '') +
+          '\n  Removed automatically when the next test run starts (startup sweep).',
       );
       return;
     }
@@ -192,9 +190,7 @@ export default class DbLifecycleReporter {
         await connection.close();
       }
     } catch (error) {
-      console.warn(
-        `Test database cleanup skipped: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
+      console.warn(`Test database cleanup skipped: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

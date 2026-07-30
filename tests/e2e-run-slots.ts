@@ -154,8 +154,9 @@ export async function acquireRunSlot(options: AcquireOptions = {}): Promise<() =
   const maxRuns = options.maxRuns ?? maxConcurrentE2eRuns();
   const pollMs = options.pollMs ?? 1000;
   const logEveryMs = options.logEveryMs ?? 15000;
-  const timeoutMs = options.timeoutMs
-    ?? (Number(process.env.LT_E2E_SLOT_TIMEOUT) > 0 ? Number(process.env.LT_E2E_SLOT_TIMEOUT) * 1000 : 900000);
+  const timeoutMs =
+    options.timeoutMs ??
+    (Number(process.env.LT_E2E_SLOT_TIMEOUT) > 0 ? Number(process.env.LT_E2E_SLOT_TIMEOUT) * 1000 : 900000);
 
   if (maxRuns === 0) {
     return () => {};
@@ -173,9 +174,7 @@ export async function acquireRunSlot(options: AcquireOptions = {}): Promise<() =
       // of them always keeps its slot.
       const overshoot = activeRuns();
       if (overshoot.length > maxRuns) {
-        const newest = [...overshoot].sort(
-          (a, b) => b.startedAt - a.startedAt || b.pid - a.pid,
-        )[0];
+        const newest = [...overshoot].sort((a, b) => b.startedAt - a.startedAt || b.pid - a.pid)[0];
         if (newest.pid === own.pid) {
           releaseOwnSlot();
           await sleep(pollMs + Math.floor(Math.random() * pollMs));
@@ -190,8 +189,8 @@ export async function acquireRunSlot(options: AcquireOptions = {}): Promise<() =
 
     if (Date.now() - startedWaiting >= timeoutMs) {
       log(
-        `[e2e-governor] no slot freed within ${Math.round(timeoutMs / 1000)}s — proceeding anyway (fail-open). `
-          + `Active runs: ${others.map((s) => `pid ${s.pid}`).join(', ')}`,
+        `[e2e-governor] no slot freed within ${Math.round(timeoutMs / 1000)}s — proceeding anyway (fail-open). ` +
+          `Active runs: ${others.map((s) => `pid ${s.pid}`).join(', ')}`,
       );
       claimOwnSlot();
       return releaseOwnSlot;
@@ -201,9 +200,9 @@ export async function acquireRunSlot(options: AcquireOptions = {}): Promise<() =
     if (Date.now() - lastLog >= logEveryMs) {
       lastLog = Date.now();
       log(
-        `[e2e-governor] waiting for a free e2e slot — ${others.length}/${maxRuns} in use `
-          + `(${others.map((s) => `pid ${s.pid}`).join(', ')}). `
-          + 'Concurrent full-speed e2e runs starve each other; queuing is faster overall.',
+        `[e2e-governor] waiting for a free e2e slot — ${others.length}/${maxRuns} in use ` +
+          `(${others.map((s) => `pid ${s.pid}`).join(', ')}). ` +
+          'Concurrent full-speed e2e runs starve each other; queuing is faster overall.',
       );
     }
     await sleep(pollMs);

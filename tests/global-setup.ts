@@ -63,9 +63,9 @@ export async function setup() {
     if (!SAFE_TEST_DB_PATTERN.test(db.databaseName)) {
       await connection.close();
       throw new Error(
-        `Refusing to dropDatabase("${db.databaseName}"): not a recognized test database `
-          + `(expected a name matching ${SAFE_TEST_DB_PATTERN}). `
-          + 'NSC__MONGOOSE__URI must point at a disposable test database.',
+        `Refusing to dropDatabase("${db.databaseName}"): not a recognized test database ` +
+          `(expected a name matching ${SAFE_TEST_DB_PATTERN}). ` +
+          'NSC__MONGOOSE__URI must point at a disposable test database.',
       );
     }
 
@@ -114,9 +114,7 @@ export async function setup() {
     }
   } catch (error) {
     // Best-effort: a failed sweep must never block the test run itself.
-    console.warn(
-      `Startup sweep skipped: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    );
+    console.warn(`Startup sweep skipped: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   // 2. Machine-wide run governor — wait for a free e2e slot before spawning forks.
