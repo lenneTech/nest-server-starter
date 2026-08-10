@@ -13,13 +13,11 @@ import {
   Get,
   Param,
   Post,
-  Res,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
 import { Readable } from 'stream';
 
 import { FileService } from './file.service';
@@ -27,9 +25,24 @@ import { FileService } from './file.service';
 /**
  * Controller to handle file REST API endpoints
  *
- * Inherits public download endpoints from CoreFileController:
- * - GET /files/id/:id - Download file by ID (public)
- * - GET /files/:filename - Download file by filename (public)
+ * Inherits the download endpoints from CoreFileController:
+ * - GET /files/id/:id     - Download file by ID
+ * - GET /files/:filename  - Download file by filename
+ *
+ * Both are gated by `file.downloadRoles` in config.env.ts (default: ADMIN).
+ *
+ * DO NOT re-declare these two as overrides here. Role metadata lives on the
+ * function object, so an override carries its own — which silently opts the
+ * route out of `file.downloadRoles` and pins whatever the override declares.
+ * This class used to override both purely to attach Swagger decorators, and in
+ * doing so re-declared `@Roles(RoleEnum.S_EVERYONE)`: every project generated
+ * from this starter kept serving the entire shared GridFS bucket to anonymous
+ * callers, no matter what the framework default was. Swagger still lists both
+ * routes through inheritance; only the prose annotations are gone, which is a
+ * cheap price for the endpoints meaning what the config says.
+ *
+ * To widen them, set `file: { downloadRoles: [...] }` in config.env.ts. For a
+ * per-file rule (owner, tenant), override `checkRights()` in FileService.
  */
 @ApiCommonErrorResponses()
 @ApiTags('files')
@@ -41,40 +54,6 @@ export class FileController extends CoreFileController {
    */
   constructor(protected override readonly fileService: FileService) {
     super(fileService);
-  }
-
-  // ===================================================================================================================
-  // Public Download Endpoints (inherited from CoreFileController, documented here for Swagger)
-  // ===================================================================================================================
-
-  /**
-   * Download file by ID
-   * More reliable than filename-based download as IDs are unique.
-   * Recommended for TUS uploads and when filename uniqueness cannot be guaranteed.
-   */
-  @ApiBearerAuth()
-  @ApiOkResponse({ description: 'File downloaded successfully' })
-  @ApiOperation({ description: 'Download a file from GridFS by ID', summary: 'Download file by ID' })
-  @ApiParam({ description: 'File ID', name: 'id', type: String })
-  @Get('id/:id')
-  @Roles(RoleEnum.S_EVERYONE)
-  override async getFileById(@Param('id') id: string, @Res() res: Response): Promise<Response> {
-    return super.getFileById(id, res);
-  }
-
-  /**
-   * Download file by filename
-   * Note: If multiple files have the same filename, only the first match is returned.
-   * For unique file access, use GET /files/id/:id instead.
-   */
-  @ApiBearerAuth()
-  @ApiOkResponse({ description: 'File downloaded successfully' })
-  @ApiOperation({ description: 'Download a file from GridFS by filename', summary: 'Download file by filename' })
-  @ApiParam({ description: 'Filename', name: 'filename', type: String })
-  @Get(':filename')
-  @Roles(RoleEnum.S_EVERYONE)
-  override async getFile(@Param('filename') filename: string, @Res() res: Response): Promise<Response> {
-    return super.getFile(filename, res);
   }
 
   // #region rest
