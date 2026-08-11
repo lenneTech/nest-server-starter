@@ -63,19 +63,31 @@ describe('bootstrap process-exit diagnostics (src/main.ts)', () => {
 describe('graceful shutdown (src/main.ts)', () => {
   const mainSource = readSourceWithoutComments('src/main.ts');
 
-  it('enables shutdown hooks so SIGTERM actually terminates the container', () => {
+  it('installs the graceful shutdown so SIGTERM actually terminates the container', () => {
     // Without this, the diagnostics handler is the ONLY signal listener, so it takes the
     // re-raise branch — and `process.kill(self, SIGTERM)` is a no-op at PID 1 (a PID-namespace
     // init is SIGNAL_UNKILLABLE for a default-disposition signal). The listening HTTP server
     // keeps the event loop busy, so `docker stop` waits out its grace period and SIGKILLs:
     // in-flight requests dropped, every onModuleDestroy() skipped.
-    expect(mainSource).toContain('enableShutdownHooks()');
+    //
+    // `installGracefulShutdown()` (nest-server 11.33.0+) IS `enableShutdownHooks()` when no
+    // `shutdownDelayMs` is configured, and additionally holds the instance fully healthy for
+    // that long before close() when one is.
+    expect(mainSource).toContain('installGracefulShutdown(server)');
 
-    const hooksIndex = mainSource.indexOf('enableShutdownHooks()');
+    const hooksIndex = mainSource.indexOf('installGracefulShutdown(server)');
     const listenIndex = mainSource.indexOf('server.listen(');
     expect(hooksIndex).toBeGreaterThan(-1);
     expect(listenIndex).toBeGreaterThan(-1);
     expect(hooksIndex).toBeLessThan(listenIndex);
+  });
+
+  it('does NOT also call enableShutdownHooks()', () => {
+    // Keeping both is the trap this guard exists for, and it fails SILENTLY: Nest would
+    // register its own listener for the same signals and close the app in parallel with the
+    // wait, so a configured `shutdownDelayMs` never actually delays anything. Nothing in the
+    // logs says so — the only symptom is requests dropped during a rolling deploy.
+    expect(mainSource).not.toContain('enableShutdownHooks()');
   });
 });
 

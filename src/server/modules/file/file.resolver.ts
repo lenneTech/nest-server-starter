@@ -7,6 +7,16 @@ import { FileService } from './file.service';
 
 /**
  * File resolver for GraphQL file operations
+ *
+ * NOTE — these members are NOT governed by `file.uploadRoles` / `deleteRoles` /
+ * `downloadRoles` from config.env.ts. Those knobs write role metadata onto
+ * `CoreFileResolver.prototype.*` (nest-server 11.33.0+), and this class does not
+ * extend it: it is a standalone, filename-based admin API. The `@Roles(ADMIN)`
+ * declared here is therefore the whole story, and stays the whole story if the
+ * config is widened.
+ *
+ * `FileService.checkRights()` still applies to every call made through the service,
+ * but with ADMIN on every member it can never refuse here.
  */
 @Resolver()
 @Roles(RoleEnum.ADMIN)
@@ -26,7 +36,8 @@ export class FileResolver {
   @Query(() => FileInfo, { nullable: true })
   @Roles(RoleEnum.ADMIN)
   async getFileInfo(@Args({ name: 'filename', type: () => String }) filename: string): Promise<CoreFileInfo | null> {
-    return this.fileService.getFileInfoByName(filename);
+    // `force`: @Roles(ADMIN) above is the whole gate for this admin API.
+    return this.fileService.getFileInfoByName(filename, { force: true });
   }
 
   // ===========================================================================
@@ -39,7 +50,7 @@ export class FileResolver {
   @Mutation(() => FileInfo)
   @Roles(RoleEnum.ADMIN)
   async deleteFile(@Args({ name: 'filename', type: () => String }) filename: string): Promise<CoreFileInfo | null> {
-    return this.fileService.deleteFileByName(filename);
+    return this.fileService.deleteFileByName(filename, { force: true });
   }
 
   /**

@@ -6,6 +6,7 @@ import {
   FilterArgs,
   handleFatalBootstrapError,
   HttpExceptionLogFilter,
+  installGracefulShutdown,
   installProcessDiagnostics,
   isCookiesEnabled,
   isCorsDisabled,
@@ -124,7 +125,15 @@ async function bootstrap() {
   // and `docker stop` waits out its full grace period before SIGKILL — dropping in-flight requests
   // and skipping every onModuleDestroy(). enableShutdownHooks() is what closes the app and drains
   // the loop; installProcessDiagnostics() then correctly defers to it instead of re-raising.
-  server.enableShutdownHooks();
+  //
+  // installGracefulShutdown() IS enableShutdownHooks() when no `shutdownDelayMs` is configured.
+  // With one, it additionally keeps the instance fully healthy for that long BEFORE close() is
+  // entered, so a load balancer can finish deregistering while requests still land on a healthy
+  // process. A NestJS lifecycle hook cannot do that: every one of them already runs inside close(),
+  // after the modules are destroyed. Do NOT keep enableShutdownHooks() next to this call — Nest
+  // would register its own listener for the same signals and close the app in parallel with the
+  // wait, so the delay would silently never happen.
+  installGracefulShutdown(server);
 
   // Start server on configured port
   await server.listen(envConfig.port, envConfig.hostname);

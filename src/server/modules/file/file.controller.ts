@@ -2,7 +2,7 @@ import {
   ApiCommonErrorResponses,
   CoreFileController,
   CoreFileInfo,
-  FileUpload,
+  multerFileToUpload,
   RoleEnum,
   Roles,
 } from '@lenne.tech/nest-server';
@@ -18,7 +18,6 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { Readable } from 'stream';
 
 import { FileService } from './file.service';
 
@@ -29,7 +28,10 @@ import { FileService } from './file.service';
  * - GET /files/id/:id     - Download file by ID
  * - GET /files/:filename  - Download file by filename
  *
- * Both are gated by `file.downloadRoles` in config.env.ts (default: ADMIN).
+ * Both are gated by `file.downloadRoles` in config.env.ts. The framework default
+ * is `[ADMIN]`; this project widens it to `[S_USER]` and makes the real decision
+ * per file in `FileService.checkRights()` (own file, or ADMIN) — a role can only
+ * answer "may this caller reach the route", never "may this caller have THIS file".
  *
  * DO NOT re-declare these two as overrides here. Role metadata lives on the
  * function object, so an override carries its own — which silently opts the
@@ -41,8 +43,8 @@ import { FileService } from './file.service';
  * routes through inheritance; only the prose annotations are gone, which is a
  * cheap price for the endpoints meaning what the config says.
  *
- * To widen them, set `file: { downloadRoles: [...] }` in config.env.ts. For a
- * per-file rule (owner, tenant), override `checkRights()` in FileService.
+ * To change who may reach them, edit `file.downloadRoles` in config.env.ts. For
+ * the per-file rule (owner, tenant), see `checkRights()` in FileService.
  */
 @ApiCommonErrorResponses()
 @ApiTags('files')
@@ -88,14 +90,15 @@ export class FileController extends CoreFileController {
       throw new BadRequestException('No file provided');
     }
 
-    const fileUpload: FileUpload = {
-      capacitor: null,
-      createReadStream: () => Readable.from(file.buffer),
-      filename: file.originalname,
-      mimetype: file.mimetype,
-    };
-
-    return this.fileService.createFile(fileUpload);
+    // multerFileToUpload() adapts the in-memory multer upload to what CoreFileService
+    // consumes, so this REST route writes to the same central storage as the GraphQL
+    // path. It requires `memory: true` (GridFsMulterConfigService uses memoryStorage)
+    // and throws with that instruction rather than storing an empty file.
+    //
+    // No `metadata.ownerId` here on purpose: this endpoint is @Roles(ADMIN), and
+    // FileService.checkRights() treats an owner-less file as admin-only. Pass
+    // `{ metadata: { ownerId } }` if you widen this route to normal users.
+    return this.fileService.createFile(multerFileToUpload(file));
   }
 
   /**
@@ -108,7 +111,9 @@ export class FileController extends CoreFileController {
   @Get('info/:id')
   @Roles(RoleEnum.ADMIN)
   async getFileInfo(@Param('id') id: string): Promise<CoreFileInfo | null> {
-    return this.fileService.getFileInfo(id);
+    // `force`: this route is @Roles(ADMIN) — the guard has already decided, and
+    // FileService.checkRights() must not be asked to re-derive that from an absent user.
+    return this.fileService.getFileInfo(id, { force: true });
   }
 
   /**
@@ -121,7 +126,7 @@ export class FileController extends CoreFileController {
   @Delete(':id')
   @Roles(RoleEnum.ADMIN)
   async deleteFile(@Param('id') id: string): Promise<CoreFileInfo | null> {
-    return this.fileService.deleteFile(id);
+    return this.fileService.deleteFile(id, { force: true });
   }
   // #endregion rest
 }

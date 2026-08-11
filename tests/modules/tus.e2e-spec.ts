@@ -88,6 +88,21 @@ describe('TUS Module (e2e)', () => {
   const users: Partial<User & { token: string }>[] = [];
   const uploadedFiles: TusUploadResult[] = [];
 
+  /**
+   * Cookie header carrying the signed-in session, assigned by `signInUsers`.
+   *
+   * Since nest-server 11.33.0 `tus.roles` defaults to `[S_USER]`, so every TUS
+   * verb except OPTIONS needs a session — a TUS upload writes into the very file
+   * store the download routes guard, and the termination extension can delete
+   * from it, so anonymous writes would be the wrong way round. These specs talk
+   * to the server through raw `fetch`/`tus-js-client` rather than TestHelper, so
+   * the cookie has to be built by hand.
+   *
+   * Set `tus: { roles: [RoleEnum.S_EVERYONE] }` in config.env.ts if your project
+   * genuinely accepts anonymous uploads (a public contact form with attachments).
+   */
+  let authHeaders: Record<string, string> = {};
+
   // ===================================================================================================================
   // Helper Functions
   // ===================================================================================================================
@@ -112,6 +127,7 @@ describe('TUS Module (e2e)', () => {
 
     const response = await fetch(`${baseUrl}/tus`, {
       headers: {
+        ...authHeaders,
         'Content-Length': '0',
         'Tus-Resumable': TUS_HEADERS.RESUMABLE,
         'Upload-Length': String(options.size),
@@ -137,6 +153,7 @@ describe('TUS Module (e2e)', () => {
     const response = await fetch(location, {
       body: data,
       headers: {
+        ...authHeaders,
         'Content-Length': String(Buffer.byteLength(data)),
         'Content-Type': TUS_HEADERS.CONTENT_TYPE,
         'Tus-Resumable': TUS_HEADERS.RESUMABLE,
@@ -154,7 +171,7 @@ describe('TUS Module (e2e)', () => {
    */
   async function getTusUploadStatus(location: string): Promise<{ length: number; offset: number; response: Response }> {
     const response = await fetch(location, {
-      headers: { 'Tus-Resumable': TUS_HEADERS.RESUMABLE },
+      headers: { ...authHeaders, 'Tus-Resumable': TUS_HEADERS.RESUMABLE },
       method: 'HEAD',
     });
 
@@ -170,7 +187,7 @@ describe('TUS Module (e2e)', () => {
    */
   async function terminateTusUpload(location: string): Promise<Response> {
     return fetch(location, {
-      headers: { 'Tus-Resumable': TUS_HEADERS.RESUMABLE },
+      headers: { ...authHeaders, 'Tus-Resumable': TUS_HEADERS.RESUMABLE },
       method: 'DELETE',
     });
   }
@@ -205,6 +222,7 @@ describe('TUS Module (e2e)', () => {
       const upload = new tus.Upload(fileBuffer as unknown as Blob, {
         chunkSize: options.chunkSize || 1024 * 1024,
         endpoint: `${baseUrl}/tus`,
+        headers: { ...authHeaders },
         metadata: {
           filename: options.filename,
           filetype: options.filetype || 'text/plain',
@@ -383,6 +401,15 @@ describe('TUS Module (e2e)', () => {
       user.token = TestHelper.extractSessionToken(res);
       expect(user.token).toBeDefined();
     }
+
+    // Build the Cookie header every TUS request below sends. `buildBetterAuthCookies`
+    // is what TestHelper itself uses, so the raw-fetch path stays in step with it.
+    const cookies = TestHelper.buildBetterAuthCookies(users[0].token);
+    authHeaders = {
+      Cookie: Object.entries(cookies)
+        .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+        .join('; '),
+    };
   });
 
   it('prepareUsers', async () => {
@@ -396,6 +423,9 @@ describe('TUS Module (e2e)', () => {
   // ===================================================================================================================
 
   describe('TUS Server Capabilities', () => {
+    // OPTIONS stays public regardless of `tus.roles`: it is the CORS preflight,
+    // which browsers send without credentials, and it returns server capabilities
+    // only. Gating it would make every browser upload fail before it starts.
     it('should return TUS server capabilities via OPTIONS', async () => {
       const response = await fetch(`${baseUrl}/tus`, { method: 'OPTIONS' });
 
@@ -441,6 +471,7 @@ describe('TUS Module (e2e)', () => {
     it('should reject upload without Tus-Resumable header', async () => {
       const response = await fetch(`${baseUrl}/tus`, {
         headers: {
+          ...authHeaders,
           'Content-Length': '0',
           'Upload-Length': '100',
         },
@@ -448,6 +479,24 @@ describe('TUS Module (e2e)', () => {
       });
 
       expect(response.status).toBe(412);
+    });
+
+    // `tus.roles` defaults to [S_USER] since nest-server 11.33.0. Without this test
+    // the suite proves only that an authenticated upload works — it would not notice
+    // the gate being dropped, which is exactly how the endpoint stayed public before.
+    it('should reject an anonymous upload', async () => {
+      const response = await fetch(`${baseUrl}/tus`, {
+        headers: {
+          'Content-Length': '0',
+          'Tus-Resumable': TUS_HEADERS.RESUMABLE,
+          'Upload-Length': '10',
+        },
+        method: 'POST',
+      });
+
+      // 401, not 403: nobody is signed in. Asserting the exact code matters —
+      // an SPA auth layer branches on 401 to trigger a logout.
+      expect(response.status).toBe(401);
     });
   });
 

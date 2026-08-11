@@ -1,4 +1,4 @@
-import { getEnvironmentConfig, IServerOptions, merge } from '@lenne.tech/nest-server';
+import { getEnvironmentConfig, IServerOptions, merge, RoleEnum } from '@lenne.tech/nest-server';
 import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
@@ -71,6 +71,33 @@ const PROJECT_STATIC_ASSETS = { options: { prefix: '' }, path: join(__dirname, '
 const PROJECT_TEMPLATES = { engine: 'ejs', path: join(__dirname, 'assets', 'templates') };
 const PROJECT_ERROR_CODE = { additionalErrorRegistry: ProjectErrors };
 const PROJECT_HEALTH_CHECK = { configs: { database: { enabled: true } }, enabled: true };
+
+/**
+ * File access — the COARSE gate on the two inherited download routes
+ * (`GET /files/id/:id`, `GET /files/:filename`).
+ *
+ * Since nest-server 11.33.0 these are role-gated and default to `[ADMIN]`.
+ * That default is right for the framework's own reference server, and wrong
+ * for this starter: it ships an avatar upload every signed-in user may use, so
+ * an admin-only download would make `user.avatar` unreadable by the very user
+ * it belongs to.
+ *
+ * So the gate is widened to "signed in" and the real decision is made per file
+ * in `FileService.checkRights()` (own file, or ADMIN). Roles can only answer
+ * "may this caller reach the route"; they can never answer "may this caller
+ * have THIS file". See the framework's 11.32.x-to-11.33.x guide § A.3.
+ *
+ * `uploadRoles` / `deleteRoles` are left at their `[ADMIN]` default — they
+ * govern the core GraphQL members only, and this project's own file endpoints
+ * declare `@Roles(RoleEnum.ADMIN)` themselves.
+ *
+ * NOTE for markup-driven downloads: anything stricter than `S_EVERYONE` only
+ * works from an `<img>`/`<a download>` when the session travels as a COOKIE on
+ * a same-site request (cookies are enabled here, and `lt dev up` serves app and
+ * API as siblings under one registrable domain). A Bearer-only frontend has to
+ * fetch such URLs programmatically and build an object URL.
+ */
+const PROJECT_FILE = { downloadRoles: [RoleEnum.S_USER] };
 
 /** Demo cron job — disabled by default; flip `disabled: false` to activate. */
 const DEMO_CRON_JOBS = {
@@ -214,6 +241,7 @@ function deployedConfig(
     // meaningful when GraphQL is enabled.
     execAfterInit: 'pnpm run docs:bootstrap',
     // #endregion graphql
+    file: PROJECT_FILE,
     filter: { maxLimit: null },
     // #region graphql
     // Disable GraphQL playground in production for security; keep it in develop/test for tooling
@@ -228,6 +256,20 @@ function deployedConfig(
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
     templates: PROJECT_TEMPLATES,
+    // Express `trust proxy`, passed through by CoreModule (nest-server 11.33.0+).
+    // Deliberately UNSET here, because the correct value is the number of proxies
+    // that actually sit in front of THIS deployment and no template can know it.
+    //
+    // Set it as soon as you enable `auth.rateLimit` / `betterAuth.rateLimit` behind
+    // a reverse proxy (Caddy, nginx, a Kubernetes ingress, a cloud LB). Both limiters
+    // key on `request.ip`, which without this resolves to the PROXY for every request
+    // — so every client shares one bucket and the limit throttles all of them at once.
+    // A boot warning names this when a limiter is on and the value is unset.
+    //   trustProxy: 1,      // exactly one reverse proxy in front of the app
+    //   trustProxy: 2,      // a reverse proxy behind a CDN
+    //   trustProxy: false,  // nothing proxies us — states it explicitly, silences the warning
+    // NEVER `true` on a public deployment: it trusts whatever the client sent.
+    //
     // Feeds the health check's build identity (`/health-check` → build.version),
     // kept in sync with the `version` GET /meta reports (both read meta.json).
     version: metaData.version,
@@ -286,6 +328,7 @@ function localConfig(
     // #region graphql
     execAfterInit: 'pnpm run docs:bootstrap',
     // #endregion graphql
+    file: PROJECT_FILE,
     filter: { maxLimit: null },
     // #region graphql
     graphQl: { driver: { introspection: true, playground: true }, maxComplexity: 1000 },

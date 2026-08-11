@@ -224,6 +224,40 @@ describe('File Module REST (e2e)', () => {
     expect(res.data).toEqual(fileContent);
   });
 
+  // ===================================================================================================================
+  // Download access control (nest-server 11.33.0)
+  //
+  // `GET /files/id/:id` and `GET /files/:filename` are inherited from
+  // CoreFileController and are no longer public. Two layers decide:
+  //
+  //   1. `file.downloadRoles` (config.env.ts) — widened here to S_USER, so any
+  //      signed-in caller may REACH the route. Anonymous callers get 401.
+  //   2. `FileService.checkRights()` — own file (metadata.ownerId) or ADMIN.
+  //      A refusal answers 404, deliberately identical to an unknown id, so the
+  //      endpoint cannot be used to probe which files exist.
+  //
+  // This file was uploaded through the ADMIN endpoint and carries no owner, so
+  // users[1] (a plain signed-in user) must not reach it.
+  // ===================================================================================================================
+
+  it('rejects an anonymous download', async () => {
+    const res = await testHelper.download(`/files/id/${fileInfo.id}`);
+    // Exactly 401, never 403: an SPA auth layer branches on 401 to log the user out,
+    // so conflating the two hides a real regression.
+    expect(res.statusCode).toEqual(401);
+  });
+
+  it('rejects a download of a foreign file for a non-admin user', async () => {
+    const res = await testHelper.download(`/files/id/${fileInfo.id}`, { cookies: users[1].token });
+    // 404, not 403 — checkRights() refused, and a refusal must not confirm the id.
+    expect(res.statusCode).toEqual(404);
+  });
+
+  it('rejects a download by filename for a non-admin user', async () => {
+    const res = await testHelper.download(`/files/${fileInfo.filename}`, { cookies: users[1].token });
+    expect(res.statusCode).toEqual(404);
+  });
+
   it('deleteRESTFile', async () => {
     const res = await testHelper.rest(`/files/${fileInfo.id}`, { cookies: users[0].token, method: 'DELETE' });
     expect(res.id).toEqual(fileInfo.id);

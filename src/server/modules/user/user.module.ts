@@ -1,4 +1,7 @@
 import { ConfigService } from '@lenne.tech/nest-server';
+// #region graphql
+import { CoreRedisPubSub, CoreRedisService } from '@lenne.tech/nest-server';
+// #endregion graphql
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 // #region graphql
@@ -6,6 +9,7 @@ import { PubSub } from 'graphql-subscriptions';
 // #endregion graphql
 
 // #region rest
+import { FileModule } from '../file/file.module';
 import { AvatarController } from './avatar.controller';
 import { UserController } from './user.controller';
 // #endregion rest
@@ -30,7 +34,14 @@ import { UserService } from './user.service';
     UserService,
     'USER_CLASS',
   ],
-  imports: [MongooseModule.forFeature([{ name: User.name, schema: UserSchema }])],
+  imports: [
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    // #region rest
+    // AvatarController stores the avatar in the central file storage (nest-server
+    // 11.33.0+) instead of on pod-local disk, so it needs FileService.
+    FileModule,
+    // #endregion rest
+  ],
   providers: [
     // #region graphql
     UserResolver,
@@ -43,8 +54,14 @@ import { UserService } from './user.service';
     },
     // #region graphql
     {
+      // Redis-backed when `redis` is configured, so subscriptions reach clients on
+      // EVERY replica; the process-local in-memory PubSub otherwise (unchanged
+      // behaviour for a single instance). A hardcoded `useValue: new PubSub()` would
+      // silently stay single-replica after Redis is enabled.
+      inject: [{ optional: true, token: CoreRedisService }],
       provide: 'PUB_SUB',
-      useValue: new PubSub(),
+      useFactory: (redisService?: CoreRedisService) =>
+        redisService?.enabled ? new CoreRedisPubSub(redisService) : new PubSub(),
     },
     // #endregion graphql
   ],

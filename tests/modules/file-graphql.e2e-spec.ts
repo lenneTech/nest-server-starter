@@ -77,6 +77,15 @@ describe('File Module GraphQL (e2e)', () => {
   // TUS test data
   let tusTestFile: { content: string; filename: string; gridFsId: string };
 
+  /**
+   * Cookie header for the raw-fetch TUS calls below, assigned by `signInUsers`.
+   *
+   * `tus.roles` defaults to `[S_USER]` since nest-server 11.33.0 — a TUS upload
+   * writes into the same file store the download routes guard, so it needs a
+   * session. TestHelper is not used for these calls, so the cookie is built by hand.
+   */
+  let authHeaders: Record<string, string> = {};
+
   // Per-run private directory for upload fixtures (see beforeAll)
   let fixtureDir: string;
 
@@ -98,6 +107,7 @@ describe('File Module GraphQL (e2e)', () => {
 
     const response = await fetch(`${baseUrl}/tus`, {
       headers: {
+        ...authHeaders,
         'Content-Length': '0',
         'Tus-Resumable': TUS_HEADERS.RESUMABLE,
         'Upload-Length': String(options.size),
@@ -120,6 +130,7 @@ describe('File Module GraphQL (e2e)', () => {
     const response = await fetch(location, {
       body: data,
       headers: {
+        ...authHeaders,
         'Content-Length': String(Buffer.byteLength(data)),
         'Content-Type': TUS_HEADERS.CONTENT_TYPE,
         'Tus-Resumable': TUS_HEADERS.RESUMABLE,
@@ -329,6 +340,14 @@ describe('File Module GraphQL (e2e)', () => {
       user.token = TestHelper.extractSessionToken(res);
       expect(user.token).toBeDefined();
     }
+
+    // Build the Cookie header the raw-fetch TUS calls need (see `authHeaders`)
+    const cookies = TestHelper.buildBetterAuthCookies(users[0].token);
+    authHeaders = {
+      Cookie: Object.entries(cookies)
+        .map(([name, value]) => `${name}=${encodeURIComponent(value)}`)
+        .join('; '),
+    };
   });
 
   /**

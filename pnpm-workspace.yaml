@@ -35,16 +35,16 @@ auditConfig:
     # FALSE POSITIVE, not an accepted vulnerability. The fix was backported across
     # every release line, and the `overrides` below pin a patched release on each.
     # Measured at each package's `main` entry point:
-    #   1.1.16 vulnerable → 1.1.17+ patched      (pinned: 1.1.17)
+    #   1.1.16 vulnerable → 1.1.17+ patched      (pinned: 1.1.18)
     #   2.1.2  vulnerable → 2.1.4  patched       (pinned: 2.1.4)
-    #   5.0.7  vulnerable → 5.0.8  patched       (pinned: 5.0.8)
+    #   5.0.7  vulnerable → 5.0.8+ patched       (pinned: 5.0.9)
     # Note 1.1.16 and 2.1.2 SHIP a stray `dist/` that does contain the fix, but their
     # `main` points at the unpatched root `index.js` — grep the whole package and you
     # will conclude they are patched when they are not.
     #
     # It still fires because GitHub's advisory range is a blanket `<= 5.0.7` with
     # `first_patched: 5.0.8` — a single range across ALL majors, never narrowed for the
-    # backports. So the installed 1.1.17 matches `<= 5.0.7` as a semver range and gets
+    # backports. So the installed 1.1.18 matches `<= 5.0.7` as a semver range and gets
     # flagged despite carrying the fix.
     #
     # Why some paths stay on the old lines at all: two consumers are stuck on
@@ -66,7 +66,7 @@ auditConfig:
     # production path:
     #   @lenne.tech/nest-server > ts-morph > @ts-morph/common > minimatch > brace-expansion
     # `ts-morph` is a prod `dependencies` entry of nest-server (not a devDep), so this
-    # ships in the production image. It is patched today (brace-expansion@5.0.8) only
+    # ships in the production image. It is patched today (brace-expansion@5.0.9) only
     # because the minimatch override below lifts it onto the 5.x line. If a future
     # nest-server bump moves it back onto a vulnerable line, `pnpm audit` — and with it
     # `pnpm run check` — stays GREEN while a HIGH advisory ships.
@@ -77,7 +77,13 @@ auditConfig:
     # trusting a green audit.
     #
     # Re-verify when the upstream range is narrowed — then delete this entry.
-    # Verified 2026-07-30.
+    # Verified 2026-08-11 after the nest-server 11.33.0 bump: the prod path resolves
+    # minimatch@10.2.6 -> brace-expansion@5.0.9 (patched).
+    #
+    # NOTE: a SECOND brace-expansion advisory landed since — GHSA-rgw5-rvv9-x895
+    # (DoS via unbounded intermediate arrays, bypassing the GHSA-mh99 fix). That one
+    # is NOT suppressed, and must not be: the pins below were raised to 1.1.18 /
+    # 2.1.4 / 5.0.9 to close it outright.
     - GHSA-mh99-v99m-4gvg
 
 # pnpm 11 configuration
@@ -155,7 +161,6 @@ overrides:
   # Pinned to 14.0.0 (latest, also patched). API used (uuid.v4) is stable 8-14.
   uuid: 14.0.0
 
-
   # Security: Remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26,
   # >=6.11.1 <=6.15.1). Transitive via @apollo/server>body-parser>qs and
   # express>body-parser>qs. 6.15.2 is the patched release.
@@ -191,7 +196,7 @@ overrides:
   # Target is the LATEST 4.x, not the minimum patch: an override is a hard PIN,
   # not a floor, so targeting 4.12.27 would hold the package back from every
   # later patch. Re-point or drop once the SDK requests >=4.12.27 itself.
-  'hono@>=4.0.0 <4.12.27': 4.12.31
+  'hono@>=4.0.0 <4.12.34': 4.12.34
 
   # Security: fast-uri — FOUR advisories, all covered by 3.1.4:
   #   <=3.1.1  path traversal via percent-encoded dot segments (GHSA-q3j6-qgpj-74h6)
@@ -207,7 +212,7 @@ overrides:
   # 3.1.2 — and, being unqualified, it silently overruled the bounded entry added next to it.
   # Keep the key bounded so it can only ever raise a vulnerable version, never cap a patched one.
   # Drop once ajv / ajv-formats request >=3.1.4 themselves.
-  'fast-uri@>=3.0.0 <3.1.4': 3.1.4
+  'fast-uri@>=3.0.0 <3.1.5': 3.1.5
 
   # Security: body-parser DoS on malformed urlencoded input
   # (GHSA-v422-hmwv-36x6, low, patched >=2.3.0). Transitive via
@@ -229,6 +234,9 @@ overrides:
   #   1.1.16 vulnerable → 1.1.17, 1.1.18 patched
   #   2.1.2  vulnerable → 2.1.4        patched
   #   5.0.7  vulnerable → 5.0.8, 5.0.9 patched
+  # The targets were raised 1.1.17 -> 1.1.18 and 5.0.8 -> 5.0.9 on 2026-08-11 for the
+  # FOLLOW-UP advisory GHSA-rgw5-rvv9-x895 (unbounded intermediate arrays), which the
+  # earlier patch levels do not cover. Both releases now clear the release-age gate.
   # CAUTION when re-verifying: 1.1.16 and 2.1.2 ship a stray `dist/` that DOES contain
   # the fix while `main` points at the unpatched root `index.js`. Grepping the whole
   # package says "patched"; only the entry point tells the truth.
@@ -256,8 +264,8 @@ overrides:
   # The `>=3.0.0` lower bound also sweeps in 3.x/4.x. Those are ESM-only
   # (`type: module`), so lifting them to 5.x (dual ESM+CJS) is a widening, not a break.
   # Nothing in the tree uses them today.
-  'brace-expansion@>=3.0.0 <5.0.8': 5.0.8
-  'brace-expansion@<1.1.17': 1.1.17
+  'brace-expansion@>=3.0.0 <5.0.9': 5.0.9
+  'brace-expansion@<1.1.18': 1.1.18
   # Matches nothing today (the minimatch 9 -> 10 lift removed the only 2.x consumer),
   # and is kept deliberately: the advisory is suppressed repo-wide via ignoreGhsas at
   # the top of this file, so a 2.x path reappearing later would NOT turn the audit red.
@@ -305,7 +313,7 @@ overrides:
   # which declare js-yaml ^4. NOTE: js-yaml never published a 4.1.2; the 4.x
   # line ends at 4.3.0, so the fixed target is 4.3.0 (the earlier '>=4.1.2'
   # range silently pulled a 5.0.0 major, which this pin reverts).
-  js-yaml: 4.3.0
+  js-yaml: 4.3.1
 
   # Security: Email injection / header-related CVEs in nodemailer <9.0.1
   # (high). Transitive via @lenne.tech/nest-server (declares 9.0.3). 9.0.3 is
@@ -319,9 +327,26 @@ overrides:
   # exact 2.2.0).
   multer: 2.2.0
 
-  # Security: various undici CVEs <7.28.0 (incl. high) - transitive via
-  # @lenne.tech/nest-server>@compodoc/compodoc and better-auth.
-  'undici@>=7.0.0 <7.28.0': 7.28.0
+  # Security: various undici CVEs <7.29.0 — response desynchronization,
+  # cross-user information disclosure, CRLF injection via a blob-like body type,
+  # cookie attribute injection (2x high, 4x moderate). Transitive via
+  # @compodoc/compodoc>cheerio>undici. 7.29.0 is the patched 7.x release.
+  'undici@>=7.0.0 <7.29.0': 7.29.0
+
+  # Security: ip-address — Address4 decodes leading-zero octets as decimal
+  # (GHSA-mwp4-54f8-5fhr, high, patched >=10.3.1), plus two moderates (CIDR
+  # suffix suppressing subnet checks, IPv4-mapped/NAT64 misclassification).
+  # Transitive via @lenne.tech/nest-server>@modelcontextprotocol/sdk>
+  # express-rate-limit>ip-address, which declares a caret range — so this only
+  # pins until a fresh resolve picks up the fix on its own. Aligned with the
+  # framework's own entry.
+  'ip-address@<10.3.1': 10.3.1
+
+  # Security: nanoid — a custom generator can loop indefinitely for a non-integer
+  # size (GHSA-2v37-7h3g-55p8, high, patched >=3.3.17). Dev-only: the single path
+  # is better-auth's optional `vitest` peer, >vite>postcss>nanoid. Scoped to the
+  # 3.x line on purpose — 5.x/6.x are unaffected and must not be dragged down.
+  'nanoid@>=3.0.0 <3.3.17': 3.3.17
 
   # Security: high CVE in piscina <4.9.3 - transitive via the build/test toolchain.
   'piscina@<4.9.3': 4.9.3
@@ -372,6 +397,21 @@ allowBuilds:
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
   - '@lenne.tech/nest-server'
+  # Written by pnpm during the 11.33.0 bump: nest-server 11.33.0 pins @nestjs/*
+  # 11.1.29, published the same day, so the 1-day hold-back refused it and the
+  # install could not resolve. Same three lines the framework repo carries.
+  #
+  # These are the machine-written `name@version` form the note above warns about,
+  # and they are meant to be TEMPORARY: once 11.1.29 clears the 24h cutoff the
+  # entries are inert and should be deleted at the next dependency bump. They are
+  # NOT a standing policy — an override target that trips the gate should still be
+  # answered with a slightly older patched release rather than a line here.
+  - '@nestjs/common@11.1.29'
+  - '@nestjs/core@11.1.29'
+  - '@nestjs/platform-express@11.1.29'
+  - '@nestjs/common@11.1.29'
+  - '@nestjs/core@11.1.29'
+  - '@nestjs/platform-express@11.1.29'
 
 # ---------------------------------------------------------------------------
 # Peer dependency rules — silence KNOWN-BENIGN unmet-peer warnings only.
