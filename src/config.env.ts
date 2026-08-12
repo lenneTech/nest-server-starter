@@ -270,6 +270,30 @@ function deployedConfig(
     //   trustProxy: false,  // nothing proxies us — states it explicitly, silences the warning
     // NEVER `true` on a public deployment: it trusts whatever the client sent.
     //
+    // Graceful-shutdown delay in ms (nest-server 11.33.0+), default 0 = off.
+    // `installGracefulShutdown()` in main.ts waits this long IN THE SIGTERM/SIGINT
+    // HANDLER, before close() is entered, so a load balancer can finish
+    // deregistering while requests still land on a fully healthy instance. A Nest
+    // lifecycle hook cannot do this — every one of them already runs inside close().
+    //
+    // Left unset because the right value depends on the orchestrator: keep it well
+    // below the grace period AND leave room for the drain that follows (Compose
+    // `stop_grace_period` 10s, Kubernetes `terminationGracePeriodSeconds` 30s,
+    // installProcessDiagnostics() force-exits after 30s). Exceed any of them and the
+    // process is SIGKILLed mid-wait with no hook running. >10000 warns, >60000 caps.
+    //   shutdownDelayMs: 5000,
+    //
+    // Storage note: `file.storage` and `s3` are deliberately NOT set here. Unset,
+    // the driver derives to GridFS (a database is configured, no `s3` block is) —
+    // which is what this starter runs on. Configuring `s3.bucket` alone would make
+    // S3 the derived driver and MOVE the bytes; `FileService` already forwards
+    // `configService` + `s3Service` to `super()`, so that works instead of failing
+    // the boot. See `.env.example` → "File storage" for the operator-facing knobs.
+    //
+    // Redis (`redis`) is likewise unset: absent means every feature keeps its
+    // process-local behaviour, which is correct for a single replica. See
+    // `.env.example` → "Central Redis" before scaling past one.
+    //
     // Feeds the health check's build identity (`/health-check` → build.version),
     // kept in sync with the `version` GET /meta reports (both read meta.json).
     version: metaData.version,

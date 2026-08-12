@@ -1,5 +1,6 @@
 import {
   ConfigService,
+  CoreFileInfo,
   CoreFileService,
   CoreS3Service,
   FileInputCheckType,
@@ -8,7 +9,7 @@ import {
 } from '@lenne.tech/nest-server';
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { Connection, mongo } from 'mongoose';
+import { Connection } from 'mongoose';
 
 /**
  * File service
@@ -29,13 +30,38 @@ export class FileService extends CoreFileService {
   }
 
   /**
-   * Duplicate file by name
+   * Duplicate file by name.
+   *
+   * Delegates instead of reaching into `this.files` directly. Until nest-server
+   * 11.34.0 this was a raw GridFS pipe, and because this starter is what every
+   * project is generated from, that shape was designed to be copied. It was wrong
+   * in four separate ways:
+   *
+   * - it only ever worked on the GridFS driver — under `file.storage: 's3'` or
+   *   `'filesystem'` the source is simply not in the bucket;
+   * - it bypassed `checkRights()` entirely, so the ownership rule below did not
+   *   apply to a duplicate at all (the copy was made with NO authorization);
+   * - it returned the write stream without awaiting it, so the caller was told the
+   *   copy existed while it was still being written;
+   * - neither stream carried an error handler, and an unhandled stream `'error'`
+   *   takes the whole process down.
+   *
+   * `duplicateByName()` answers all four. Forward the caller's context so the
+   * duplicate is COVERED by the ownership rule rather than exempt from it — and
+   * give the COPY its own metadata, because it deliberately does not inherit the
+   * source's owner:
+   *
+   * ```typescript
+   * await this.fileService.duplicate(name, newName, { currentUser, metadata: { ownerId: currentUser.id } });
+   * ```
+   *
    * @param fileName - Source file name
    * @param newName - Name for the duplicated file
-   * @returns The GridFS upload stream for the duplicated file
+   * @param serviceOptions - Caller context; `{ force: true }` where a role decorator already decided
+   * @returns The file info of the COPY (since 11.34.0 — previously a `GridFSBucketWriteStream`)
    */
-  duplicate(fileName: string, newName: string): mongo.GridFSBucketWriteStream {
-    return this.files.openDownloadStreamByName(fileName).pipe(this.files.openUploadStream(newName));
+  async duplicate(fileName: string, newName: string, serviceOptions?: FileServiceOptions): Promise<CoreFileInfo> {
+    return this.duplicateByName(fileName, newName, serviceOptions);
   }
 
   /**

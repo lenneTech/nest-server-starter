@@ -91,6 +91,16 @@ if [ -z "$SERVER_CMD" ]; then
   fi
 fi
 
+# NOTE on `exec` and shutdown: `exec` replaces this shell, so the server becomes PID 1 and receives
+# `docker stop`'s SIGTERM directly — no signal-forwarding wrapper needed. src/main.ts installs the
+# framework's graceful shutdown for it. If you configure `shutdownDelayMs` (NSC__SHUTDOWN_DELAY_MS,
+# nest-server 11.33.0+), the process deliberately stays fully healthy for that long BEFORE closing,
+# so a load balancer can finish deregistering. That time is spent INSIDE the orchestrator's grace
+# period: Compose `stop_grace_period` defaults to 10s and Kubernetes
+# `terminationGracePeriodSeconds` to 30s. Set the delay well below whichever applies AND leave room
+# for the drain that follows — exceed it and the container is SIGKILLed mid-wait, running no
+# shutdown hook at all, which is strictly worse than no delay.
+
 # NOTE: no NODE_OPTIONS=--max-old-space-size here, and that is DELIBERATE.
 # Node sizes its default heap from the cgroup memory limit (uv_get_constrained_memory) — but only
 # while the flag is UNSET. Pinning a literal disables that auto-sizing, so on a memory-limited
