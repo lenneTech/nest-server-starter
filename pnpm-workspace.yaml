@@ -342,11 +342,18 @@ overrides:
   # framework's own entry.
   'ip-address@<10.3.1': 10.3.1
 
-  # Security: nanoid — a custom generator can loop indefinitely for a non-integer
-  # size (GHSA-2v37-7h3g-55p8, high, patched >=3.3.17). Dev-only: the single path
-  # is better-auth's optional `vitest` peer, >vite>postcss>nanoid. Scoped to the
-  # 3.x line on purpose — 5.x/6.x are unaffected and must not be dragged down.
-  'nanoid@>=3.0.0 <3.3.17': 3.3.17
+  # Security: TWO advisories on the 3.x line, and the target must be the LATER of
+  # the two — a 3.3.17 target closes the first and leaves the second wide open.
+  #   1. a custom generator can loop indefinitely for a NON-INTEGER size
+  #      (GHSA-2v37-7h3g-55p8, high, patched >=3.3.17)
+  #   2. custom generators can loop indefinitely when size is ZERO
+  #      (high, published 2026-08, patched >=3.3.18)
+  # Dev-only: the single path is better-auth's optional `vitest` peer,
+  # >vite>postcss>nanoid. Scoped to the 3.x line on purpose — 5.x/6.x are
+  # unaffected and must not be dragged down. Note this override is REQUIRED here
+  # even though @lenne.tech/nest-server carries the same one: pnpm overrides do
+  # not reach consumers (see the framework's docs/security-overrides.md).
+  'nanoid@>=3.0.0 <3.3.18': 3.3.18
 
   # Security: high CVE in piscina <4.9.3 - transitive via the build/test toolchain.
   'piscina@<4.9.3': 4.9.3
