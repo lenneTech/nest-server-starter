@@ -99,6 +99,35 @@ const PROJECT_HEALTH_CHECK = { configs: { database: { enabled: true } }, enabled
  */
 const PROJECT_FILE = { downloadRoles: [RoleEnum.S_USER] };
 
+/*
+ * FROM nest-server 11.35.0 ON, the rule in `FileService.checkRights()` is also available as a
+ * DECLARATION — add `access` to PROJECT_FILE and you can delete the override:
+ *
+ *   const PROJECT_FILE = { access: 'owner', downloadRoles: [RoleEnum.S_USER] };
+ *
+ * | `file.access`   | project class                                            |
+ * |-----------------|----------------------------------------------------------|
+ * | `'public'`      | open: anyone may read and write                          |
+ * | `'authenticated'` | login-restricted: every signed-in user                  |
+ * | `'owner'`       | per-user: only the uploader, plus ADMIN                  |
+ * | `'tenant'`      | per-tenant: only the own validated tenant, plus ADMIN    |
+ * | `'custom'`      | the default — you write `checkRights()` yourself         |
+ *
+ * `'owner'` is exactly what this project's override does, including the parts that are easy to get
+ * wrong (fail closed without a user, require `metadata.ownerId` to be PRESENT, cover the by-name
+ * branch, refuse a listing) AND the metadata stamping that `AvatarController` currently does by hand.
+ *
+ * This starter keeps the explicit override on purpose: it is the reference implementation, so it has
+ * to EXERCISE the inheritance seam a consuming project extends — a rule that lives only in a preset
+ * proves the preset works, never that the extension point still does. **In your own project, prefer
+ * the preset** unless your rights are something the framework cannot guess (an explicit read right, a
+ * case assignment, a published flag).
+ *
+ * Two consequences worth knowing before you switch: files uploaded BEFORE you enable the preset carry
+ * no `metadata.ownerId` and are therefore ADMIN-only until you backfill it, and declaring the class
+ * never widens the role gate — `'public'` still needs `downloadRoles: [RoleEnum.S_EVERYONE]`.
+ */
+
 /** Demo cron job — disabled by default; flip `disabled: false` to activate. */
 const DEMO_CRON_JOBS = {
   sayHello: {

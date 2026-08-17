@@ -73,11 +73,24 @@ export class FileService extends CoreFileService {
    * which is what this hook is for.
    *
    * The rule: ADMIN sees everything; everyone else sees only files whose
-   * `metadata.ownerId` is their own id. A file with no owner recorded — the
-   * admin uploads via `/files/upload` and the GraphQL mutations, and TUS uploads,
-   * which carry `tusUploadId` but no owner — is therefore ADMIN-ONLY. If your
-   * project wants TUS uploaders to read their own uploads back, write an owner
-   * into the TUS metadata as well and it will be picked up here unchanged.
+   * `metadata.ownerId` is their own id. A file with no owner recorded — the admin
+   * uploads via `/files/upload` and the GraphQL mutations — is therefore
+   * ADMIN-ONLY.
+   *
+   * **TUS uploads DO carry an owner from nest-server 11.35.0 on.** The tus server
+   * records the authenticated creator as it creates the upload and writes
+   * `metadata.ownerId` onto the finished file, so a tus uploader reads their own
+   * upload back through this rule with no extra project code. Before 11.35.0 a
+   * tus upload carried only `tusUploadId`, which made every one of them
+   * admin-only — if you relied on that, note that it has changed. Uploads created
+   * before the update carry no owner and stay admin-only.
+   *
+   * **`file.access: 'owner'` (11.35.0+) is this exact rule as one config value**,
+   * including the metadata stamping `AvatarController` does by hand below. This
+   * project keeps the explicit override because it is the reference
+   * implementation and has to EXERCISE the inheritance seam consuming projects
+   * extend — see the note at `PROJECT_FILE` in `config.env.ts`. In your own
+   * project, prefer the preset.
    *
    * Two properties worth knowing:
    *
