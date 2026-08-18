@@ -391,7 +391,22 @@ function localConfig(
     hostname: process.env.BIND_ADDRESS,
     ignoreSelectionsForPopulate: true,
     logExceptions: true,
-    mongoose: { uri: process.env.NSC__MONGOOSE__URI || `mongodb://127.0.0.1/${options.dbName}` },
+    mongoose: {
+      // Fail fast when Mongo is not there. The driver's default is 30 s per
+      // operation, which is the right call for a deployed service riding out a
+      // replica-set election — and the wrong one everywhere localConfig applies
+      // (local, e2e, ci), where "no Mongo" means it is simply not running.
+      //
+      // At 30 s the symptom is indistinguishable from a hang: every test burns
+      // its own timeout waiting, a CI suite spends its whole budget proving the
+      // same fault, and the log blames whatever test happened to run first. At
+      // 5 s it is an error message. Deployed environments keep the default —
+      // deployedConfig does not go through here.
+      //
+      // Override per environment via NSC__MONGOOSE__OPTIONS__SERVER_SELECTION_TIMEOUT_MS.
+      options: { serverSelectionTimeoutMS: 5000 },
+      uri: process.env.NSC__MONGOOSE__URI || `mongodb://127.0.0.1/${options.dbName}`,
+    },
     port: Number(process.env.PORT) || 3000,
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
