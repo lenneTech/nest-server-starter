@@ -48,6 +48,26 @@ code — grepping the whole package then reports "patched" when it is not.
 node -p "require.resolve('<pkg>')"   # what actually loads
 ```
 
+### Override keys: one rule per package
+
+An override key is matched against the **requested range** (semver intersection), not
+against the resolved version. A bounded key like `ip-address@<10.3.1` therefore still
+fires for a consumer asking `^10.0.0` and pins the whole tree to the target. Every entry
+in `overrides:` is a hard pin — there is no such thing as a "floor only" override.
+
+Two rules for the same package fight, and **the loser is invisible**. Until 2026-08-22
+this repo carried both of these:
+
+```yaml
+'@hono/node-server': 1.19.14          # BELOW the >=2.0.10 that fixes the CVEs
+'@hono/node-server@<2.0.10': 2.0.11   # above it
+```
+
+The tree happened to land on `2.0.11`, so `pnpm audit` was green while the configuration
+said the opposite — one edit away from shipping the advisory. The same shape existed for
+`hono` (bare `4.12.25`, below the `4.12.27` fix, rescued only by a second ranged entry),
+and earlier for `fast-uri`. Write one rule per package.
+
 ### Override targets
 
 Target the **newest patched release that also clears the `minimumReleaseAge` gate**, not
@@ -58,6 +78,43 @@ package back), and not the absolute latest either (a release younger than the cu
 ```bash
 npm view <pkg> time --json
 ```
+
+A target left behind the newest release in its major silently becomes a **downgrade lock**:
+the entry looks maintained, the audit is green, and the package is being held back — until
+the day an advisory lands on the version it is holding. That is what happened to `fast-uri`
+here, and to eleven targets at once in the 11.36.1 sweep.
+
+Two override entries are **lockstep** entries rather than mere floors: `@apollo/server`,
+`nodemailer` (and `multer`, `ws`) also appear as declared dependencies of
+`@lenne.tech/nest-server`. Under the hoisted linker a target *below* the declared version
+does not leave you one patch behind — it puts a **second, older copy** in the tree next to
+the declared one. Move those targets in the same commit as the framework bump.
+
+### Verifying an override is still doing something — the only honest test
+
+A clean `pnpm audit` is **not** evidence that an override is obsolete: the audit is clean
+*because the override is working*. Diffing against the committed lockfile proves nothing
+either — it already carries the pins. Do two **fresh** resolves and diff them:
+
+```bash
+mkdir -p /tmp/ovA /tmp/ovB
+cp package.json pnpm-workspace.yaml /tmp/ovA/
+cp package.json /tmp/ovB/ && <strip the `overrides:` block> > /tmp/ovB/pnpm-workspace.yaml
+(cd /tmp/ovA && pnpm install --lockfile-only)
+(cd /tmp/ovB && pnpm install --lockfile-only && pnpm audit)
+diff <(grep -E '^  [^ ]' /tmp/ovA/pnpm-lock.yaml) <(grep -E '^  [^ ]' /tmp/ovB/pnpm-lock.yaml)
+```
+
+Read the diff as follows:
+
+| Without the override the tree resolves… | Meaning | Action |
+| --- | --- | --- |
+| an **older** version, and the audit goes red | load-bearing | keep |
+| the **same** version | inert today | keep as documented floor, raise the target if it lags |
+| a **newer** version | downgrade lock | raise the key and the target together |
+| the package is **absent entirely** | the chain left the tree | remove the entry, then re-audit |
+
+Removal needs the last row, or a red audit that the override provably fixes. Nothing else.
 
 Prefer picking a slightly older patched release over adding a `minimumReleaseAgeExclude`
 entry. Standing exemptions to the release-age gate weaken a supply-chain control for

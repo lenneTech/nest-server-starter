@@ -77,8 +77,9 @@ auditConfig:
     # trusting a green audit.
     #
     # Re-verify when the upstream range is narrowed — then delete this entry.
-    # Verified 2026-08-11 after the nest-server 11.33.0 bump: the prod path resolves
-    # minimatch@10.2.6 -> brace-expansion@5.0.9 (patched).
+    # Verified 2026-08-22 after the nest-server 11.36.1 bump: the prod path resolves
+    # minimatch@10.2.6 -> brace-expansion@5.0.9 (patched). Only two brace-expansion
+    # lines are in the tree at all (1.1.18 and 5.0.9), both carrying the backport.
     #
     # NOTE: a SECOND brace-expansion advisory landed since — GHSA-rgw5-rvv9-x895
     # (DoS via unbounded intermediate arrays, bypassing the GHSA-mh99 fix). That one
@@ -103,100 +104,143 @@ auditConfig:
 # Each override is documented below with: what / why (CVE) / transitive chain.
 # ---------------------------------------------------------------------------
 overrides:
+  # ---- ONE RULE PER PACKAGE. Read this before adding an entry. ----------------
+  #
+  # An override key is matched against the REQUESTED RANGE (semver intersection),
+  # not against the resolved version. So even a bounded key like `ip-address@<10.3.1`
+  # fires for a consumer asking `^10.0.0` and pins the WHOLE tree to the target.
+  # Every entry below is therefore a HARD PIN, and a target left behind the newest
+  # release in its major silently becomes a DOWNGRADE LOCK.
+  #
+  # Two rules for the same package fight, and the loser is invisible. Until
+  # 2026-08-22 this block carried BOTH of these:
+  #     '@hono/node-server': 1.19.14          # BELOW the >=2.0.10 that fixes the CVEs
+  #     '@hono/node-server@<2.0.10': 2.0.11   # above it
+  # The tree happened to land on 2.0.11, so `pnpm audit` was green while the
+  # configuration said the opposite — one edit away from shipping the advisory.
+  # The same shape existed for `hono` (bare 4.12.25, below the 4.12.27 fix, rescued
+  # only by a second ranged entry). Both bare entries are gone; see below.
+  #
+  # HOW TO VERIFY an entry is still doing something, and doing it in the right
+  # direction — the ONLY honest test:
+  #     cp package.json pnpm-workspace.yaml /tmp/withA/ ; strip `overrides:` for /tmp/withoutB/
+  #     (cd /tmp/withA   && pnpm install --lockfile-only)
+  #     (cd /tmp/withoutB && pnpm install --lockfile-only && pnpm audit)
+  #     diff the resolved versions of the two lockfiles
+  # Diffing against the COMMITTED lockfile proves nothing — it already carries the pins.
+  # If the no-override resolve is NEWER than the pin, the entry is a downgrade lock:
+  # raise the target and the key together. If the no-override resolve is already above
+  # the advisory floor AND the audit is clean, keep the entry as a bounded floor so a
+  # future range narrowing cannot reopen the hole — but never let it cap a patched
+  # release.
+  # ----------------------------------------------------------------------------
+
   # Peer-conflict + security: @nestjs/apollo pulls in
   # @apollo/server-plugin-landing-page-graphql-playground@4.0.1 (peerDep
-  # @apollo/server@^4), conflicting with @lenne.tech/nest-server@11.25.6 which
-  # depends on @apollo/server@5.5.1. Forces a single v5 instance. Also covers
-  # security CVE in @apollo/server <5.5.0. Remove once the playground plugin
-  # accepts v5. Keep aligned with nest-server's @apollo/server version.
+  # @apollo/server@^4), conflicting with @lenne.tech/nest-server which depends on
+  # @apollo/server@5.5.1. Forces a single v5 instance. Also covers the CVE in
+  # @apollo/server <5.5.0. Bare on purpose: this is a LOCKSTEP entry — the target
+  # must equal the version @lenne.tech/nest-server declares (5.5.1 today), or the
+  # hoisted linker puts a second copy in the tree. Move it when the framework moves.
+  # Remove once the playground plugin accepts v5.
   '@apollo/server': 5.5.1
 
   # Security: SSRF via NO_PROXY bypass (GHSA-3p68-rc4w-qgx5), Cloud Metadata
-  # Exfiltration via Header Injection (GHSA-fvcv-3m26-pcqx) in axios <1.15.0, AND
-  # formDataToJSON recursion DoS + prototype pollution in auth subfields (3x
-  # moderate) in axios <1.18.0. Transitive via @lenne.tech/nest-server>@getbrevo/
-  # brevo and >node-mailjet. 1.18.1 is the patched release (>=1.18.0), aligned
-  # with nest-server's own override.
-  axios: 1.18.1
-
-  # Security: Multiple CVEs <4.12.18 (Prototype Pollution, bodyLimit bypass,
-  # JSX tag injection, CSS Declaration Injection, Vary header bypass, JWT
-  # NumericDate validation). Latest 4.x patch. Transitive via
-  # @lenne.tech/nest-server>@nestjs/terminus>@prisma/client>prisma>@prisma/dev
-  # (@prisma/dev requires hono ^4.12.8, so 4.12.22 is compatible).
-  hono: 4.12.25
-
-  # Security: Authorization bypass CVE in @hono/node-server <1.19.10.
-  # Transitive via @lenne.tech/nest-server>@nestjs/terminus>prisma>@prisma/dev
-  # (@prisma/dev pins 1.19.11). 1.19.14 is latest 1.x; 2.x is a major bump.
-  '@hono/node-server': 1.19.14
-
-  # Security: Code Injection and Prototype Pollution in lodash <=4.17.23.
-  # Transitive via multiple chains. 4.18.1 is the patched release line.
-  lodash: 4.18.1
-
-  # Security: ReDoS vulnerability in ajv >=7.0.0-alpha.0 <8.18.0. Transitive
-  # via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core.
-  ajv: 8.20.0
-
-  # Security: AsyncLocalStorage context contamination in effect <3.20.0
-  # (GHSA-38f7-945m-qr2g). @prisma/config@7.4.2 pins effect to exact 3.18.4
-  # (vulnerable), so this override is required. 3.21.2 is latest 3.x.
-  effect: 3.21.2
-
-  # Security: ReDoS via extglob quantifiers (high, >=4.0.0 <4.0.4) AND Method
-  # Injection in POSIX Character Classes (moderate) in picomatch. Transitive
-  # via @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core.
-  picomatch: 4.0.4
-
-  # Security: Multiple CVEs in vite (arbitrary file read via WebSocket, fs.deny
-  # bypass, path traversal in .map handling, plus GHSA fs.deny bypass on Windows
-  # alternate paths fixed in 8.0.16). 8.0.16 still satisfies vite-plugin-node@8
-  # peer (vite@^8) and pulls postcss@^8.5.10 (fix for GHSA-qx2v-qp2m-jg93).
-  vite: 8.0.16
-
-  # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf
-  # is provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via
-  # @compodoc/compodoc (uuid 11.1.0, directly and via >vis-network>vis-data).
-  # Pinned to 14.0.0 (latest, also patched). API used (uuid.v4) is stable 8-14.
-  uuid: 14.0.0
-
-  # Security: Remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26,
-  # >=6.11.1 <=6.15.1). Transitive via @apollo/server>body-parser>qs and
-  # express>body-parser>qs. 6.15.2 is the patched release.
-  qs: 6.15.2
-
-  # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
-  # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Range on the LEFT only replaces the
-  # vulnerable 8.x instance (ws@7.x, unaffected, is left untouched). Transitive
-  # via @nestjs/graphql>graphql-ws>ws and @nestjs/graphql>ws.
-  'ws@>=8.0.0 <8.21.0': 8.21.0
-  # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — bump
-  # to the patched 7.5.11 so the deprecated lib keeps its expected major.
-  'ws@>=7.0.0 <7.5.11': 7.5.11
-
-  # Security: @hono/node-server path traversal in the static-file handler
-  # (GHSA-frvp-7c67-39w9, patched >=2.0.5) plus an unauthenticated memory leak
-  # in the 2.x line itself (GHSA-9mqv-5hh9-4cgg, patched >=2.0.10); both moderate.
-  # Transitive via @lenne.tech/nest-server>@modelcontextprotocol/sdk, which
-  # declares ^1.19.9 and ships NO 1.x fix line — so this is deliberately a
-  # CROSS-MAJOR override. Verified safe upstream: the SDK's only consumed symbol
-  # is `getRequestListener`, unchanged in 2.x as `(fetchCallback, options?)`;
-  # engines >=20 and peer hono@^4 both fit.
-  # NOTE: pnpm `overrides:` are NOT inherited from a dependency, so nest-server's
-  # own copy of this entry does nothing here — see
-  # node_modules/@lenne.tech/nest-server/docs/security-overrides.md.
-  # Drop once @modelcontextprotocol/sdk moves its own range to ^2.
-  '@hono/node-server@<2.0.10': 2.0.11
+  # Exfiltration via Header Injection (GHSA-fvcv-3m26-pcqx) in axios <1.15.0, plus
+  # formDataToJSON recursion DoS + prototype pollution in auth subfields (3x moderate)
+  # in axios <1.18.0. Transitive via @lenne.tech/nest-server>node-mailjet (and
+  # >@getbrevo/brevo, when that path is present).
+  # 2026-08-22: was an unqualified `axios: 1.18.1`, which had become a downgrade lock —
+  # a fresh resolve without it lands on 1.19.0. Key bounded to the advisory floor and
+  # target raised, so this can only ever lift a vulnerable version.
+  'axios@<1.18.0': 1.19.0
 
   # Security: 3x Hono, all moderate, all patched >=4.12.27 — GHSA-xgm2-5f3f-mvvc
   # (API-Gateway adapter), GHSA-hvrm-45r6-mjfj (jsx request-context bleed),
-  # GHSA-w62v-xxxg-mg59 (cx() XSS bypass). Transitive via
-  # @lenne.tech/nest-server>@modelcontextprotocol/sdk.
-  # Target is the LATEST 4.x, not the minimum patch: an override is a hard PIN,
-  # not a floor, so targeting 4.12.27 would hold the package back from every
-  # later patch. Re-point or drop once the SDK requests >=4.12.27 itself.
-  'hono@>=4.0.0 <4.12.34': 4.12.34
+  # GHSA-w62v-xxxg-mg59 (cx() XSS bypass). Plus the earlier <4.12.18 set (prototype
+  # pollution, bodyLimit bypass, JSX tag injection, CSS declaration injection, Vary
+  # header bypass, JWT NumericDate validation).
+  # Transitive via @lenne.tech/nest-server>@modelcontextprotocol/sdk (and, before it
+  # left the tree, >@nestjs/terminus>prisma>@prisma/dev — that chain is GONE, which is
+  # why the old bare entry's justification no longer applied).
+  # 2026-08-22: consolidated from TWO rules (`hono: 4.12.25` + `hono@>=4.0.0 <4.12.34`)
+  # into one. The bare entry pinned 4.12.25 — BELOW the 4.12.27 fix — and was only
+  # rescued by the ranged one. Target raised to the newest 4.x; a fresh resolve without
+  # any hono override lands on 4.13.3.
+  'hono@>=4.0.0 <4.12.27': 4.13.3
+
+  # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
+  # ranged '@hono/node-server@<2.0.10': 2.0.11).
+  # @modelcontextprotocol/sdk@1.30.0 declares "^1.19.9 || ^2.0.5", so a fresh resolve
+  # picks the newest 2.x (2.1.1) on its own — above the >=2.0.10 that fixes
+  # GHSA-frvp-7c67-39w9 and GHSA-9mqv-5hh9-4cgg. Evidence: `pnpm why @hono/node-server`
+  # reports that SDK as the only consumer (the @nestjs/terminus>prisma>@prisma/dev chain
+  # the old comment named is no longer in the tree at all), and a no-override resolve
+  # audits clean at 2.1.1 while the entries held the tree at 2.0.11.
+  # @lenne.tech/nest-server 11.36.1 retired its own copy for the same reason — see
+  # node_modules/@lenne.tech/nest-server/docs/security-overrides.md, "Retired".
+  # Do NOT re-add unless the SDK narrows its range back to ^1.
+
+  # Security: Code Injection and Prototype Pollution in lodash <=4.17.23.
+  # Transitive via multiple chains (@nestjs/swagger among them).
+  # Key bounded 2026-08-22 so a future 4.18.x cannot be capped by this pin.
+  'lodash@<=4.17.23': 4.18.1
+
+  # Security: ReDoS in ajv >=7.0.0-alpha.0 <8.18.0. Transitive via
+  # @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core and
+  # @lenne.tech/nest-server>@modelcontextprotocol/sdk>ajv.
+  # 2026-08-22: was an unqualified `ajv: 8.20.0`, which also dragged the untouched
+  # ajv@6 consumers across a MAJOR (ajv 6 -> 8 changes the export shape and adds strict
+  # mode — the same class of break the minimatch bound below guards against). Key
+  # narrowed to the advisory range: 7.x/8.x consumers are lifted, 6.x is left alone.
+  # With that bound the tree resolves ajv 6.15.0 / 8.18.0 / 8.20.0 side by side, all at
+  # or above the fix, and the audit stays clean — so this is now a floor, not a lift.
+  'ajv@>=7.0.0-alpha.0 <8.18.0': 8.20.0
+
+  # Security: ReDoS via extglob quantifiers (high, >=4.0.0 <4.0.4) AND Method
+  # Injection in POSIX Character Classes (moderate) in picomatch. Transitive via
+  # @compodoc/compodoc>@angular-devkit/schematics>@angular-devkit/core.
+  # 2026-08-22: was an unqualified `picomatch: 4.0.4`, which lifted the picomatch@2
+  # consumers across two majors AND capped the 4.x line one patch below latest. Key
+  # bounded to the advisory range, target raised to 4.0.5. A no-override resolve keeps
+  # picomatch@2.3.2 alongside 4.0.5 and audits clean, so 2.x needs no lift.
+  'picomatch@>=4.0.0 <4.0.4': 4.0.5
+
+  # Security: Multiple CVEs in vite (arbitrary file read via WebSocket, fs.deny
+  # bypass, path traversal in .map handling, plus the fs.deny bypass on Windows
+  # alternate paths fixed in 8.0.16). Dev/test only (vitest, vite-plugin-node).
+  # 8.2.2 still satisfies the vite-plugin-node@8 peer (vite@^8) and pulls
+  # postcss@^8.5.x (see the postcss entry). Target raised 8.0.16 -> 8.2.2 and key
+  # bounded 2026-08-22; a no-override resolve lands on 8.2.2.
+  'vite@<8.0.16': 8.2.2
+
+  # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf is
+  # provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via @compodoc/compodoc.
+  # The API used (uuid.v4) is stable across 8-14, so the cross-major target is safe.
+  # 2026-08-22: was an unqualified `uuid: 14.0.0`, capping the package below latest.
+  # Key bounded to the advisory; @compodoc/compodoc@2.0.0 now declares a range that
+  # already reaches 14.x, so a fresh resolve lands on 14.0.1 by itself and this entry
+  # no longer fires. Kept as a FLOOR: if a consumer narrows back onto the 11.x line it
+  # would be lifted rather than silently reopening GHSA-w5hq-g745-h8pq.
+  'uuid@<11.1.1': 14.0.2
+
+  # Security: Remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26,
+  # >=6.11.1 <=6.15.1). Transitive via @apollo/server>body-parser>qs and
+  # express>body-parser>qs. Target raised 6.15.2 -> 6.15.3 and key bounded 2026-08-22.
+  'qs@>=6.11.1 <=6.15.1': 6.15.3
+
+  # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
+  # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Transitive via @nestjs/graphql>graphql-ws>ws
+  # and @nestjs/graphql>ws.
+  # THE TARGET MUST EQUAL THE ws VERSION @lenne.tech/nest-server DECLARES (8.21.3 today,
+  # as an ordinary dependency). Under the hoisted linker a LOWER target does not leave
+  # you one patch behind — it puts a SECOND, older ws copy in the tree next to the
+  # declared one. Raised 8.21.0 -> 8.21.3 on 2026-08-22; the upper bound moves with it
+  # so the declared 8.21.3 itself is never matched. Move both when the framework moves.
+  'ws@>=8.0.0 <8.21.3': 8.21.3
+  # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — patched
+  # release, raised 7.5.11 -> 7.5.13 on 2026-08-22 (latest 7.x).
+  'ws@>=7.0.0 <7.5.13': 7.5.13
 
   # Security: fast-uri — FOUR advisories, all covered by 3.1.4:
   #   <=3.1.1  path traversal via percent-encoded dot segments (GHSA-q3j6-qgpj-74h6)
@@ -206,29 +250,32 @@ overrides:
   # Transitive via @compodoc/compodoc>@angular-devkit/*>ajv>fast-uri and
   # @lenne.tech/nest-server>@modelcontextprotocol/sdk>ajv.
   #
-  # This REPLACES an earlier unqualified `fast-uri: 3.1.2` entry. That one fixed the first two
+  # This REPLACED an earlier unqualified `fast-uri: 3.1.2` entry. That one fixed the first two
   # advisories and then became a DOWNGRADE-LOCK: an unqualified key matches every version and
   # pins it, so when the two 2026 advisories landed it actively held the package on a vulnerable
   # 3.1.2 — and, being unqualified, it silently overruled the bounded entry added next to it.
+  # (That is the same defect the `hono` / `@hono/node-server` pairs had; see the header.)
   # Keep the key bounded so it can only ever raise a vulnerable version, never cap a patched one.
-  # Drop once ajv / ajv-formats request >=3.1.4 themselves.
+  # 3.1.5 is the newest 3.x; 4.x is a major and nothing requests it. Drop once ajv /
+  # ajv-formats request >=3.1.4 themselves.
   'fast-uri@>=3.0.0 <3.1.5': 3.1.5
 
   # Security: body-parser DoS on malformed urlencoded input
   # (GHSA-v422-hmwv-36x6, low, patched >=2.3.0). Transitive via
   # @lenne.tech/nest-server>@as-integrations/express5 and express itself.
-  # Drop once express / @apollo/server request >=2.3.0.
+  # 2.3.0 is the newest 2.x. Drop once express / @apollo/server request >=2.3.0.
   'body-parser@>=2.0.0 <2.3.0': 2.3.0
 
   # Security: Overlong UTF-8 decoding in @protobufjs/utf8 <=1.1.0. Transitive
   # via @lenne.tech/nest-server>@apollo/server>@apollo/usage-reporting-protobuf
   # >@apollo/protobufjs>@protobufjs/utf8.
-  '@protobufjs/utf8': 1.1.1
+  # Key bounded and target raised 1.1.1 -> 1.1.2 on 2026-08-22 (was an unqualified
+  # entry capping the package one patch below latest).
+  '@protobufjs/utf8@<1.1.1': 1.1.2
 
   # Security: brace-expansion DoS via unbounded expansion (GHSA-mh99-v99m-4gvg /
   # CVE-2026-14257, high). The fix was backported to EVERY release line, so all three
-  # pins below land on patched code — this used to say "patched only in 5.0.8, no
-  # 1.x/2.x backport", which was wrong and left two lines pinned short of the fix.
+  # pins below land on patched code.
   #
   # Patch status measured at each package's `main` entry point:
   #   1.1.16 vulnerable → 1.1.17, 1.1.18 patched
@@ -236,7 +283,7 @@ overrides:
   #   5.0.7  vulnerable → 5.0.8, 5.0.9 patched
   # The targets were raised 1.1.17 -> 1.1.18 and 5.0.8 -> 5.0.9 on 2026-08-11 for the
   # FOLLOW-UP advisory GHSA-rgw5-rvv9-x895 (unbounded intermediate arrays), which the
-  # earlier patch levels do not cover. Both releases now clear the release-age gate.
+  # earlier patch levels do not cover.
   # CAUTION when re-verifying: 1.1.16 and 2.1.2 ship a stray `dist/` that DOES contain
   # the fix while `main` points at the unpatched root `index.js`. Grepping the whole
   # package says "patched"; only the entry point tells the truth.
@@ -251,15 +298,11 @@ overrides:
   #
   # Targets are the NEWEST patched release that also clears the minimumReleaseAge gate
   # (see bottom of this file) — not the minimum that merely clears the advisory,
-  # because an override is a hard PIN and would hold the package back (the `hono` rule
-  # above), and not the absolute latest either, because a release younger than the
-  # cutoff fails `pnpm install` with ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION.
-  # Concretely on 2026-07-30: 1.1.18 and 5.0.9 exist and are patched, but were
-  # published ~10h earlier and trip the gate; 1.1.17 (2026-07-29) and 5.0.8
-  # (2026-07-23) are equally patched and pass. Taking the newer ones would have forced
-  # a standing `minimumReleaseAgeExclude` exemption to paper over the age gate —
-  # exactly the trade the policy at the bottom of this file tells us not to make.
-  # When bumping these, check `npm view <pkg> time` against the cutoff first.
+  # because an override is a hard PIN and would hold the package back, and not a
+  # release younger than the cutoff either, because that fails `pnpm install` with
+  # ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION. Verified 2026-08-22: 1.1.18, 2.1.4 and
+  # 5.0.9 are still the newest in their lines. When bumping these, check
+  # `npm view <pkg> time` against the cutoff first.
   #
   # The `>=3.0.0` lower bound also sweeps in 3.x/4.x. Those are ESM-only
   # (`type: module`), so lifting them to 5.x (dual ESM+CJS) is a widening, not a break.
@@ -300,47 +343,51 @@ overrides:
   # (vitest > @vitest/mocker > vite > postcss). A secondary path runs through
   # better-auth > vitest, but that peer is optional and pruned by `--prod`, so no
   # postcss reaches the production image either way.
-  'postcss@<8.5.25': 8.5.25
+  # Target raised 8.5.25 -> 8.5.26 on 2026-08-22 (newest 8.x).
+  'postcss@<8.5.25': 8.5.26
 
   # Security: CRLF injection via unescaped multipart field names/filenames in
   # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
-  # @lenne.tech/nest-server>@getbrevo/brevo>axios and >node-mailjet>axios.
-  # 4.0.6 is the patched release (fixed target, latest 4.x).
-  form-data: 4.0.6
+  # @lenne.tech/nest-server>node-mailjet>axios (and >@getbrevo/brevo>axios).
+  # 4.0.6 is the newest 4.x.
+  'form-data@<4.0.6': 4.0.6
 
-  # Security: Prototype pollution / special-character handling in js-yaml
-  # <4.1.2. Transitive via eslint, @nestjs/swagger and cosmiconfig — all of
-  # which declare js-yaml ^4. NOTE: js-yaml never published a 4.1.2; the 4.x
-  # line ends at 4.3.0, so the fixed target is 4.3.0 (the earlier '>=4.1.2'
-  # range silently pulled a 5.0.0 major, which this pin reverts).
-  js-yaml: 4.3.1
+  # Security: Prototype pollution / special-character handling in js-yaml <4.1.2.
+  # Transitive via eslint, cosmiconfig and (historically) @nestjs/swagger.
+  # NOTE: js-yaml never published a 4.1.2; the 4.x line ends at 4.3.1, which is the
+  # fixed target for every ^4 consumer.
+  # 2026-08-22: was an unqualified `js-yaml: 4.3.1`. @nestjs/swagger@11.4.7 now declares
+  # js-yaml ^5, so the bare key was force-DOWNGRADING a direct dependency's own dep
+  # across a major. Key bounded to the advisory: ^4 consumers are lifted to 4.3.1, ^5
+  # consumers are left on the (unaffected, audit-clean) 5.x line.
+  'js-yaml@<4.1.2': 4.3.1
 
-  # Security: Email injection / header-related CVEs in nodemailer <9.0.1
-  # (high). Transitive via @lenne.tech/nest-server (declares 9.0.3). 9.0.3 is
-  # the patched release (fixed target — the earlier '>=9.0.1' range pinned
-  # 9.0.1, below the framework's 9.0.3).
-  nodemailer: 9.0.3
+  # Security: Email injection / header-related CVEs in nodemailer <9.0.1 (high).
+  # Transitive via @lenne.tech/nest-server. LOCKSTEP entry: the target must equal the
+  # version the framework declares (9.0.5 today) — a lower target puts a second copy in
+  # the hoisted tree. Raised 9.0.3 -> 9.0.5 on 2026-08-22 alongside nest-server 11.36.1.
+  nodemailer: 9.0.5
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high).
-  # Transitive via @lenne.tech/nest-server (and @nestjs/platform-express).
-  # 2.2.0 is the patched release (fixed target, aligned with the framework's
-  # exact 2.2.0).
+  # Transitive via @lenne.tech/nest-server and @nestjs/platform-express, and a direct
+  # dependency here. LOCKSTEP entry, aligned with the framework's exact 2.2.0
+  # (also the newest release).
   multer: 2.2.0
 
   # Security: various undici CVEs <7.29.0 — response desynchronization,
   # cross-user information disclosure, CRLF injection via a blob-like body type,
   # cookie attribute injection (2x high, 4x moderate). Transitive via
-  # @compodoc/compodoc>cheerio>undici. 7.29.0 is the patched 7.x release.
+  # @compodoc/compodoc>cheerio>undici. 7.29.0 is the newest 7.x (8.x is a major).
   'undici@>=7.0.0 <7.29.0': 7.29.0
 
   # Security: ip-address — Address4 decodes leading-zero octets as decimal
   # (GHSA-mwp4-54f8-5fhr, high, patched >=10.3.1), plus two moderates (CIDR
   # suffix suppressing subnet checks, IPv4-mapped/NAT64 misclassification).
   # Transitive via @lenne.tech/nest-server>@modelcontextprotocol/sdk>
-  # express-rate-limit>ip-address, which declares a caret range — so this only
-  # pins until a fresh resolve picks up the fix on its own. Aligned with the
-  # framework's own entry.
-  'ip-address@<10.3.1': 10.3.1
+  # express-rate-limit>ip-address, which declares a caret range — so the key still
+  # matches by intersection and this is a hard pin, not a floor. Target raised
+  # 10.3.1 -> 10.5.0 on 2026-08-22 (it was capping the package two minors back).
+  'ip-address@<10.3.1': 10.5.0
 
   # Security: TWO advisories on the 3.x line, and the target must be the LATER of
   # the two — a 3.3.17 target closes the first and leaves the second wide open.
@@ -356,6 +403,7 @@ overrides:
   'nanoid@>=3.0.0 <3.3.18': 3.3.18
 
   # Security: high CVE in piscina <4.9.3 - transitive via the build/test toolchain.
+  # 4.9.3 is the newest 4.x (5.x is a major).
   'piscina@<4.9.3': 4.9.3
 
   # Security: Zip-Slip — archive extraction can create files and links outside
@@ -363,8 +411,18 @@ overrides:
   # @swc/cli>@xhmikosr/bin-wrapper>@xhmikosr/downloader>@xhmikosr/decompress
   # and the same chain under @nestjs/cli. @swc/cli@0.8.1 is already latest, so
   # the fix can only come from an override. @xhmikosr/downloader requires
-  # ^11.1.1, so the patched 11.1.3 satisfies it (patch bump, same engines).
-  '@xhmikosr/decompress': 11.1.3
+  # ^11.1.1, so 11.1.4 satisfies it (patch bump, same engines).
+  # Key bounded and target raised 11.1.3 -> 11.1.4 on 2026-08-22 (was an unqualified
+  # entry capping the package one patch below latest).
+  '@xhmikosr/decompress@>=11.0.0 <11.1.3': 11.1.4
+
+  # REMOVED 2026-08-22: 'effect: 3.21.2'.
+  # It existed for @prisma/config@7.4.2 pinning effect to an exact vulnerable 3.18.4,
+  # reached via @lenne.tech/nest-server>@nestjs/terminus>@prisma/client>prisma. That
+  # whole chain has left the tree: `pnpm why effect`, `pnpm why prisma` and
+  # `pnpm why @prisma/dev` all report nothing, and the package appears in neither a
+  # with-overrides nor a without-overrides fresh resolve. This is the one removal here
+  # justified by the package being gone rather than by the pin being stale.
 
 # ---------------------------------------------------------------------------
 # Build script approvals (pnpm 11 replacement for onlyBuiltDependencies).
@@ -404,21 +462,14 @@ allowBuilds:
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
   - '@lenne.tech/nest-server'
-  # Written by pnpm during the 11.33.0 bump: nest-server 11.33.0 pins @nestjs/*
-  # 11.1.29, published the same day, so the 1-day hold-back refused it and the
-  # install could not resolve. Same three lines the framework repo carries.
-  #
-  # These are the machine-written `name@version` form the note above warns about,
-  # and they are meant to be TEMPORARY: once 11.1.29 clears the 24h cutoff the
-  # entries are inert and should be deleted at the next dependency bump. They are
-  # NOT a standing policy — an override target that trips the gate should still be
-  # answered with a slightly older patched release rather than a line here.
-  - '@nestjs/common@11.1.29'
-  - '@nestjs/core@11.1.29'
-  - '@nestjs/platform-express@11.1.29'
-  - '@nestjs/common@11.1.29'
-  - '@nestjs/core@11.1.29'
-  - '@nestjs/platform-express@11.1.29'
+  # 2026-08-22: removed six machine-written entries left behind by `pnpm audit --fix`
+  # during the 11.33.0 bump — '@nestjs/common@11.1.29', '@nestjs/core@11.1.29' and
+  # '@nestjs/platform-express@11.1.29', each listed TWICE. The project now declares
+  # @nestjs/* 11.2.1, so 11.1.29 no longer resolves anywhere in the tree and the lines
+  # were inert. That is exactly how they decay: they read as standing policy long after
+  # they stopped describing anything, and nobody notices because a no-op never fails.
+  # An exemption here is only ever justified for a version that is actually being
+  # installed right now; otherwise pin a slightly older patched release instead.
 
 # ---------------------------------------------------------------------------
 # Peer dependency rules — silence KNOWN-BENIGN unmet-peer warnings only.

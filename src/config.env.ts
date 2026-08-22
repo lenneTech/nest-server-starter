@@ -227,6 +227,23 @@ function deployedConfig(
     automaticObjectIdFiltering: true,
     // betterAuth.secret comes from NSC__BETTER_AUTH__SECRET
     betterAuth: {
+      // Native password reset is ON by default since nest-server 11.36.1: the framework injects the
+      // `sendResetPassword` hook, so `POST /iam/request-password-reset` is a live, UNAUTHENTICATED,
+      // token-minting, mail-sending endpoint. Two bounds guard it — a per-recipient cooldown in the
+      // mailer (always on) and the IP-axis `rateLimit` below (OFF unless you configure it).
+      //
+      // emailAndPassword: { passwordReset: false },   // answers RESET_PASSWORD_DISABLED again
+      //
+      // Route-level limiter for all /iam/* endpoints. Presence of the object enables it — an
+      // explicit `enabled: false` pre-configures without switching it on. Set `trustProxy` (below)
+      // whenever you turn this on behind a reverse proxy, or every client shares one bucket.
+      // rateLimit: { max: 10, windowSeconds: 60 },
+      //
+      // Send the reset mail through Brevo instead of SMTP/EJS. Deliberately separate from
+      // `emailVerification.brevoTemplateId` and with no fallback to it — that one is the
+      // VERIFICATION mail, and reusing it would tell someone who asked to reset their password to
+      // confirm their address instead.
+      // emailVerification: { passwordResetBrevoTemplateId: 42 },
       twoFactor: { appName: process.env.TWO_FACTOR_APP_NAME || brand },
     },
     // Brevo overlay — only active when BREVO_API_KEY is set
