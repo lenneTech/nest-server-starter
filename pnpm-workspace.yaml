@@ -432,10 +432,51 @@ allowBuilds:
   '@apollo/protobufjs': true
   '@compodoc/compodoc': true
   '@nestjs/core': true
-  '@scarf/scarf': true
+  # Install-time analytics, reached via @nestjs/swagger > swagger-ui-dist. Its
+  # postinstall (`node ./report.js`) shells out to read the dependency tree and POSTs
+  # to scarf.sh — opt-in by default. Nothing at runtime needs it, and THIS file is the
+  # one hoisted into every generated project, so `true` would put an install-time
+  # beacon on every customer's dev machine and CI runner.
+  #
+  # `nest-server` has always denied it. This file said `true` — a silent drift between
+  # the two maps, and the standing proof of the duplication warning below.
+  '@scarf/scarf': false
   '@swc/core': true
   bcrypt: true
+  # Not in this project's lockfile today (see the msgpackr note below for why that is
+  # not a reason to delete an entry). Live in nest-server and nuxt-base-template, and
+  # the hoist merges all three, so it is kept deliberately rather than pruned.
   esbuild: true
+  # Optional native accelerator for msgpackr.
+  #
+  # Do NOT delete this as a dead entry. `pnpm why msgpackr-extract` in THIS repo comes
+  # up empty, and the file's own no-dead-overrides rule would seem to apply — it does
+  # not. `bullmq` is an OPTIONAL PEER of @lenne.tech/nest-server and is never installed
+  # in npm mode (optional peers are not auto-installed, even under autoInstallPeers).
+  # It becomes real in VENDOR mode — the default for `lt fullstack init` — where the
+  # CLI's import-closure scanner resolves the dynamic `import('bullmq')` in
+  # core-cron-jobs.service.ts into a direct dependency, pinned at bullmq@6.2.0
+  # → msgpackr → msgpackr-extract@3.0.4.
+  #
+  # `false` costs nothing — and note it does NOT disable native acceleration. The
+  # install script is `node-gyp-build-optional-packages`, and the same resolver runs
+  # again at REQUIRE time against the prebuilt @msgpackr-extract/<platform> package,
+  # which carries no scripts of its own. Verified in nest-server, which has the same
+  # entry: `msgpackr.isNativeAccelerationEnabled === true` with the build denied. The
+  # script would only ever run a redundant node-gyp compile — one that needs
+  # python/make/g++ and would fail in a slim image anyway.
+  #
+  # This entry MUST live here, even though `nest-server` carries the identical one in
+  # its own pnpm-workspace.yaml. That file never reaches a generated project: in vendor
+  # mode the framework is source code rather than a dependency, and in npm mode a
+  # dependency's workspace settings are not read at all. Only the settings hoisted from
+  # THIS template (plus lt-monorepo's) end up in the project.
+  #
+  # Without it, pnpm 11 stops the very first install of a fresh `lt fullstack init`
+  # with ERR_PNPM_IGNORED_BUILDS and writes the placeholder
+  # `msgpackr-extract: set this to true or false` into the generated workspace file
+  # — an unusable project before a single line of code is written.
+  'msgpackr-extract': false
 
 # ---------------------------------------------------------------------------
 # Packages excluded from the minimum-release-age gate (allowed even if freshly

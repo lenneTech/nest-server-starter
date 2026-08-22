@@ -237,7 +237,19 @@ function deployedConfig(
       // Route-level limiter for all /iam/* endpoints. Presence of the object enables it — an
       // explicit `enabled: false` pre-configures without switching it on. Set `trustProxy` (below)
       // whenever you turn this on behind a reverse proxy, or every client shares one bucket.
-      // rateLimit: { max: 10, windowSeconds: 60 },
+      //
+      // Switchable from the environment, like `trustProxy`: no template can know the right
+      // numbers, but an operator should not have to edit TypeScript to turn the limiter on. The
+      // per-recipient cooldown in the mailer covers mail-bombing ONE address; this is the IP axis,
+      // which is what bounds address enumeration and mail-cost amplification across many.
+      ...(process.env.IAM_RATE_LIMIT_MAX
+        ? {
+            rateLimit: {
+              max: Number(process.env.IAM_RATE_LIMIT_MAX),
+              windowSeconds: Number(process.env.IAM_RATE_LIMIT_WINDOW_SECONDS ?? 60),
+            },
+          }
+        : {}),
       //
       // Send the reset mail through Brevo instead of SMTP/EJS. Deliberately separate from
       // `emailVerification.brevoTemplateId` and with no fallback to it — that one is the
