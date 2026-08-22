@@ -27,65 +27,38 @@ strictPeerDependencies: false
 # prints "1 high (1 ignored)" and still exits 0. The count is informational; the exit
 # code is the gate. Do not chase the number to zero by widening this list.
 # ----------------------------------------------------------------------------------
-auditConfig:
-  ignoreGhsas:
-    # brace-expansion DoS via unbounded expansion — GHSA-mh99-v99m-4gvg /
-    # CVE-2026-14257 (HIGH).
-    #
-    # FALSE POSITIVE, not an accepted vulnerability. The fix was backported across
-    # every release line, and the `overrides` below pin a patched release on each.
-    # Measured at each package's `main` entry point:
-    #   1.1.16 vulnerable → 1.1.17+ patched      (pinned: 1.1.18)
-    #   2.1.2  vulnerable → 2.1.4  patched       (pinned: 2.1.4)
-    #   5.0.7  vulnerable → 5.0.8+ patched       (pinned: 5.0.9)
-    # Note 1.1.16 and 2.1.2 SHIP a stray `dist/` that does contain the fix, but their
-    # `main` points at the unpatched root `index.js` — grep the whole package and you
-    # will conclude they are patched when they are not.
-    #
-    # It still fires because GitHub's advisory range is a blanket `<= 5.0.7` with
-    # `first_patched: 5.0.8` — a single range across ALL majors, never narrowed for the
-    # backports. So the installed 1.1.18 matches `<= 5.0.7` as a semver range and gets
-    # flagged despite carrying the fix.
-    #
-    # Why some paths stay on the old lines at all: two consumers are stuck on
-    # minimatch@3 —
-    #   @nestjs/cli > fork-ts-checker-webpack-plugin > minimatch > brace-expansion
-    #   standard-version > dotgitignore > minimatch > brace-expansion
-    # they `require('minimatch')` and call the result, while brace-expansion@5 and
-    # minimatch@10 export a namespace object instead of a callable, so lifting either
-    # throws at require time. The 1.x backport is what closes those.
-    #
-    # Residual: none from this advisory — every path carries the fix.
-    #
-    # SCOPE WARNING, and the reason this entry needs re-checking rather than trusting:
-    # `ignoreGhsas` is keyed on the GHSA id ALONE. pnpm applies no package, version or
-    # path filter, so this line hides the advisory EVERYWHERE in the graph,
-    # permanently — not just on the two dev-only paths reasoned about above.
-    #
-    # That matters because brace-expansion is NOT dev-only here. It has a live
-    # production path:
-    #   @lenne.tech/nest-server > ts-morph > @ts-morph/common > minimatch > brace-expansion
-    # `ts-morph` is a prod `dependencies` entry of nest-server (not a devDep), so this
-    # ships in the production image. It is patched today (brace-expansion@5.0.9) only
-    # because the minimatch override below lifts it onto the 5.x line. If a future
-    # nest-server bump moves it back onto a vulnerable line, `pnpm audit` — and with it
-    # `pnpm run check` — stays GREEN while a HIGH advisory ships.
-    #
-    # So after every @lenne.tech/nest-server bump, re-run:
-    #   pnpm list --prod --depth Infinity | grep -A1 minimatch
-    # and confirm the resolved brace-expansion is still on a patched release before
-    # trusting a green audit.
-    #
-    # Re-verify when the upstream range is narrowed — then delete this entry.
-    # Verified 2026-08-22 after the nest-server 11.36.1 bump: the prod path resolves
-    # minimatch@10.2.6 -> brace-expansion@5.0.9 (patched). Only two brace-expansion
-    # lines are in the tree at all (1.1.18 and 5.0.9), both carrying the backport.
-    #
-    # NOTE: a SECOND brace-expansion advisory landed since — GHSA-rgw5-rvv9-x895
-    # (DoS via unbounded intermediate arrays, bypassing the GHSA-mh99 fix). That one
-    # is NOT suppressed, and must not be: the pins below were raised to 1.1.18 /
-    # 2.1.4 / 5.0.9 to close it outright.
-    - GHSA-mh99-v99m-4gvg
+# There is deliberately no `auditConfig.ignoreGhsas` block: `pnpm audit` is clean on
+# its own merits, with nothing suppressed.
+#
+# GHSA-mh99-v99m-4gvg (brace-expansion, HIGH) lived here until 2026-08-22 as a
+# documented false positive — GitHub's range was then a blanket `<= 5.0.7` that swept
+# up the patched 1.x backports. The entry named its own removal condition ("re-verify
+# when the upstream range is narrowed"), and that condition is now met: the advisory
+# reads per-major windows (`< 1.1.17`, `< 2.1.3`, `< 3.0.3`, `< 5.0.8`), and the two
+# lines in this tree — 1.1.18 and 5.0.9 — sit above every one of them.
+#
+# Two things learned there are worth keeping, because they outlive the entry:
+#
+# 1. `ignoreGhsas` is keyed on the GHSA id ALONE. No package, version or path filter —
+#    an entry hides the advisory EVERYWHERE in the graph, permanently. And since lt CLI
+#    1.42.0 `auditConfig` is hoisted as a UNION into every generated project, so an
+#    entry here silences it for every customer workspace, not just this one.
+#
+# 2. brace-expansion is NOT dev-only here. It has a live production path,
+#    `@lenne.tech/nest-server > ts-morph > @ts-morph/common > minimatch > brace-expansion`
+#    (`ts-morph` is a prod dependency), patched today only because the minimatch
+#    override below lifts it onto the 5.x line. After every nest-server bump, run
+#    `pnpm list --prod --depth Infinity | grep -A1 minimatch` and confirm the resolved
+#    brace-expansion is still on a patched release before trusting a green audit.
+#
+# Why some paths stay on the old lines at all: two consumers are stuck on minimatch@3
+# (`@nestjs/cli > fork-ts-checker-webpack-plugin`, `standard-version > dotgitignore`).
+# They `require('minimatch')` and call the result, while brace-expansion@5 and
+# minimatch@10 export a namespace object rather than a callable, so lifting either
+# throws at require time. The 1.x backport is what closes those.
+#
+# The second advisory, GHSA-rgw5-rvv9-x895, was never suppressed and must not be — the
+# pins below were raised to 1.1.18 / 2.1.4 / 5.0.9 to close it outright.
 
 # pnpm 11 configuration
 #
