@@ -256,6 +256,20 @@ function deployedConfig(
       // VERIFICATION mail, and reusing it would tell someone who asked to reset their password to
       // confirm their address instead.
       // emailVerification: { passwordResetBrevoTemplateId: 42 },
+      //
+      // NOT wired here on purpose: `options.user.validateUserInfo`. It is better-auth's hook for
+      // narrowing self-registration (domain allowlist, invite code), and reaching for it is the
+      // obvious move — but from better-auth 1.7 it also BREAKS INITIAL-ADMIN SETUP. better-auth
+      // resolves the hook through `getCurrentAuthContext()`, which only exists inside its own
+      // request pipeline; system setup runs at application bootstrap, so the call ends in
+      // `FORBIDDEN / validation_context_missing` and no admin is ever created. Fail-closed, but
+      // the error names nothing you would connect to this setting.
+      //
+      // Note the source is NOT a bypass: the framework passes `{ method: 'admin' }` when it
+      // provisions the first admin, so a hook that runs CAN allow it through by branching on
+      // `source.method` — the context problem above is the part you cannot branch around. If you
+      // need the hook, provision the first admin through a request-scoped IAM route instead.
+      // See nest-server migration-guides/11.36.x-to-11.37.0.md §7.
       twoFactor: { appName: process.env.TWO_FACTOR_APP_NAME || brand },
     },
     // Brevo overlay — only active when BREVO_API_KEY is set
