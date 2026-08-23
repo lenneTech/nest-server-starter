@@ -39,8 +39,8 @@ importers:
   .:
     dependencies:
       '@lenne.tech/nest-server':
-        specifier: 11.36.3
-        version: 11.36.3(@better-auth/core@1.6.26(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.9)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(ioredis@5.11.0)(nanostores@1.3.0)(vitest@4.1.11)(zod@4.4.3)
+        specifier: 11.36.4
+        version: 11.36.4(@better-auth/core@1.6.26(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.9)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(ioredis@5.11.0)(nanostores@1.3.0)(vitest@4.1.11)(zod@4.4.3)
       '@nestjs/common':
         specifier: 11.2.1
         version: 11.2.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -693,8 +693,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lenne.tech/nest-server@11.36.3':
-    resolution: {integrity: sha512-YNWUT7/7FlzDsGBOnhyHDtmz3DjiVIcGssgIZ2kq8ZXODv1k6vtE/c1oZq04iaBcDvRhzUEsXV0GHI9Ij/g2Bg==}
+  '@lenne.tech/nest-server@11.36.4':
+    resolution: {integrity: sha512-NgoLIjSC7BwEv6lwinNtqpIPE12e2knm9i+fWEtDIHBc4La7K251ptdBkEgU8uthYV8Wb1R/nzzTdMtnvFyQbQ==}
     engines: {node: '>= 22', pnpm: ^11.0.0}
     hasBin: true
     peerDependencies:
@@ -6029,7 +6029,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lenne.tech/nest-server@11.36.3(@better-auth/core@1.6.26(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.9)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(ioredis@5.11.0)(nanostores@1.3.0)(vitest@4.1.11)(zod@4.4.3)':
+  '@lenne.tech/nest-server@11.36.4(@better-auth/core@1.6.26(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.3.7(zod@4.4.3))(jose@6.2.9)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(@nestjs/websockets@11.1.28)(@types/express@5.0.6)(better-call@1.3.7(zod@4.4.3))(ioredis@5.11.0)(nanostores@1.3.0)(vitest@4.1.11)(zod@4.4.3)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.0)
       '@as-integrations/express5': 1.1.2(@apollo/server@5.5.1(graphql@16.14.0))(express@5.2.1)

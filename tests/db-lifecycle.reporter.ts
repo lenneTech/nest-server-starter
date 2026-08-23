@@ -15,8 +15,57 @@ export const RUN_DB_PATTERN = /-run-(\d+)-p(\d+)$/;
  * setup assumes: a running `lt dev` session exports it pointing at the
  * project's DEVELOPMENT database, so without this guard a test run started
  * from that shell would silently wipe the developer's data.
+ *
+ * The marker must be a whole SEGMENT of the name, not a substring anywhere in
+ * it. The unanchored form this replaced was far too permissive: "ci" alone
+ * occurs inside soCIal, speCIal, finanCIal, invoiCIng, priCIng and muniCIpal,
+ * and "test" inside testimonials, latest and contest. A project named e.g.
+ * `social-hub` therefore had its DEVELOPMENT database accepted as a disposable
+ * test database — exactly the data loss this guard exists to prevent, given
+ * that `lt dev` exports the URI pointing at that very database.
+ *
+ * The anchoring turns this into a NAMING CONTRACT on the base database name: the
+ * marker must be delimited by `-`/`_` or a string boundary. A name like `shope2e`
+ * or `app-e2edb` would not satisfy it, and its databases would then never be
+ * collected (see the skip counters in the sweep and in `onTestRunEnd`, which
+ * exist to make that visible).
+ *
+ * `acctest` is a separate alternative BECAUSE of the anchoring: `test` no longer
+ * matches inside it (no delimiter precedes the `test`). It was redundant under
+ * the old pattern; deleting it as "redundant" now would silently stop
+ * acceptance-test databases from ever being collected.
  */
-export const SAFE_TEST_DB_PATTERN = /(e2e|ci|test|acctest)/i;
+export const SAFE_TEST_DB_PATTERN = /(^|[-_])(e2e|ci|test|acctest)([-_]|$)/i;
+
+/**
+ * Environment suffixes that mark a database as NOT disposable, whatever else its
+ * name says. Applied ON TOP of SAFE_TEST_DB_PATTERN by `isDroppableTestDb()`.
+ *
+ * Why this exists: SAFE_TEST_DB_PATTERN is a name heuristic, and a project slug
+ * may legitimately carry one of its markers as a whole word — `ci` is the
+ * ordinary German abbreviation for *Corporate Identity* (`ci-relaunch`,
+ * `ci-portal`), `test` a product noun for an exam or assessment
+ * (`online-test`). `lt dev up` names the developer's database `<slug>-local` and
+ * exports the Mongo URI at it, so `ci-portal-local` reached the one drop site
+ * that has NO second condition — see `tests/global-setup.ts`.
+ *
+ * Deliberately NOT applied to the sweep paths: those already require
+ * `isStaleTestDb(name, base)`, i.e. the name must belong to this project's own
+ * base, and adding a second refusal there could only turn a collected database
+ * into a leaked one.
+ */
+export const NON_DISPOSABLE_DB_PATTERN =
+  /(^|[-_])(local|dev|develop|development|prod|production|staging|stage|live)([-_]|$)/i;
+
+/**
+ * May this database be dropped by a path that has no other condition to lean on?
+ *
+ * Use this — not SAFE_TEST_DB_PATTERN alone — wherever the name is the ONLY
+ * evidence available, i.e. for an externally supplied Mongo URI.
+ */
+export function isDroppableTestDb(name: string): boolean {
+  return SAFE_TEST_DB_PATTERN.test(name) && !NON_DISPOSABLE_DB_PATTERN.test(name);
+}
 
 /**
  * Age limit for stale run databases. Normally staleness is detected via a dead
@@ -31,11 +80,18 @@ const STALE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
  * `mongodb://127.0.0.1/foo?bar=1` → { dbName: 'foo', query: '?bar=1', serverUri: 'mongodb://127.0.0.1' }
  */
 export function splitMongoUri(uri: string): { dbName: string; query: string; serverUri: string } {
-  const match = uri.match(/^(.*)\/([^/?]+)(\?.*)?$/);
+  // The database is the path segment AFTER the authority, which is why this anchors on the
+  // scheme instead of scanning for the last `/`. The previous greedy form (`^(.*)\/([^/?]+)…`)
+  // got two cases wrong: `mongodb://127.0.0.1` reported the HOST as the database name, hiding
+  // the fact that the URI names none at all (the driver then silently falls back to its default
+  // database, `test`); and an option value containing a slash — `?tlsCAFile=/etc/ca.pem` —
+  // reported `ca.pem`. Both matter: global-setup.ts refuses to drop a database the URI never
+  // named, and it can only do that if an absent name reads as absent.
+  const match = uri.match(/^(mongodb(?:\+srv)?:\/\/[^/?]*)(?:\/([^/?]*))?(\?.*)?$/i);
   if (!match) {
     return { dbName: '', query: '', serverUri: uri };
   }
-  return { dbName: match[2], query: match[3] || '', serverUri: match[1] };
+  return { dbName: match[2] || '', query: match[3] || '', serverUri: match[1] };
 }
 
 /**
@@ -62,6 +118,16 @@ export function deriveTestDbUri(suffix: string): string {
   return `${serverUri}/${name}${query}`;
 }
 
+/**
+ * Is a process with this PID currently running?
+ *
+ * Caveat worth knowing before trusting a `false`: `process.kill(pid, 0)` throws
+ * EPERM for a LIVE process owned by another user, and this catch cannot tell
+ * that apart from ESRCH ("no such process"). On a shared machine another user's
+ * running e2e database is therefore classified stale. Harmless here because the
+ * name guard still has to agree, but it is the reason this must never become the
+ * sole condition for a drop.
+ */
 function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
@@ -172,6 +238,7 @@ export default class DbLifecycleReporter {
 
         const base = dbName.replace(RUN_DB_PATTERN, '');
         const { databases } = await connection.db().admin().listDatabases({ nameOnly: true });
+        let guardSkipped = 0;
         for (const { name } of databases) {
           if (name === dbName) {
             continue;
@@ -179,13 +246,27 @@ export default class DbLifecycleReporter {
           // DBs derived from THIS run's name (per-worker `-w<N>` and their derived
           // suffixes) — the run is over, they go regardless of PID/age.
           const stale = name.startsWith(`${dbName}-`) || isStaleTestDb(name, base);
-          // Belt and braces: never drop anything that is not recognizably a test database.
-          if (stale && SAFE_TEST_DB_PATTERN.test(name)) {
-            await connection.db(name).dropDatabase();
-            dropped.push(name);
+          if (!stale) {
+            continue;
           }
+          // Belt and braces: never drop anything that is not recognizably a test database.
+          if (!SAFE_TEST_DB_PATTERN.test(name)) {
+            guardSkipped++;
+            continue;
+          }
+          await connection.db(name).dropDatabase();
+          dropped.push(name);
         }
         console.info(`Test database cleanup: dropped ${dropped.join(', ')}`);
+        if (guardSkipped > 0) {
+          // A stale-looking database the name guard refused. Under the naming contract
+          // documented at SAFE_TEST_DB_PATTERN this should be zero — a non-zero count means
+          // those databases will never be collected, so say so rather than leaking silently.
+          console.warn(
+            `Test database cleanup: ${guardSkipped} stale database(s) skipped by the safety guard ` +
+              `(name lacks a delimited e2e/ci/test/acctest segment) — these will accumulate.`,
+          );
+        }
       } finally {
         await connection.close();
       }
