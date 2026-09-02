@@ -1,0 +1,80 @@
+name: Tests
+
+# WHY THIS FILE EXISTS.
+#
+# Until it did, this repository had NO CI at all — `.github/workflows/` was absent.
+# It released, it was the reference every generated API copies, and nothing ever ran
+# a test on it. Its sibling nuxt-base-starter was in the same state and it cost real
+# damage: a better-auth version bump went out from there untested and split client
+# from server across every fullstack project.
+#
+# The rest of the base repos are self-testing (nest-server, nuxt-extensions and cli
+# all run `build.yml` on push; lt-monorepo runs `test.yml` on pull_request). This was
+# the last one without.
+#
+# The job mirrors `pnpm run check` rather than re-listing its steps, so it cannot
+# drift from what a developer runs locally. It also lines up with nest-server's
+# `pnpm run check:consumer`, which installs this starter's tarball and runs its
+# checks — the two gates then fail on the same break instead of one covering for the
+# other.
+
+on:
+  push:
+    branches:
+      - '*'
+      - '*/*'
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    # Bounds a wedged job. Without it GitHub applies its 360-minute default, which is
+    # long enough that a hung run is noticed by a human rather than by CI.
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        # Tracks nest-server's own matrix, so the framework and the starter that
+        # consumes it are never verified against different runtimes.
+        node-version: [24.x]
+        mongodb-version: ['7.0']
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+
+      - name: Install pnpm
+        # No version input: the exact version is read from package.json's
+        # `packageManager` field. Deliberately NOT corepack — Node >= 25 no longer
+        # ships it, and pnpm follows the field itself (managePackageManagerVersions).
+        # Passing `version:` here would be a second pin that can drift from the first.
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      # MongoDB and nothing else. nest-server additionally needs Redis and an S3
+      # (RustFS) for its distributed-feature suites; this starter has neither — its
+      # tests touch only the database, and `tests/global-setup.ts` explicitly honours
+      # an externally provided `NSC__MONGOOSE__URI`, which is what a service container
+      # is. Adding containers "to be safe" would buy nothing and cost every run.
+      - name: Start MongoDB
+        uses: supercharge/mongodb-github-action@1.12.1
+        with:
+          mongodb-version: ${{ matrix.mongodb-version }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # One call on purpose. `check` already chains audit → spectaql:sync →
+      # format:check → lint → typecheck:tests → unit + e2e → build →
+      # check-server-start.sh, and re-listing those here would let the pipeline and
+      # the local gate drift apart silently. Its `--frozen-lockfile` install is a
+      # no-op after the step above.
+      - name: Run check
+        run: pnpm run check

@@ -396,6 +396,19 @@ overrides:
   # `pnpm why @prisma/dev` all report nothing, and the package appears in neither a
   # with-overrides nor a without-overrides fresh resolve. This is the one removal here
   # justified by the package being gone rather than by the pin being stale.
+  # browserslist, two HIGH advisories on the same package, both closed here:
+  #   - GHSA-c83g-rgw3-j3cx — unbounded cache growth to OOM
+  #   - GHSA-73wf-gq98-2v4g — crash / prototype write via an untrusted
+  #     browserslist-stats.json
+  # Both `<=4.28.6`, first patched 4.28.7. Build-time only — the paths are
+  # @nestjs/cli>webpack, @nestjs/cli>fork-ts-checker-webpack-plugin>webpack and
+  # unplugin-swc>unplugin>webpack, none of which reach a consumer's runtime.
+  # Target 4.28.8 rather than the 4.28.7 floor: it is the current release, so the
+  # tree resolves one copy instead of two. Bounded key — it can only raise a
+  # vulnerable version, never cap a patched one. RAISE THE TARGET when a newer
+  # 4.28.x ships. Verified 2026-09-01.
+  'browserslist@<4.28.7': 4.28.8
+
 
 # ---------------------------------------------------------------------------
 # Build script approvals (pnpm 11 replacement for onlyBuiltDependencies).
