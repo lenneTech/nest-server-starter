@@ -1,4 +1,4 @@
-import { getEnvironmentConfig, IServerOptions, merge, RoleEnum } from '@lenne.tech/nest-server';
+import { getEnvironmentConfig, IServerOptions, merge, resolveSmtpSecure, RoleEnum } from '@lenne.tech/nest-server';
 import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
@@ -222,9 +222,22 @@ function deployedConfig(
   },
 ): Partial<IServerOptions> {
   const brand = options?.brandSuffix ? `Nest Server Starter ${options.brandSuffix}` : 'Nest Server Starter';
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
 
   const base: Partial<IServerOptions> = {
     automaticObjectIdFiltering: true,
+    // The LEGACY reset token (`POST /users/password/reset`) expires after 60 minutes since
+    // nest-server 11.39.0 — before that it never expired at all, while the error message
+    // already claimed it did. A reset link takes over an EXISTING account, so an unbounded
+    // one means an archived, forwarded or restored mail opens that account years later.
+    //
+    // Left at the default on purpose; set it only to shorten the window, or to state the
+    // opt-out explicitly. `0` disables expiry and restores the pre-11.39 behaviour — anything
+    // unusable (negative, empty, non-numeric) falls back to 60 rather than to "unbounded", so
+    // a typo can never be the thing that switches off an account-takeover credential.
+    //
+    // auth: { passwordReset: { tokenExpiresInMinutes: 60 } },
+    //
     // betterAuth.secret comes from NSC__BETTER_AUTH__SECRET
     betterAuth: {
       // Native password reset is ON by default since nest-server 11.36.1: the framework injects the
@@ -300,10 +313,37 @@ function deployedConfig(
     email: {
       // defaultSender.email comes from NSC__EMAIL__DEFAULT_SENDER__EMAIL
       defaultSender: { name: brand },
+      // The page nuxt-base-starter ships (`app/pages/auth/reset-password.vue`) reads the token from
+      // `?token=`, so the link must carry it that way. `{token}` is substituted, and the leading
+      // slash resolves against `appUrl` — which keeps this one line correct in every environment
+      // instead of needing a full URL per deployment.
+      //
+      // Set explicitly rather than left to the framework default: that default appends the token as
+      // a PATH segment, which suits a project whose page is `reset-password/[token].vue`. Both
+      // conventions are supported; what breaks is a link built for one and a page written for the
+      // other, and then only for whoever clicks it.
+      passwordResetLink: '/auth/reset-password?token={token}',
       smtp: {
         // host + auth.user + auth.pass come from NSC__EMAIL__SMTP__HOST etc.
-        port: parseInt(process.env.SMTP_PORT || '587', 10),
-        secure: process.env.SMTP_SECURE !== 'false',
+        port: smtpPort,
+        // `secure: false` alone means OPPORTUNISTIC STARTTLS: nodemailer upgrades only if the
+        // server advertises the capability, so an attacker who strips it from the greeting gets
+        // the SMTP credentials and a working reset link in cleartext. This matters BECAUSE of the
+        // fix below — while the 587 + secure:true pairing was in place the connection always
+        // failed, and a channel that never opens has nothing to downgrade. Requiring the upgrade
+        // pins that shut (the decision sits in smtp-connection/index.js:1506). Opt out only for
+        // a host that genuinely cannot do STARTTLS, and then know that the session is plaintext.
+        //
+        // Deliberately asymmetric to `resolveSmtpSecure` below: there an unrecognised value
+        // decides nothing and the port does, because either answer is defensible. Here one
+        // answer is safe and the other is not, so everything but the exact 'false' keeps the
+        // protection — a typo must not switch it off.
+        requireTLS: process.env.SMTP_REQUIRE_TLS !== 'false',
+        // Port-derived, with SMTP_SECURE as an override. The rule lives in the framework
+        // (`resolveSmtpSecure`, exported since 11.39.0) so project and framework cannot drift:
+        // only the literal 'true'/'false' override, everything else follows the port. This was
+        // a local copy until 11.39.0 shipped the export — see migration guide §6.
+        secure: resolveSmtpSecure(process.env.SMTP_SECURE, smtpPort),
       },
     },
     env: envName,
@@ -410,6 +450,16 @@ function localConfig(
     cors: { allowAll: true },
     email: {
       defaultSender: { email: 'noreply@test.local', name: brand },
+      // The page nuxt-base-starter ships (`app/pages/auth/reset-password.vue`) reads the token from
+      // `?token=`, so the link must carry it that way. `{token}` is substituted, and the leading
+      // slash resolves against `appUrl` — which keeps this one line correct in every environment
+      // instead of needing a full URL per deployment.
+      //
+      // Set explicitly rather than left to the framework default: that default appends the token as
+      // a PATH segment, which suits a project whose page is `reset-password/[token].vue`. Both
+      // conventions are supported; what breaks is a link built for one and a page written for the
+      // other, and then only for whoever clicks it.
+      passwordResetLink: '/auth/reset-password?token={token}',
       smtp: {
         auth: { pass: '', user: '' },
         host: process.env.SMTP_HOST || 'mailhog.lenne.tech',

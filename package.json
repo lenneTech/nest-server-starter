@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "11.38.0",
+  "version": "11.39.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -34,11 +34,11 @@
     "build:test": "pnpm run build",
     "c": "pnpm run check",
     "check": "node scripts/check.mjs",
-    "check:raw": "pnpm install --frozen-lockfile && pnpm run spectaql:sync && pnpm audit && pnpm run format:check && pnpm run lint && pnpm run typecheck:tests && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
+    "check:raw": "pnpm install --frozen-lockfile && pnpm run spectaql:sync && pnpm audit && pnpm peers check && pnpm run format:check && pnpm run lint && pnpm run typecheck:tests && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
     "check:envs": "bash scripts/check-envs.sh",
     "check:envs:docker": "bash scripts/check-envs.sh --docker",
-    "check:fix": "pnpm install && pnpm run spectaql:sync && pnpm audit --fix && pnpm run format && pnpm run lint:fix && pnpm run typecheck:tests && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
-    "check:naf": "pnpm install && pnpm run spectaql:sync && pnpm run format && pnpm run lint:fix && pnpm run typecheck:tests && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
+    "check:fix": "pnpm install && pnpm run spectaql:sync && pnpm audit --fix && pnpm peers check && pnpm run format && pnpm run lint:fix && pnpm run typecheck:tests && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
+    "check:naf": "pnpm install && pnpm run spectaql:sync && pnpm peers check && pnpm run format && pnpm run lint:fix && pnpm run typecheck:tests && pnpm test && pnpm run build && bash scripts/check-server-start.sh",
     "spectaql:sync": "node extras/update-spectaql-version.mjs",
     "cf": "pnpm run check:fix",
     "cnaf": "pnpm run check:naf",
@@ -109,7 +109,7 @@
   "dependencies": {
     "@better-auth/core": "1.7.1",
     "@better-auth/passkey": "1.7.1",
-    "@lenne.tech/nest-server": "11.38.0",
+    "@lenne.tech/nest-server": "11.39.0",
     "@nestjs/common": "11.2.1",
     "@nestjs/core": "11.2.1",
     "@nestjs/graphql": "13.4.5",

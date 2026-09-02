@@ -121,7 +121,12 @@ export class UserResolver {
   @Mutation(() => Boolean, { description: 'Request new password for user with email' })
   @Roles(RoleEnum.S_EVERYONE)
   async requestPasswordResetMail(@Args('email') email: string): Promise<boolean> {
-    return !!(await this.userService.sendPasswordResetMail(email));
+    // Always true, whatever the lookup found. `sendPasswordResetMail` returns `null` for an address
+    // without an account, and passing that through would answer `false` for unknown and `true` for
+    // known — an account oracle in the response body, which for a B2B product also answers who
+    // works at which customer. The equal status code is worth nothing while the body differs.
+    await this.userService.sendPasswordResetMail(email);
+    return true;
   }
 
   /**

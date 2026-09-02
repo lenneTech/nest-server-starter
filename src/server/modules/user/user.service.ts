@@ -73,29 +73,54 @@ export class UserService extends CoreUserService<User, UserInput, UserCreateInpu
 
   /**
    * Request password reset mail
+   *
+   * Returns `null` for an address without an account. The callers must still answer the same thing
+   * either way — see the note on `requestPasswordResetMail` in the controller and the resolver.
+   *
+   * Three things here are deliberate, and each was a defect once (tests/password-reset-mail.e2e-spec.ts):
+   *
+   * - The token comes from `createPasswordResetToken`, not off the returned user. The security
+   *   interceptor strips `passwordResetToken` from anything `process()` hands back — correctly, a
+   *   reset token in a response body is one in a log and a proxy cache — so reading it there
+   *   yielded `undefined` and mailed it.
+   * - The link comes from `buildPasswordResetLink`, which resolves the app URL the same way the
+   *   cookie and CORS setup does and returns `null` rather than a string containing `undefined`.
+   *   Hand-built bases missed both the localhost defaults and the page's real path.
+   * - The send is NOT awaited. A mail send is a network round trip; awaiting it makes the response
+   *   time say whether the address exists, which is the same disclosure the equal status codes are
+   *   there to prevent.
    */
-  async sendPasswordResetMail(email: string, serviceOptions?: ServiceOptions): Promise<User> {
-    // Set password reset token
-    const user = await super.setPasswordResetTokenForEmail(email, serviceOptions);
+  async sendPasswordResetMail(email: string, serviceOptions?: ServiceOptions): Promise<null | User> {
+    const created = await this.createPasswordResetToken(email, serviceOptions);
 
-    // Build reset link.
-    // Priority: explicit email.passwordResetLink (deployment override) → derived from appUrl/baseUrl.
-    // Since nest-server 11.25.0 the reference config no longer ships email.passwordResetLink —
-    // setting it remains supported as a deploy-specific override (IServerOptions still accepts it).
-    const config = this.configService.configFastButReadOnly;
-    const baseLink = config.email?.passwordResetLink || `${config.appUrl || config.baseUrl}/auth/password-reset`;
+    // Unknown address: nothing to send, and nothing to say about it.
+    if (!created) {
+      return null;
+    }
 
-    // Send email
-    await this.emailService.sendMail(user.email, 'Password reset', {
-      htmlTemplate: 'password-reset',
-      templateData: {
-        link: `${baseLink}/${user.passwordResetToken}`,
-        name: user.username,
-      },
-    });
+    const link = this.buildPasswordResetLink(created.token);
+    if (!link) {
+      // Sending a mail whose link cannot work is worse than sending none: the recipient has no
+      // second way in, and a dead link gives them nothing to act on.
+      this.userServiceLogger.error(
+        'Password reset mail not sent: no reset link could be built. Set `email.passwordResetLink` or `appUrl`.',
+      );
+      return created.user;
+    }
 
-    // Return user
-    return user;
+    void this.emailService
+      .sendMail(created.user.email, 'Password reset', {
+        htmlTemplate: 'password-reset',
+        templateData: {
+          link,
+          name: created.user.username,
+        },
+      })
+      .catch((error: unknown) => {
+        this.userServiceLogger.error(`Password reset mail could not be sent: ${String(error)}`);
+      });
+
+    return created.user;
   }
 
   // #region rest

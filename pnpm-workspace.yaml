@@ -106,6 +106,27 @@ overrides:
   # the advisory floor AND the audit is clean, keep the entry as a bounded floor so a
   # future range narrowing cannot reopen the hole — but never let it cap a patched
   # release.
+  #
+  # ENTRIES AGE, AND A STALE ONE IS A LOCK RATHER THAN A NO-OP. Two ways it happens,
+  # both seen here on 2026-09-02:
+  #   1. The FLOOR falls behind the patch line. The entry keeps doing exactly what it
+  #      was written to do, which is now the wrong thing (`fast-uri` below).
+  #   2. The TARGET is overtaken by a later advisory and becomes vulnerable itself —
+  #      it was clean the day it was pinned (`qs` below, 6.15.3 inside a range
+  #      published afterwards). This one looks fine from the outside: the entry names
+  #      a version ABOVE the vulnerable one, and nobody reads further.
+  # In both cases adding a second, higher entry next to the old one does NOT fix it:
+  # the narrower key claims its paths first and pins them below the patch line, and
+  # the tree then carries both versions. RAISE the existing entry.
+  #
+  # HOW TO SPOT IT — the reliable tells, in order:
+  #   - `pnpm audit` names a package this file already overrides. That is never
+  #     "transitive, pre-existing, not our diff" — it means the entry IS the cause.
+  #   - Two entries for one package WITHIN a major, one below the other's target.
+  #     (Across majors is normal: brace-expansion and js-yaml legitimately carry one
+  #     floor per major line.)
+  #   - Two resolutions within a major in the lockfile — but note that `@types/x`
+  #     greps like a second resolution of `x` and is not one.
   # ----------------------------------------------------------------------------
 
   # Peer-conflict + security: @nestjs/apollo pulls in
@@ -166,9 +187,14 @@ overrides:
   # ajv@6 consumers across a MAJOR (ajv 6 -> 8 changes the export shape and adds strict
   # mode — the same class of break the minimatch bound below guards against). Key
   # narrowed to the advisory range: 7.x/8.x consumers are lifted, 6.x is left alone.
-  # With that bound the tree resolves ajv 6.15.0 / 8.18.0 / 8.20.0 side by side, all at
-  # or above the fix, and the audit stays clean — so this is now a floor, not a lift.
-  'ajv@>=7.0.0-alpha.0 <8.18.0': 8.20.0
+  # With that bound the tree resolved ajv 6.15.0 / 8.18.0 / 8.20.0 side by side, all at
+  # or above the fix, and the audit stayed clean — so this became a floor, not a lift.
+  # 2026-09-02: upper bound raised 8.18.0 -> 8.20.0. Not a security change — the 8.18.0
+  # the tree settled on sits just OUTSIDE the old key, so the entry no longer fired,
+  # while ajv-formats@3.0.1 asks for 8.20.0 and `pnpm peers check` reported the gap.
+  # The lower bound stays at 7.0.0-alpha.0 so the ajv@6 consumers are still left alone;
+  # this raises the 8.x line to what its own consumers declare, nothing more.
+  'ajv@>=7.0.0-alpha.0 <8.20.0': 8.20.0
 
   # Security: ReDoS via extglob quantifiers (high, >=4.0.0 <4.0.4) AND Method
   # Injection in POSIX Character Classes (moderate) in picomatch. Transitive via
@@ -193,14 +219,32 @@ overrides:
   # 2026-08-22: was an unqualified `uuid: 14.0.0`, capping the package below latest.
   # Key bounded to the advisory; @compodoc/compodoc@2.0.0 now declares a range that
   # already reaches 14.x, so a fresh resolve lands on 14.0.1 by itself and this entry
-  # no longer fires. Kept as a FLOOR: if a consumer narrows back onto the 11.x line it
-  # would be lifted rather than silently reopening GHSA-w5hq-g745-h8pq.
-  'uuid@<11.1.1': 14.0.2
+  # no longer fired. It was kept as a FLOOR: if a consumer narrows back onto the 11.x
+  # line it is lifted rather than silently reopening GHSA-w5hq-g745-h8pq.
+  # 2026-09-02: key raised <11.1.1 -> <14.0.2. The entry now serves TWO purposes, and
+  # the second is not security: vis-network@10.1.0 and vis-data@8.0.3 both declare a
+  # uuid peer of 14.0.2 while the tree settled on 14.0.1, which `pnpm peers check`
+  # reports as unmet. The advisory floor is unchanged in effect (everything below
+  # 11.1.1 is still lifted); the key simply now also covers the one patch between the
+  # resolved version and what the consumers ask for.
+  'uuid@<14.0.2': 14.0.2
 
-  # Security: Remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26,
-  # >=6.11.1 <=6.15.1). Transitive via @apollo/server>body-parser>qs and
-  # express>body-parser>qs. Target raised 6.15.2 -> 6.15.3 and key bounded 2026-08-22.
-  'qs@>=6.11.1 <=6.15.1': 6.15.3
+  # Security: THREE advisories in qs, all covered by 6.16.0:
+  #   >=6.11.1 <=6.15.1  remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26)
+  #   >=6.14.2 <=6.15.3  array-limit bypass via bracket-key comma parsing (GHSA-x5fp-wj9c-mxmx)
+  #   >=2.2.5  <6.16.0   DoS via attacker-controlled isBuffer (GHSA-4mjr-xmp4-gh2g)
+  # Transitive via @apollo/server>body-parser>qs and express>body-parser>qs — 56 paths, i.e.
+  # Express' query parser, so this sits on the request path of every route.
+  #
+  # 2026-09-02: the key was `qs@>=6.11.1 <=6.15.1` with target 6.15.3, and that target had
+  # itself become vulnerable — 6.15.3 is INSIDE the range of GHSA-x5fp-wj9c-mxmx. Adding a
+  # second, higher entry next to it does NOT help: the narrower floor claims its paths first
+  # and pins them below the new patch line, leaving both versions in the lockfile and the
+  # vulnerable one reachable. AN OUTDATED FLOOR IS NOT INERT, IT IS A LOCK — raise the
+  # existing entry instead of placing one beside it. Diagnosed upstream in nest-server.
+  # Key opened to `<6.16.0` so every path lifts. Drop once express / @apollo/server request
+  # >=6.16.0 themselves.
+  'qs@<6.16.0': 6.16.0
 
   # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
   # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Transitive via @nestjs/graphql>graphql-ws>ws
@@ -229,9 +273,22 @@ overrides:
   # 3.1.2 — and, being unqualified, it silently overruled the bounded entry added next to it.
   # (That is the same defect the `hono` / `@hono/node-server` pairs had; see the header.)
   # Keep the key bounded so it can only ever raise a vulnerable version, never cap a patched one.
-  # 3.1.5 is the newest 3.x; 4.x is a major and nothing requests it. Drop once ajv /
-  # ajv-formats request >=3.1.4 themselves.
-  'fast-uri@>=3.0.0 <3.1.5': 3.1.5
+  #
+  # 2026-09-02: FOUR MORE advisories landed, all patched in 3.1.6 — and the entry above
+  # (`>=3.0.0 <3.1.5` -> 3.1.5) was holding the tree one release below the fix:
+  #   >=3.0.0 <3.1.6  SSRF via malformed IPv6 normalization (GHSA-f65p-4m7j-42xc, high)
+  #   >=3.0.0 <3.1.6  host confusion via percent-encoded scheme normalization (GHSA-jqff-g426-hqxp, high)
+  #   >=3.1.2 <3.1.6  SSRF via repeated hostname percent-decoding (GHSA-fph4-wmhf-6fwf, high)
+  #   >=3.1.3 <3.1.6  host confusion via skipped IDN canonicalization (GHSA-5jgf-p345-68v8, high)
+  # Same lesson as the `qs` entry above: a floor that has fallen behind the patch line is not
+  # a no-op, it actively pins the vulnerable version, and a second entry beside it loses to the
+  # narrower key. The fix is to RAISE this one.
+  #
+  # Target is 3.1.6, deliberately not 3.1.7: the latter was published 2026-09-02 and trips
+  # minimumReleaseAge (ERR_PNPM_NO_MATURE_MATCHING_VERSION). Staying inside 3.x on purpose —
+  # 4.x exists, but a major jump for a transitive advisory is its own kind of outage.
+  # Drop once ajv / ajv-formats request >=3.1.6 themselves.
+  'fast-uri@<3.1.6': 3.1.6
 
   # Security: body-parser DoS on malformed urlencoded input
   # (GHSA-v422-hmwv-36x6, low, patched >=2.3.0). Transitive via
