@@ -1,0 +1,74 @@
+name: Tag version
+
+# WHY THIS FILE EXISTS.
+#
+# This repository has 187 version-bump commits and, until 2026-09-02, five tags.
+# Tagging by hand was tried twice (11.34.x, then 11.36.3-11.36.5) and lapsed both
+# times within days. A convention that depends on somebody remembering it during a
+# release is the one that fails during a busy release — so it is automated instead.
+#
+# WHAT IT TAGS, AND WHY THAT SOURCE.
+#
+# The tag name comes from `package.json` -> version, NOT from the commit subject.
+# That distinction is load-bearing: nine older bump commits say one version in their
+# message while package.json holds another (e.g. "Updated to nest-server version
+# 10.5.0" sits on a tree whose package.json reads 10.4.3 — the framework moved, the
+# starter's own version did not). The manifest is what a checkout actually contains,
+# so it is what the tag must name.
+#
+# WHAT IT DELIBERATELY DOES NOT DO.
+#
+# It does not wait for the Tests workflow. A tag here is a historical marker — "this
+# is the tree at 11.38.0" — not a quality claim, and it stays the correct answer to
+# that question even if CI on that commit later goes red. Gating it via `workflow_run`
+# would add a trigger that resolves refs from the default branch and fails in ways
+# that are tedious to debug, for no gain on a template repo that publishes nothing.
+
+on:
+  push:
+    branches: [main]
+    # Nothing else can change the version, so nothing else needs to wake this up.
+    paths:
+      - 'package.json'
+
+jobs:
+  tag:
+    name: Tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      # Required to push the tag with the default GITHUB_TOKEN.
+      contents: write
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          # Tags are needed to answer "does this one already exist?". Without full
+          # depth the check silently says "no" and the push then fails on a tag that
+          # was there all along.
+          fetch-depth: 0
+
+      - name: Create the version tag if it does not exist yet
+        run: |
+          set -euo pipefail
+
+          version="$(node -p "require('./package.json').version")"
+          tag="v${version}"
+
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "${tag} already exists — nothing to do."
+            exit 0
+          fi
+
+          # Annotated, matching every tag this repo already has. The message mirrors
+          # the commit subject rather than inventing a summary: the commit is the
+          # authoritative description of what changed.
+          subject="$(git log --format=%s -1)"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "${tag}" -m "${subject}"
+          git push origin "${tag}"
+
+          echo "Tagged $(git rev-parse --short HEAD) as ${tag}"
