@@ -86,10 +86,35 @@ for (const dep of ['dependencies', 'devDependencies']) {
       }
       continue;
     }
-    if (semver.gt(ver, packageJson[dep][pack])) {
-      const old = packageJson[dep][pack];
+    const current = packageJson[dep][pack];
+
+    // `semver.gt` needs two exact versions and THROWS on a range — a single
+    // `^4.21.0` anywhere in the project aborted the whole script with
+    // `TypeError: Invalid Version`, so `pnpm run update` did nothing at all and
+    // the reason pointed at semver rather than at the entry that caused it.
+    // The starter pins exactly, but projects grow ranges over time; one is
+    // enough to take the update path down.
+    //
+    // A range is not simply "older": if it already admits the framework's
+    // version there is nothing to do, and rewriting it to an exact pin would
+    // silently narrow what the project deliberately left open. Only a version
+    // ABOVE the whole range is an actual update.
+    if (!semver.valid(current)) {
+      if (!semver.validRange(current)) {
+        console.log(dep, pack, 'skipped — cannot compare "' + current + '" (not a version or range)');
+        continue;
+      }
+      if (semver.gtr(ver, current)) {
+        packageJson[dep][pack] = ver;
+        console.log(dep, pack, current + ' => ' + ver + ' (range no longer covers it)');
+        counter++;
+      }
+      continue;
+    }
+
+    if (semver.gt(ver, current)) {
       packageJson[dep][pack] = ver;
-      console.log(dep, pack, old + ' => ' + ver);
+      console.log(dep, pack, current + ' => ' + ver);
       counter++;
     }
   }
