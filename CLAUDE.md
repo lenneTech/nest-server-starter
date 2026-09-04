@@ -307,6 +307,34 @@ detects a vendored project (`src/core/VENDOR.md` present). In
 practice, users always run `/lt-dev:backend:update-nest-server` and
 the right flow kicks in automatically.
 
+**In THIS repository, the `version` field mirrors the framework
+version.** `package.json` `version` must equal the
+`@lenne.tech/nest-server` version in `dependencies` — the starter is
+not a separately versioned product, it is the template for exactly one
+framework release, so a bump raises BOTH fields:
+
+```json
+"version": "11.41.0",
+"@lenne.tech/nest-server": "11.41.0"
+```
+
+`spectaql.yml` inherits `version` via the `spectaql:sync` step, so
+leaving it behind also leaves the GraphQL docs advertising the old
+release.
+
+**This rule does NOT apply to projects generated from this starter.**
+There the project carries its own version and upgrades the framework
+independently — the two fields are expected to differ. That is also
+why there is deliberately **no guard** for it in `scripts/check.mjs`:
+the check script ships with the template, so a guard would travel into
+every generated project and fail there on a perfectly correct state.
+Verify by hand before committing a bump here:
+
+```bash
+node -e "const p=require('./package.json');process.exit(p.version===p.dependencies['@lenne.tech/nest-server']?0:1)" \
+  && echo "version matches" || echo "MISMATCH"
+```
+
 ### Native MongoDB Driver — Security Rules
 
 **NEVER** use `model.collection.*` or `model.db.*` methods — these bypass all Mongoose plugins (Tenant, Audit,
