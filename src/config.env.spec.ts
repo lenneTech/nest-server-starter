@@ -16,6 +16,25 @@ describe('config.env.ts — cross-subdomain cookies', () => {
     delete process.env.APP_URL;
     process.env.NODE_ENV = 'local';
     vi.resetModules();
+    // `getEnvironmentConfig()` runs at module scope in config.env.ts and prints three
+    // `console.info` lines ("Configured for: …", "NEST_SERVER_CONFIG used from .env",
+    // "Environment object … integrated"). With `vi.resetModules()` + a re-import per test that
+    // is 38 x 3 = 114 writes from THIS FILE ALONE — every other spec in the suite emits zero.
+    //
+    // Two reasons to silence them here rather than anywhere else:
+    //
+    // 1. Noise. 114 lines in every green run is output nobody reads, which is how a line that
+    //    matters gets skipped.
+    // 2. Every one of them is forwarded to the main thread as an `onUserConsoleLog` RPC, and at
+    //    worker teardown vitest REJECTS whatever is still in flight instead of awaiting it —
+    //    `EnvironmentTeardownError: Closing rpc while "onUserConsoleLog" was pending`, which
+    //    fails the whole run with every test green. See vitest-e2e.config.ts for the mechanism.
+    //
+    // Scoped to this file on purpose. `disableConsoleIntercept` would close the race for the
+    // suite but surface all 114 lines; a global console mock in a setup file would blind every
+    // other spec's diagnostics. This removes the writes at their source: 114 -> 0, and no other
+    // test loses anything.
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
   });
 
   afterEach(() => {

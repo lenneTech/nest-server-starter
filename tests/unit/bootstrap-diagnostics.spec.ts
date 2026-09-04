@@ -20,15 +20,28 @@ import { describe, expect, it } from 'vitest';
  * vendor-mode project.
  */
 /**
- * Reads a repo file with line and block comments removed.
+ * Reads a TS/JS repo file with line and block comments removed.
  *
  * Without this, `// installProcessDiagnostics();` satisfies a naive `toContain()` — so the one
  * edit these guards exist to catch (someone commenting the wiring out) would pass unnoticed.
  *
- * @param relativePath - Path relative to the repository root
+ * NOT usable on JSON/JSONC. The block-comment regex is not string-aware, so it happily eats a
+ * `/**\/` that lives INSIDE a string — a tsconfig glob like `src/**\/*` collapses to `src*`, and
+ * a lone `"src/**"` opens a comment that swallows everything up to the next `*\/` anywhere in the
+ * file. Both leave valid JSON behind, so every assertion built on it still passes, against
+ * mangled data. That is why the argument is restricted below instead of only warned about: this
+ * helper is generic enough to invite exactly that reuse.
+ *
+ * @param relativePath - Path relative to the repository root, `.ts`/`.js`/`.mjs` only
  * @returns The source with comments stripped
  */
 function readSourceWithoutComments(relativePath: string): string {
+  if (!/\.(ts|js|mjs|cts|mts)$/.test(relativePath)) {
+    throw new Error(
+      `readSourceWithoutComments is only safe for TS/JS sources, got "${relativePath}" — ` +
+        'see the JSONC caveat above; parse structured config instead of stripping its comments.',
+    );
+  }
   return readFileSync(join(process.cwd(), relativePath), 'utf8')
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/^\s*\/\/.*$/gm, '');

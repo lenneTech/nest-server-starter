@@ -466,6 +466,18 @@ overrides:
   # 4.28.x ships. Verified 2026-09-01.
   'browserslist@<4.28.7': 4.28.8
 
+  # Security: fflate <0.8.3 — `unzipSync` loops indefinitely on a crafted ZIP64 archive
+  # (moderate). Dev/test only, and the path is NOT the one an audit report suggests:
+  #   @vitest/ui > vitest > fflate      <- a DIRECT devDependency of this project
+  # `pnpm audit` also renders a `better-auth > vitest > @vitest/ui > fflate` chain marked
+  # `"dev": false`, which reads like production exposure and is not: `better-auth` declares
+  # vitest as an OPTIONAL PEER, and pnpm walks that edge without marking it dev because a peer
+  # edge is not a dev edge. That artefact will appear in every project consuming nest-server —
+  # do not let it drive a decision.
+  # Target 0.8.3 is both the advisory floor and the newest release, so this cannot become a
+  # downgrade lock. Bounded key, per the rules at the top of this block. Added 2026-09-04.
+  'fflate@<0.8.3': 0.8.3
+
 
 # ---------------------------------------------------------------------------
 # Build script approvals (pnpm 11 replacement for onlyBuiltDependencies).

@@ -99,6 +99,11 @@ function classify(cmd) {
     return { fatal: true, kind: "build", label: "build" };
   if (c.includes("check-server-start") || c.includes("server-start"))
     return { fatal: true, kind: "server", label: "server-start" };
+  // Verifies that every `node dist/….js` in package.json resolves after a build.
+  // (In the CHAIN this step has to follow `build` — it reads `dist/`. Here the order
+  // is only about match precedence, and no other branch matches its command.)
+  if (c.includes("prod-scripts"))
+    return { fatal: true, kind: "prod-scripts", label: "prod-scripts" };
   return { fatal: true, kind: "other", label: cmd.length > 32 ? `${cmd.slice(0, 29)}…` : cmd };
 }
 
@@ -159,11 +164,151 @@ function parseLint(out) {
 // ── audit (faithful: runs the project's OWN audit command) ──────────────────
 const SEVERITIES = ["critical", "high", "moderate", "low", "info"];
 
+/**
+ * Decide whether an audit run counts as degraded infrastructure, and why.
+ *
+ * Pulled OUT of `runAudit()` on purpose: this decision is the whole safety property, and while it
+ * lived inline it could only be observed by running a real audit against a real outage — so it was
+ * effectively untestable, and the gap below went unnoticed.
+ *
+ * ORDER MATTERS, and the `code !== 0` branch must stay in front. A non-zero exit WITHOUT an
+ * infrastructure signature is a real failure and has to keep blocking (`false` means "not
+ * degraded", i.e. blocking). Folding the two branches into one `!counts` test would quietly turn
+ * every genuine audit failure into a warning.
+ *
+ * The last branch is the one that was missing: exit 0 with nothing parseable. `counts` is null, so
+ * the ambiguity probe in `runAudit()` is never entered — it needs a parsed report to be ambiguous
+ * ABOUT — and the old expression only considered a non-zero exit, so the run fell through to "not
+ * degraded" and printed `✓ audit 0`. A green tick with a literal zero, while the Vulnerabilities
+ * section right below admitted "counts unavailable". The tick is the half that gets read.
+ *
+ * The probe cannot rescue this case either: a service that answers says nothing about a tally that
+ * was never read. So it degrades directly instead of asking.
+ */
+export function resolveAuditDegradation({ code, counts, out, silentOutage }) {
+  if (silentOutage) return "unreachable";
+  if (code !== 0 && !counts) return isAuditEndpointUnavailable(out);
+  if (code === 0 && !counts) return "unreadable";
+  return false;
+}
+
+/**
+ * One source for how a degraded audit is worded, in both places it is rendered — the live step line
+ * and the Vulnerabilities section. They used to carry separate binary ternaries (`unreachable` or
+ * else), so a third cause would silently have been reported as the second one.
+ */
+export function auditDegradedText(reason, { short }) {
+  const cause =
+    reason === "unreachable"
+      ? short
+        ? "the npm advisory endpoint is unreachable (timeout/5xx)"
+        : "the npm advisory service was unreachable"
+      : reason === "unreadable"
+        ? "it exited 0 but produced no readable report, so nothing was actually checked"
+        : short
+          ? "npm retired the audit endpoint pnpm uses"
+          : "npm retired the endpoint pnpm uses";
+  return short
+    ? `could not run — ${cause}; not blocking`
+    : `audit could not run (${cause}) — vulnerabilities NOT CHECKED`;
+}
+
 // Run the audit command exactly as the check chain defines it (same scope /
 // --prod / --audit-level), only appending --json for the counts. The gate is
 // the command's own exit code, so `check` blocks precisely when a bare
 // `<auditCmd>` would — never with a narrower scope than the chain. (The old
 // hardcoded `--prod` hid devDependency vulns for library packages.)
+/**
+ * Is an audit failure an INFRASTRUCTURE problem rather than a finding?
+ *
+ * Three families, all found the hard way (ported from nest-server, 2026-09-04):
+ *
+ *  - `retired`     — npm retired the legacy endpoint older pnpm calls. Waiting never fixes it;
+ *                    it needs a pnpm upgrade.
+ *  - `unreachable` — the working bulk endpoint timing out, 5xx-ing, or refusing the connection.
+ *                    A later run fixes it.
+ *  - `unreadable`  — exit 0 with nothing parseable. Decided in `resolveAuditDegradation`, not
+ *                    here, because there is no error envelope to match a signature against.
+ *
+ * The two are reported separately BECAUSE the reader's next action differs; a single neutral
+ * sentence would leave somebody waiting forever on the first.
+ *
+ * The auth guard comes FIRST, before the rule it is an exception to: a 4xx refusal is ACTIONABLE
+ * (a token, a registry setting) and must stay fatal. A proxy that rejects the request while
+ * QUOTING an upstream status — `403 Forbidden: upstream returned 503` — would otherwise match the
+ * `5\d\d` signature on the quoted number, and a wrong credential would silently degrade to
+ * "infrastructure, not blocking": the audit stops running for good and nobody is told why.
+ */
+export function isAuditEndpointUnavailable(out) {
+  if (/ERR_PNPM_AUDIT_BAD_RESPONSE/.test(out) || (/\baudit\b/i.test(out) && /\bretired\b/i.test(out))) {
+    return "retired";
+  }
+  let envelope;
+  try {
+    envelope = JSON.parse(out.slice(out.indexOf("{")))?.error;
+  } catch {
+    envelope = undefined;
+  }
+  if (envelope) {
+    if (
+      /\b(4\d\d)\b/.test(String(envelope.code ?? "")) ||
+      /\bunauthor|\bforbidden\b|\bauthentication\b/i.test(String(envelope.message ?? ""))
+    ) {
+      return false;
+    }
+    const message = `${envelope.code ?? ""} ${envelope.message ?? ""}`;
+    // 5xx is read from the `code` FIELD ALONE, never from the free text. Against the concatenated
+    // string `\b5\d\d\b` matched any number 500–599 anywhere in the prose — including pnpm's own
+    // progress line, `{"code":"pnpm","message":"audited 503 packages"}`, which turned a run that
+    // had to BLOCK into a yellow warning. The word signatures below stay on the full text: they
+    // are terms, not numbers, and do not collide with a package tally.
+    const serverError = /^\s*5\d\d\s*$/.test(String(envelope.code ?? ""));
+    if (
+      serverError ||
+      /\btimeout\b|\baborted\b|ETIMEDOUT|ECONNRESET|ENOTFOUND|EAI_AGAIN/i.test(message) ||
+      /fetch failed|socket hang up|ECONNREFUSED|EHOSTUNREACH|ENETUNREACH/i.test(message)
+    ) {
+      return "unreachable";
+    }
+  }
+  return false;
+}
+
+/**
+ * Is a CLEAN audit result indistinguishable from a broken one?
+ *
+ * The worst shape a gate can take. With the advisory service unreachable, pnpm can exit **0** with
+ * `advisories: {}` and every count at zero — byte-identical to a genuinely clean repo, and with no
+ * error envelope, so the check above is never even consulted. The run then prints
+ * `✓ audit  critical 0 · high 0 · …` and passes, locally and in CI, having verified nothing.
+ * A hang is loud and a timeout is catchable; this reports SAFETY that was never established.
+ *
+ * Says only "ambiguous", never "broken" — the caller then asks the service itself. A run WITH
+ * findings is never ambiguous: findings prove the service answered.
+ */
+function isAuditResultAmbiguous(parsed) {
+  const advisories = parsed?.advisories;
+  const raw = parsed?.metadata?.vulnerabilities;
+  if (!advisories || !raw) return false;
+  if (Object.keys(advisories).length > 0) return false;
+  return SEVERITIES.every((severity) => !raw[severity]);
+}
+
+/** Ask the advisory service directly. Only reached for an ambiguous report, so it is nearly free. */
+async function advisoryServiceReachable() {
+  try {
+    const response = await fetch("https://registry.npmjs.org/-/npm/v1/security/advisories/bulk", {
+      body: "{}",
+      headers: { "content-type": "application/json" },
+      method: "POST",
+      signal: AbortSignal.timeout(8000),
+    });
+    return response.status < 500;
+  } catch {
+    return false;
+  }
+}
+
 async function runAudit(auditCmd) {
   const cmd = /(^|\s)--json(\s|$)/.test(auditCmd) ? auditCmd : `${auditCmd} --json`;
   const { code, out } = await capture(cmd, ROOT);
@@ -190,8 +335,39 @@ async function runAudit(auditCmd) {
   } catch {
     /* fall through to raw reason */
   }
+
+  // An all-zero report with exit 0 is either a clean tree or a silent outage, and the JSON cannot
+  // tell them apart. Ask the service before printing a green tick that would assert safety nobody
+  // established.
+  let silentOutage = false;
+  if (code === 0 && counts && SEVERITIES.every((severity) => !counts[severity])) {
+    let parsedAgain;
+    try {
+      parsedAgain = JSON.parse(out.slice(out.indexOf("{")));
+    } catch {
+      parsedAgain = undefined;
+    }
+    if (isAuditResultAmbiguous(parsedAgain)) {
+      silentOutage = !(await advisoryServiceReachable());
+    }
+  }
+
+  const degradedReason = resolveAuditDegradation({ code, counts, out, silentOutage });
+  const degraded = Boolean(degradedReason);
   const total = counts ? SEVERITIES.reduce((n, s) => n + (counts[s] || 0), 0) : 0;
-  return { auditCmd, blocking: code !== 0, counts, ignored, reason: counts ? null : out, total };
+  return {
+    auditCmd,
+    // Infrastructure is surfaced loudly but never blocks: it is not a finding, and no version bump
+    // fixes it — blocking would paint every check red for an outage nobody can act on, which is
+    // how people learn to ignore a red audit.
+    blocking: code !== 0 && !degraded,
+    counts,
+    degraded,
+    degradedReason,
+    ignored,
+    reason: counts ? null : out,
+    total,
+  };
 }
 
 // ── command runner ─────────────────────────────────────────────────────────
@@ -612,7 +788,18 @@ async function main() {
         started,
       );
     }
-    if (!TTY) {
+    if (audit.degraded) {
+      liveCount = 0;
+      console.log(
+        `${C.yellow("⚠")} audit  ${C.yellow(
+          auditDegradedText(audit.degradedReason, { short: true }),
+        )} ${C.dim(`(${fmtDuration(dur)})`)}`,
+      );
+    }
+    // A degraded run already printed its own ⚠ line above. Printing a green tick after it — with
+    // an all-zero tally, which is the shape a healthy clean repo produces — would put "✓ audit 0"
+    // directly under "could not run", and the tick is what a reader scanning the log takes away.
+    if (!TTY && !audit.degraded) {
       process.stdout.write(
         `  ${C.green("✓")} audit  ${audit.counts ? renderVulnLine(audit.counts, audit.ignored) : C.dim("0")} ${C.dim(`(${fmtDuration(dur)})`)}\n`,
       );
@@ -621,7 +808,10 @@ async function main() {
     // row (like every other step); the result lands in the report twice: the
     // Steps list (entry below) and the Vulnerabilities section.
     results.push({ audit, kind: "audit" });
-    results.push({ dur, kind: "step", label: "audit", project: "." });
+    // `warn` so the Steps summary does not contradict the ⚠ above it. Without it the summary
+    // printed a green tick for a run that never checked anything — the same false green this
+    // degraded path exists to prevent, reproduced in the one block people scan first.
+    results.push({ dur, kind: "step", label: "audit", project: ".", warn: audit.degraded });
   }
 
   // Per-project steps — parallel by default, serial with --sequential.
@@ -704,6 +894,9 @@ function report(started, results) {
 
   console.log(`\n${C.bold("Steps")}`);
   const steps = results.filter((x) => x.kind !== "audit");
+  // A step that degraded is not a pass. Same reasoning as the Vulnerabilities section: the marker
+  // is what a reader scanning the summary takes away, so it has to agree with the detail above.
+  const stepMark = (r) => (r.warn ? C.yellow("⚠") : C.green("✓"));
   // Group by project when more than one is involved: workspace-level steps
   // (hoisted install/audit, root-only checks) under "monorepo", then one block
   // per member. Steps within a project run sequentially, so per-group order is
@@ -716,14 +909,14 @@ function report(started, results) {
       console.log(`  ${C.bold(project === "." ? "monorepo" : shortRel(project))}`);
       for (const r of steps.filter((x) => x.project === project)) {
         console.log(
-          `    ${C.green("✓")} ${r.label.padEnd(24)}${metricSuffix(r) || "  "} ${C.dim(`(${fmtDuration(r.dur)})`)}`,
+          `    ${stepMark(r)} ${r.label.padEnd(24)}${metricSuffix(r) || "  "} ${C.dim(`(${fmtDuration(r.dur)})`)}`,
         );
       }
     }
   } else {
     for (const r of steps) {
       console.log(
-        `  ${C.green("✓")} ${`${shortRel(r.project)} · ${r.label}`.padEnd(26)}${metricSuffix(r) || "  "} ${C.dim(`(${fmtDuration(r.dur)})`)}`,
+        `  ${stepMark(r)} ${`${shortRel(r.project)} · ${r.label}`.padEnd(26)}${metricSuffix(r) || "  "} ${C.dim(`(${fmtDuration(r.dur)})`)}`,
       );
     }
   }
@@ -731,8 +924,18 @@ function report(started, results) {
   console.log(
     `\n${C.bold("Vulnerabilities")} ${C.dim(audit ? `(${audit.auditCmd})` : "(no audit step)")}`,
   );
+  // A degraded run must NOT render as a clean tally here. `counts` is all-zero in exactly the
+  // shape a healthy clean repo produces, so printing it would assert "no vulnerabilities" for a
+  // run that never reached the service — the failure this whole degraded path exists to prevent,
+  // reproduced one line further down the report where people actually look.
   console.log(
-    `  ${audit?.counts ? renderVulnLine(audit.counts, audit.ignored) : C.dim(audit ? "counts unavailable" : "—")}`,
+    `  ${
+      audit?.degraded
+        ? C.yellow(auditDegradedText(audit.degradedReason, { short: false }))
+        : audit?.counts
+          ? renderVulnLine(audit.counts, audit.ignored)
+          : C.dim(audit ? "counts unavailable" : "—")
+    }`,
   );
 
   console.log(`\n${C.bold("Tests")}`);

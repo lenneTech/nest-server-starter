@@ -62,6 +62,43 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Write console output straight to the process streams instead of routing it through
+    // vitest's worker→main RPC. Without this, `pnpm run check` fails sporadically with every
+    // test green:
+    //
+    //   EnvironmentTeardownError: [vitest-worker]: Closing rpc while "onUserConsoleLog" was pending
+    //
+    // vitest normally replaces `globalThis.console` in each worker (`setupConsoleLogSpy()`) and
+    // forwards every write as an `onUserConsoleLog` RPC. At worker teardown `execute()` does NOT
+    // await those calls — it rejects whatever is still in flight:
+    //
+    //   rpc.$rejectPendingCalls(({ method, reject }) =>
+    //     reject(new EnvironmentTeardownError(`Closing rpc while "${method}" was pending`)))
+    //
+    // So a console write from the LAST test of a file can lose a race against its own cleanup,
+    // and the rejection surfaces as an unhandled error that fails the run. It is a race, not a
+    // late log — the specs await correctly. vitest 4.1.11 is the newest 4.x; there is no patch.
+    //
+    // With the flag `setupConsoleLogSpy()` is skipped, so the custom console is never installed.
+    // Worker-side, `rpc.onUserConsoleLog` has exactly ONE caller — `sendLog()` inside that console
+    // — so nothing can be pending. Structural, not a reduced probability.
+    //
+    // MEASURED HERE, not assumed: a single `tests/common.e2e-spec.ts` run routes 10 console lines
+    // through that RPC, 7 of them test-scope. Do NOT read 10 as the scale of this: an lt-crm run
+    // (a real consumer with a full story suite) measured **695** on the same command — a factor of
+    // 70, and 695 separate chances for the race. The rule generalises; this number does not. The UNIT config deliberately does NOT carry this
+    // flag — not because it has no exposure (it has 114 writes, they are simply suppressed by the
+    // reporter) but because the flag would surface all 114 as noise while that suite showed no
+    // flake in 15 runs. See the note there; do not "harmonise" the two without re-measuring, and
+    // note that counting `^(stdout|stderr) \| ` lines measures what the REPORTER PRINTS, not the
+    // RPC traffic — that is the trap the unit-side comment was originally wrong about.
+    //
+    // Cost, measured rather than assumed: this run went from 57 visible lines to 37. The intercept
+    // prints an extra `stdout | <file> > <suite> > <test>` header line per write, so dropping it
+    // trades attribution for roughly half the volume. That is the opposite of the unit config,
+    // where the intercept SUPPRESSES passing-test output entirely and removing it adds lines —
+    // which is why the two configs get opposite answers from the same flag.
+    disableConsoleIntercept: true,
     globalSetup: ['tests/global-setup.ts'],
     // Per-worker database isolation: appends the vitest pool id to NSC__MONGOOSE__URI in each fork
     // so parallel spec files never share one database (prevents the shared-DB 401 flake).
