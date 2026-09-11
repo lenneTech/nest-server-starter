@@ -78,3 +78,61 @@ jobs:
       # no-op after the step above.
       - name: Run check
         run: pnpm run check
+
+  windows:
+    name: Windows (non-blocking)
+    runs-on: windows-latest
+    # Non-blocking until M5 of the Windows roadmap (decision D4). The job exists to
+    # show what breaks on Windows, not to gate merges, and red is expected for now:
+    # the `NODE_ENV=` prefixes, `bash scripts/...` and `find ... -delete` in
+    # package.json do not run under cmd.exe. MongoDB and the E2E suite come later.
+    continue-on-error: true
+    timeout-minutes: 45
+
+    steps:
+      # Git for Windows' default. Setting it before the checkout makes this job prove
+      # that .gitattributes keeps shell scripts and the Dockerfile LF on Windows.
+      - name: Enable core.autocrlf
+        run: git config --global core.autocrlf true
+
+      - name: Git checkout
+        uses: actions/checkout@v7
+
+      # Only *.cmd / *.bat may be CRLF. docker-entrypoint.sh is copied into the Linux
+      # image straight from the working tree, and with CRLF the container won't start.
+      - name: Verify LF line endings
+        shell: bash
+        run: |
+          crlf="$(git ls-files --eol | grep 'w/crlf' | grep -vE '\.(cmd|bat)$' || true)"
+          if [ -n "$crlf" ]; then
+            echo "Files checked out with CRLF:"
+            echo "$crlf"
+            exit 1
+          fi
+
+      - name: Install pnpm
+        if: ${{ !cancelled() }}
+        uses: pnpm/action-setup@v6
+
+      # Same runtime as the Linux job, so a difference between the two is Windows.
+      - name: Use Node.js 24.x
+        if: ${{ !cancelled() }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        id: install
+        if: ${{ !cancelled() }}
+        run: pnpm install --frozen-lockfile
+
+      # Build and unit tests run independently of each other, so one red step
+      # doesn't hide the result of the other.
+      - name: Build
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm run build
+
+      - name: Unit tests
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: pnpm run vitest:unit
