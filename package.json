@@ -65,7 +65,7 @@
     "format:check": "oxfmt --check src/ tests/",
     "link:nest-server": "pnpm link ${NEST_SERVER_PATH:-../nest-server}",
     "lint": "oxlint --ignore-path .oxlintignore src/ tests/",
-    "lint:fix": "oxlint --fix --fix-suggestions --ignore-path .oxlintignore src/ tests/",
+    "lint:fix": "oxlint --fix --ignore-path .oxlintignore src/ tests/",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "migrate:create": "f() { migrate create \"$1\" --template-file ./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/templates/migration-project.template.ts --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js; }; f",
     "migrate:up": "migrate up --store ./migrations-utils/migrate.js --migrations-dir ./migrations --compiler ts:./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js",
