@@ -63,7 +63,8 @@ RUN set -e; \
 # npm enforces registry integrity for the tarball itself.
 RUN npm install -g "$(node -p "require('./package.json').packageManager.split('+')[0]")"
 
-# Install dependencies (--ignore-scripts prevents husky/prepare errors in Docker)
+# Install dependencies (--ignore-scripts skips lifecycle scripts such as the lt-monorepo
+# root's `prepare: husky`; git hooks have no place in an image build)
 # Rebuild bcrypt native addon separately
 RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm rebuild bcrypt
 
