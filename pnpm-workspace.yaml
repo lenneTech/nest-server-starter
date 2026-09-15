@@ -161,7 +161,13 @@ overrides:
   # into one. The bare entry pinned 4.12.25 — BELOW the 4.12.27 fix — and was only
   # rescued by the ranged one. Target raised to the newest 4.x; a fresh resolve without
   # any hono override lands on 4.13.3.
-  'hono@>=4.0.0 <4.12.27': 4.13.3
+  # 2026-09-14: 4.13.3 became vulnerable itself — 3x moderate, all <4.13.5:
+  # GHSA-gqvv-2mrq-wpjv (incomplete fix for CVE-2026-39408 in `toSSG()`),
+  # GHSA-g6gw-c38x-mqfc (unbounded dot-notation nesting in `parseBody()`),
+  # GHSA-crvj-82cr-hjcx (query parser reads past the URL fragment). Key raised to the
+  # new floor, target to the newest 4.x (4.13.7). nest-server does not pin hono, so this
+  # is not tied to a framework release: per the rules above it stays as a floor.
+  'hono@>=4.0.0 <4.13.5': 4.13.7
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).
@@ -390,19 +396,39 @@ overrides:
   # js-yaml ^5, so the bare key was force-DOWNGRADING a direct dependency's own dep
   # across a major. Key bounded to the advisory: ^4 consumers are lifted to 4.3.1, ^5
   # consumers are left on the (unaffected, audit-clean) 5.x line.
-  'js-yaml@<4.1.2': 4.3.1
+  # 2026-09-14: GHSA-2883-xcg3-v3hh (high, >=4.0.0 <4.3.2) — `maxTotalMergeKeys` does not
+  # limit CPU use. 4.3.1 is inside it, 4.3.2 is the fix and the newest 4.x. Paths:
+  # @compodoc/compodoc>cosmiconfig and @nestjs/cli>fork-ts-checker-webpack-plugin>
+  # cosmiconfig; compodoc is already on its newest release (2.0.0), so no direct bump
+  # can close it. The tree holds no 3.x, so the wider key catches nothing new.
+  'js-yaml@<4.3.2': 4.3.2
 
   # Security: Email injection / header-related CVEs in nodemailer <9.0.1 (high).
   # Transitive via @lenne.tech/nest-server. LOCKSTEP entry: the target must equal the
   # version the framework declares (9.0.5 today) — a lower target puts a second copy in
   # the hoisted tree. Raised 9.0.3 -> 9.0.5 on 2026-08-22 alongside nest-server 11.36.1.
-  nodemailer: 9.0.5
+  # 2026-09-14: TEMPORARILY AHEAD of the framework. 9.0.5 is inside four newer advisories:
+  # GHSA-2x7j-588g-ccc2 (high, quadratic time complexity), GHSA-wmmp-3585-3rmp
+  # (IDN/Punycode allow-list bypass) and GHSA-cc9r-2j5m-2m83 (recipient-domain
+  # validation bypass), all <9.1.0, plus GHSA-8m3c-c648-2xjj (`resolveContent()`
+  # bypass, <=9.1.0). 9.1.1 is the fix and the newest 9.x. The key is bare, so the tree
+  # still holds one copy. Remove the lead after the nest-server release with the fix:
+  # once the framework declares >= 9.1.1, set this back to exactly that version.
+  nodemailer: 9.1.1
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high).
   # Transitive via @lenne.tech/nest-server and @nestjs/platform-express, and a direct
   # dependency here. LOCKSTEP entry, aligned with the framework's exact 2.2.0
   # (also the newest release).
-  multer: 2.2.0
+  # 2026-09-14: TEMPORARILY AHEAD of the framework and of @nestjs/platform-express
+  # 11.2.1, which both pin 2.2.0. Advisories GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4
+  # (high, DoS via crafted / oversized input) and GHSA-qvfw-j98x-7q72 (low, size-limit
+  # bypass) are all <2.3.0; GHSA-qfvm-cv95-jqjf (high) names exactly 2.2.0. Target 2.3.0,
+  # not the newest 2.4.0: 2.4.0 was published hours ago and trips the release-age gate
+  # (see minimumReleaseAgeExclude below — no exemption). Raise to 2.4.0 once it clears.
+  # Keep the direct dependency in package.json on the same version. Remove the lead
+  # after the nest-server release with the fix: set it back to the framework's version.
+  multer: 2.3.0
 
   # Security: various undici CVEs <7.29.0 — response desynchronization,
   # cross-user information disclosure, CRLF injection via a blob-like body type,
