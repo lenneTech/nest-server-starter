@@ -127,7 +127,7 @@
     "graphql-subscriptions": "3.0.0",
     "graphql-upload": "15.0.2",
     "mongoose": "9.9.3",
-    "multer": "2.2.0"
+    "multer": "2.3.0"
   },
   "devDependencies": {
     "@compodoc/compodoc": "2.0.0",
