@@ -17,7 +17,7 @@
  * a behavioural test would have to spawn a package manager per case, on a platform that has the
  * problem. The shape is the part that regresses, so that is what is pinned here.
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -68,8 +68,14 @@ describe('scripts/ can start a package manager on Windows', () => {
     expect(callsWithoutShell(readFileSync(join(SCRIPTS, file), 'utf-8'))).toEqual([]);
   });
 
-  it('run-spectaql.mjs handles a failed start instead of throwing on an unhandled event', () => {
-    const source = readFileSync(join(SCRIPTS, 'run-spectaql.mjs'), 'utf-8');
-    expect(source).toMatch(/\.on\(\s*['"]error['"]/);
-  });
+  // Skipped rather than asserted in REST mode: `api-mode.manifest.json` lists
+  // `scripts/run-spectaql.mjs` under `modes.graphql.filePatterns`, so the lt CLI deletes it from a
+  // REST-only project along with spectaql.yml. The loop above still covers whatever scripts remain.
+  it.skipIf(!existsSync(join(SCRIPTS, 'run-spectaql.mjs')))(
+    'run-spectaql.mjs handles a failed start instead of throwing on an unhandled event',
+    () => {
+      const source = readFileSync(join(SCRIPTS, 'run-spectaql.mjs'), 'utf-8');
+      expect(source).toMatch(/\.on\(\s*['"]error['"]/);
+    },
+  );
 });
