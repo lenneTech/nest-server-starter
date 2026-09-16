@@ -82,6 +82,9 @@ importers:
       cookie-parser:
         specifier: 1.4.7
         version: 1.4.7
+      cross-env:
+        specifier: 10.1.0
+        version: 10.1.0
       dotenv:
         specifier: 17.4.2
         version: 17.4.2
@@ -146,9 +149,6 @@ importers:
       cpy-cli:
         specifier: 7.0.0
         version: 7.0.0
-      cross-env:
-        specifier: 10.1.0
-        version: 10.1.0
       json-to-graphql-query:
         specifier: 2.3.0
         version: 2.3.0
