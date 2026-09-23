@@ -10,7 +10,7 @@ and do **not** run k6 load tests. Restrict to static analysis, lockfile/dependen
 inspection, and read-only commands.
 
 **Why:** the review orchestrator runs `pnpm run check` in parallel, and `scripts/check.mjs`
-boots the server itself (via `scripts/check-server-start.sh`). A second server instance
+boots the server itself (via `pnpm run check:server-start`). A second server instance
 collides on the listen port and on the shared local MongoDB, which both corrupts the
 parallel check run and produces meaningless load-test numbers.
 

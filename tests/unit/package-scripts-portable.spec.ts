@@ -29,7 +29,7 @@
  * itself stays, because deleting it breaks the build on every platform.
  *
  * WHAT IS STILL OPEN
- * The `bash scripts/…` steps (`check:*`, `check:envs*`) and the shell function in `migrate:create`,
+ * The `bash scripts/check-envs.sh` steps (`check:envs*`) and the shell function in `migrate:create`,
  * each named in a known list below. The former `find` in `test:cleanup`, `open` in `docs` and
  * `${…:-…}` in `link:nest-server` now run through small Node scripts under `scripts/`.
  */
@@ -262,14 +262,13 @@ describe('package.json scripts run on Windows', () => {
   });
 
   it('does not call a program that cmd.exe lacks or runs as something else', () => {
-    // The `bash scripts/…` steps are the known exceptions, listed rather than silently skipped: a
-    // Node replacement for check-server-start.sh / check-envs.sh is being designed once for all
-    // three repos that carry it.
+    // The `bash scripts/check-envs.sh` steps are the known exceptions, listed rather than silently
+    // skipped. (check-server-start.sh already moved to scripts/check-server-start.mjs.)
     expectOnlyKnown(
       Object.entries(scripts)
         .filter(([, command]) => unportablePrograms(command).length > 0)
         .map(([name]) => name),
-      ['check:envs', 'check:envs:docker', 'check:fix', 'check:naf', 'check:raw'],
+      ['check:envs', 'check:envs:docker'],
       'not available under cmd.exe',
     );
   });
