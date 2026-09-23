@@ -73,7 +73,7 @@ jobs:
 
       # One call on purpose. `check` already chains audit → spectaql:sync →
       # format:check → lint → typecheck:tests → unit + e2e → build →
-      # check-server-start.sh, and re-listing those here would let the pipeline and
+      # check:server-start, and re-listing those here would let the pipeline and
       # the local gate drift apart silently. Its `--frozen-lockfile` install is a
       # no-op after the step above.
       - name: Run check
