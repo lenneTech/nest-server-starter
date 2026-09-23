@@ -28,10 +28,10 @@
  * in sh and cmd.exe. The guard below keeps both halves: no `|| true` anywhere, and the fallback
  * itself stays, because deleting it breaks the build on every platform.
  *
- * WHAT THIS DOES NOT COVER
- * Still open and deliberately not asserted here: `find … -delete` in `test:cleanup` (named in
- * KNOWN_UNPORTABLE below), `open` in `docs` (macOS only), the shell parameter expansion
- * `${NEST_SERVER_PATH:-../nest-server}` in `link:nest-server` and the `bash scripts/…` steps.
+ * WHAT IS STILL OPEN
+ * The `bash scripts/…` steps (`check:*`, `check:envs*`), named in KNOWN_UNPORTABLE below. The former
+ * `find` in `test:cleanup`, `open` in `docs` and `${…:-…}` in `link:nest-server` now run through
+ * small Node scripts under `scripts/`.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -46,6 +46,23 @@ const scriptsMatching = (re: RegExp) =>
   Object.entries(scripts)
     .filter(([, command]) => re.test(command))
     .map(([name]) => name);
+
+/** Programs a script may not call: POSIX-only, or (`find`) something else entirely on Windows. */
+const POSIX_ONLY = ['bash', 'cat', 'cp', 'find', 'grep', 'mv', 'open', 'rm', 'sed', 'sh', 'true', 'xdg-open'];
+
+/** The program in command position of every link in a `&&` / `||` / `;` / `|` chain. */
+function commandNames(command: string): string[] {
+  return command
+    .split(/&&|\|\||;|\|/)
+    .map((link) =>
+      link
+        .trim()
+        .replace(/^cross-env\s+/, '')
+        .replace(/^(?:[A-Z_][A-Z0-9_]*=\S+\s+)+/, ''),
+    )
+    .map((link) => link.split(/\s+/)[0])
+    .filter(Boolean);
+}
 
 /** An assignment in command position: at the start, or after a `;`, `&&` or `|` separator. */
 const ENV_ASSIGNMENT = /(?:^|[\s;&|])([A-Z_][A-Z0-9_]*=\S+)/g;
@@ -91,6 +108,22 @@ describe('bareEnvAssignments — the detector itself', () => {
   });
 });
 
+describe('commandNames — the detector itself', () => {
+  it('reads the program of every link in a chain', () => {
+    expect(commandNames('pnpm run docs:ci && open http://x/ && compodoc -s')).toEqual(['pnpm', 'open', 'compodoc']);
+    expect(commandNames('cpy ./bin ./dist/ || exit 0')).toEqual(['cpy', 'exit']);
+    expect(commandNames('a; b | c')).toEqual(['a', 'b', 'c']);
+  });
+
+  it('looks past cross-env and its assignments', () => {
+    expect(commandNames('cross-env NODE_ENV=e2e A=1 find tests -delete')).toEqual(['find']);
+  });
+
+  it('does not mistake an argument for a program', () => {
+    expect(commandNames('node scripts/open.mjs ./find ./bash')).toEqual(['node']);
+  });
+});
+
 describe('package.json scripts run on Windows', () => {
   it('has scripts to check', () => {
     expect(Object.keys(scripts).length).toBeGreaterThan(0);
@@ -122,16 +155,28 @@ describe('package.json scripts run on Windows', () => {
   });
 
   it('quotes arguments with double quotes, not single ones', () => {
-    // `test:cleanup` is the one exception, and it is listed rather than silently skipped: it shells
-    // out to POSIX `find`, which Windows does not have at all (`find.exe` there is a text search).
-    // Quoting alone would not make it run, so it needs a rewrite in Node — separate work, tracked
-    // by this list. A SECOND offender fails the suite, which is the point of naming the first.
-    const KNOWN_UNPORTABLE = ['test:cleanup'];
-    const bad = scriptsMatching(/'/).filter((name) => !KNOWN_UNPORTABLE.includes(name));
+    const bad = scriptsMatching(/'/);
     expect(bad, `cmd.exe passes single quotes through literally: ${bad.join(', ')}`).toEqual([]);
-    expect(
-      KNOWN_UNPORTABLE.filter((name) => scripts[name] !== undefined && /'/.test(scripts[name])),
-      'a script left this list — drop it from KNOWN_UNPORTABLE',
-    ).toEqual(KNOWN_UNPORTABLE.filter((name) => scripts[name] !== undefined));
+  });
+
+  it('does not use shell parameter expansion', () => {
+    const bad = scriptsMatching(/\$\{/);
+    expect(bad, `cmd.exe passes \${…} through literally: ${bad.join(', ')}`).toEqual([]);
+  });
+
+  it('does not call a program that cmd.exe lacks', () => {
+    // The `bash scripts/…` steps are the known exceptions, listed rather than silently skipped: a
+    // Node replacement for check-server-start.sh / check-envs.sh is being designed once for all
+    // three repos that carry it. A SECOND offender fails the suite, and a script that stops calling
+    // bash fails it too — the list has to shrink with the fixes, or it stops meaning anything.
+    const KNOWN_UNPORTABLE = ['check:envs', 'check:envs:docker', 'check:fix', 'check:naf', 'check:raw'];
+    const found = Object.entries(scripts)
+      .filter(([, command]) => commandNames(command).some((program) => POSIX_ONLY.includes(program)))
+      .map(([name]) => name);
+    const bad = found.filter((name) => !KNOWN_UNPORTABLE.includes(name));
+    expect(bad, `not available under cmd.exe: ${bad.join(', ')}`).toEqual([]);
+    expect(found.sort(), 'a script left KNOWN_UNPORTABLE — drop it from the list').toEqual(
+      KNOWN_UNPORTABLE.filter((name) => scripts[name] !== undefined).sort(),
+    );
   });
 });
