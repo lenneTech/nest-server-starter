@@ -29,9 +29,9 @@
  * itself stays, because deleting it breaks the build on every platform.
  *
  * WHAT IS STILL OPEN
- * The `bash scripts/…` steps (`check:*`, `check:envs*`), named in KNOWN_UNPORTABLE below. The former
- * `find` in `test:cleanup`, `open` in `docs` and `${…:-…}` in `link:nest-server` now run through
- * small Node scripts under `scripts/`.
+ * The `bash scripts/…` steps (`check:*`, `check:envs*`) and the shell function in `migrate:create`,
+ * each named in a known list below. The former `find` in `test:cleanup`, `open` in `docs` and
+ * `${…:-…}` in `link:nest-server` now run through small Node scripts under `scripts/`.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -47,8 +47,62 @@ const scriptsMatching = (re: RegExp) =>
     .filter(([, command]) => re.test(command))
     .map(([name]) => name);
 
-/** Programs a script may not call: POSIX-only, or (`find`) something else entirely on Windows. */
-const POSIX_ONLY = ['bash', 'cat', 'cp', 'find', 'grep', 'mv', 'open', 'rm', 'sed', 'sh', 'true', 'xdg-open'];
+/**
+ * Programs a script may not call, by name. Two kinds, deliberately in one list:
+ *   - absent under cmd.exe: `bash`, `cp`, `rm`, `touch`, …
+ *   - PRESENT under cmd.exe, but a different program with the same name: `mkdir` (no `-p`; the `/` in
+ *     `dist/types` is read as a switch), `find` (a text search), `sort`, `timeout` (waits, runs
+ *     nothing), `rmdir`. A name-only rule catches these too, and more honestly than a "command plus
+ *     forbidden switch" rule would: the switch set is open-ended, and none of them is needed in a
+ *     script — `cpy` creates target directories, `rimraf` removes them, Node does the rest.
+ * `echo` is not listed: unquoted it behaves the same, and quoted it is caught by the quote rule.
+ */
+const POSIX_ONLY = [
+  '[',
+  'awk',
+  'bash',
+  'cat',
+  'chmod',
+  'cp',
+  'cut',
+  'export',
+  'find',
+  'grep',
+  'head',
+  'kill',
+  'ln',
+  'ls',
+  'lsof',
+  'mkdir',
+  'mv',
+  'open',
+  'pgrep',
+  'pkill',
+  'printf',
+  'rm',
+  'rmdir',
+  'sed',
+  'sh',
+  'sleep',
+  'sort',
+  'source',
+  'tail',
+  'test',
+  'timeout',
+  'touch',
+  'tr',
+  'true',
+  'wc',
+  'which',
+  'xargs',
+  'xdg-open',
+];
+
+/**
+ * POSIX shell syntax that no program name reveals: a function definition (`f() { …; }; f`) and the
+ * positional parameters it takes (`"$1"`, `$@`). cmd.exe understands neither.
+ */
+const SHELL_SYNTAX = /\b[\w-]+\s*\(\)\s*\{|\$[0-9@*#]/;
 
 /** The program in command position of every link in a `&&` / `||` / `;` / `|` chain. */
 function commandNames(command: string): string[] {
@@ -108,6 +162,23 @@ describe('bareEnvAssignments — the detector itself', () => {
   });
 });
 
+/** The programs of `command` that cmd.exe lacks or runs as something else. */
+function unportablePrograms(command: string): string[] {
+  return commandNames(command).filter((program) => POSIX_ONLY.includes(program));
+}
+
+/**
+ * Asserts the offenders of one rule: nothing outside `known`, and every entry of `known` still
+ * offending — a list that does not shrink with the fixes stops meaning anything.
+ */
+function expectOnlyKnown(found: string[], known: string[], rule: string): void {
+  const bad = found.filter((name) => !known.includes(name));
+  expect(bad, `${rule}: ${bad.join(', ')}`).toEqual([]);
+  expect([...found].sort(), `a script left the known list of "${rule}" — drop it from the list`).toEqual(
+    known.filter((name) => scripts[name] !== undefined).sort(),
+  );
+}
+
 describe('commandNames — the detector itself', () => {
   it('reads the program of every link in a chain', () => {
     expect(commandNames('pnpm run docs:ci && open http://x/ && compodoc -s')).toEqual(['pnpm', 'open', 'compodoc']);
@@ -121,6 +192,32 @@ describe('commandNames — the detector itself', () => {
 
   it('does not mistake an argument for a program', () => {
     expect(commandNames('node scripts/open.mjs ./find ./bash')).toEqual(['node']);
+  });
+});
+
+describe('unportablePrograms / SHELL_SYNTAX — the rules themselves', () => {
+  // Samples from nest-server's unfixed build scripts, where this gap was found.
+  it('flags mkdir -p on its own, not only because cp follows it', () => {
+    expect(unportablePrograms('mkdir -p dist/types && cp src/types/*.d.ts dist/types/')).toEqual(['mkdir', 'cp']);
+    expect(unportablePrograms('mkdir -p dist/types && cpy "src/types/*.d.ts" dist/types/')).toEqual(['mkdir']);
+  });
+
+  it('flags cmd.exe builtins that share a name but not a meaning', () => {
+    expect(unportablePrograms('sort -u list.txt')).toEqual(['sort']);
+    expect(unportablePrograms('timeout 5 node x.js')).toEqual(['timeout']);
+  });
+
+  it('accepts the portable replacements', () => {
+    expect(unportablePrograms('rimraf dist && tsc -p tsconfig.build.json && cpy ./a ./dist/ || exit 0')).toEqual([]);
+  });
+
+  it('sees a shell function and its positional parameters', () => {
+    expect(SHELL_SYNTAX.test('f() { migrate create "$1"; }; f')).toBe(true);
+    // Each half on its own, so neither can be dropped behind the other's back.
+    expect(SHELL_SYNTAX.test('clean() { rimraf dist; }; clean')).toBe(true);
+    expect(SHELL_SYNTAX.test('node x.js "$@"')).toBe(true);
+    expect(SHELL_SYNTAX.test('migrate create --template-file ./t.ts')).toBe(false);
+    expect(SHELL_SYNTAX.test('cpy ./package.json --rename=meta.json ./dist/')).toBe(false);
   });
 });
 
@@ -164,19 +261,22 @@ describe('package.json scripts run on Windows', () => {
     expect(bad, `cmd.exe passes \${…} through literally: ${bad.join(', ')}`).toEqual([]);
   });
 
-  it('does not call a program that cmd.exe lacks', () => {
+  it('does not call a program that cmd.exe lacks or runs as something else', () => {
     // The `bash scripts/…` steps are the known exceptions, listed rather than silently skipped: a
     // Node replacement for check-server-start.sh / check-envs.sh is being designed once for all
-    // three repos that carry it. A SECOND offender fails the suite, and a script that stops calling
-    // bash fails it too — the list has to shrink with the fixes, or it stops meaning anything.
-    const KNOWN_UNPORTABLE = ['check:envs', 'check:envs:docker', 'check:fix', 'check:naf', 'check:raw'];
-    const found = Object.entries(scripts)
-      .filter(([, command]) => commandNames(command).some((program) => POSIX_ONLY.includes(program)))
-      .map(([name]) => name);
-    const bad = found.filter((name) => !KNOWN_UNPORTABLE.includes(name));
-    expect(bad, `not available under cmd.exe: ${bad.join(', ')}`).toEqual([]);
-    expect(found.sort(), 'a script left KNOWN_UNPORTABLE — drop it from the list').toEqual(
-      KNOWN_UNPORTABLE.filter((name) => scripts[name] !== undefined).sort(),
+    // three repos that carry it.
+    expectOnlyKnown(
+      Object.entries(scripts)
+        .filter(([, command]) => unportablePrograms(command).length > 0)
+        .map(([name]) => name),
+      ['check:envs', 'check:envs:docker', 'check:fix', 'check:naf', 'check:raw'],
+      'not available under cmd.exe',
     );
+  });
+
+  it('does not use POSIX shell functions or positional parameters', () => {
+    // `migrate:create` is the known exception: the lt cli generates the same function, so its Node
+    // replacement has to land in both places together.
+    expectOnlyKnown(scriptsMatching(SHELL_SYNTAX), ['migrate:create'], 'POSIX shell syntax');
   });
 });
