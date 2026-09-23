@@ -172,7 +172,7 @@ interface RequiredEnvVar {
   envVar: string;
 }
 
-const REQUIRED_DEPLOYED_ENV_VARS: RequiredEnvVar[] = [
+export const REQUIRED_DEPLOYED_ENV_VARS: RequiredEnvVar[] = [
   { check: (c) => !!c.baseUrl, envVar: 'NSC__BASE_URL' },
   { check: (c) => !!c.mongoose?.uri, envVar: 'NSC__MONGOOSE__URI' },
   { check: (c) => !!getBetterAuthSecret(c), envVar: 'NSC__BETTER_AUTH__SECRET' },

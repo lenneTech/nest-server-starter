@@ -12,7 +12,7 @@
  * THE NEST-SPECIFIC CASES
  * The ready pattern lives in package.json, the line it has to match lives in src/main.ts. The two
  * drifted apart once already: main.ts fixed its "Server startet at" typo, check-envs.sh kept
- * matching only the typo and has timed out on every platform since. So the pattern is checked
+ * matching only the typo and timed out on every platform until it was removed. So the pattern is checked
  * against the real source line here, where a mismatch fails in milliseconds, instead of surfacing
  * as a 60-second boot timeout in CI that looks like a slow machine.
  */

@@ -29,9 +29,10 @@
  * itself stays, because deleting it breaks the build on every platform.
  *
  * WHAT IS STILL OPEN
- * The `bash scripts/check-envs.sh` steps (`check:envs*`) and the shell function in `migrate:create`,
- * each named in a known list below. The former `find` in `test:cleanup`, `open` in `docs` and
- * `${…:-…}` in `link:nest-server` now run through small Node scripts under `scripts/`.
+ * The shell function in `migrate:create`, named in a known list below. The former `find` in
+ * `test:cleanup`, `open` in `docs`, `${…:-…}` in `link:nest-server` and the `bash scripts/…` steps
+ * now run through Node scripts under `scripts/`; check-envs.sh was replaced by a unit test in
+ * src/config.env.spec.ts.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -262,13 +263,13 @@ describe('package.json scripts run on Windows', () => {
   });
 
   it('does not call a program that cmd.exe lacks or runs as something else', () => {
-    // The `bash scripts/check-envs.sh` steps are the known exceptions, listed rather than silently
-    // skipped. (check-server-start.sh already moved to scripts/check-server-start.mjs.)
+    // No exceptions left: check-server-start.sh became scripts/check-server-start.mjs and
+    // check-envs.sh a unit test. A new offender needs a named entry here, or a fix.
     expectOnlyKnown(
       Object.entries(scripts)
         .filter(([, command]) => unportablePrograms(command).length > 0)
         .map(([name]) => name),
-      ['check:envs', 'check:envs:docker'],
+      [],
       'not available under cmd.exe',
     );
   });
