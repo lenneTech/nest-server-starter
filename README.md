@@ -198,9 +198,9 @@ See `.env.example` for the complete catalog of required and optional env vars.
 
 ### Verifying configurations
 
-`pnpm run check:envs` boots every NODE_ENV against an empty `.env` (deployed must fail-fast,
-local must start) and against a fixture `.env` (all six must start). Add `--docker` for the same
-checks inside the production image: `pnpm run check:envs:docker`.
+`src/config.env.spec.ts` checks the contract on every `pnpm test`: `develop`, `test` and
+`production` refuse to start while a required `NSC__*` var is missing and name every missing one;
+`local`, `e2e` and `ci` start without any of them.
 
 ## Test & debug the NestServer package in this project
 Use `pnpm link` to include the local NestJS server in the project.

@@ -5,6 +5,9 @@
  * `https://<slug>.localhost`. Without this, sessions created by API
  * sign-in are not seen by the App in the same browser.
  */
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('config.env.ts — cross-subdomain cookies', () => {
@@ -166,5 +169,109 @@ describe('config.env.ts — SMTP transport security', () => {
       expect((await loadSmtp({ SMTP_PORT: '587', SMTP_SECURE: value }))?.secure).toBe(false);
       expect((await loadSmtp({ SMTP_PORT: '465', SMTP_SECURE: value }))?.secure).toBe(true);
     }
+  });
+});
+
+/**
+ * The fail-fast contract for deployed envs (`develop` → `test` → `production`): a missing required
+ * `NSC__*` var must stop the server at startup, naming every missing var; local envs must run
+ * without any of them. See `REQUIRED_DEPLOYED_ENV_VARS` in config.env.ts.
+ *
+ * This replaces `scripts/check-envs.sh`, which booted a server per NODE_ENV to check the same thing
+ * and could not pass anywhere: its start pattern kept the "startet" typo after main.ts was fixed,
+ * and its Phase 2 fixture was git-ignored and never committed. Checked at import, the contract
+ * runs in every `pnpm test`, in milliseconds, on every platform.
+ *
+ * The environment is fully controlled: every inherited `NSC__*` var is removed (`lt dev up` sets
+ * `NSC__MONGOOSE__URI`, for one), and the config is imported from an empty working directory. Both
+ * config.env.ts and nest-server's getEnvironmentConfig() call `dotenv.config()`, which reads `.env`
+ * from the cwd — a developer's `.env` would otherwise fill in what the test left out. (Stubbing
+ * `dotenv` was tried and does not work: the second call is a plain require() inside node_modules.)
+ */
+describe('config.env.ts — fail-fast for deployed envs', () => {
+  const ORIGINAL_ENV = { ...process.env };
+  const ORIGINAL_CWD = process.cwd();
+  let emptyDir = '';
+
+  /** A value for every unconditional requirement — public dummies, never real secrets. */
+  const COMPLETE: Record<string, string> = {
+    NSC__BASE_URL: 'https://api.example.test',
+    NSC__BETTER_AUTH__SECRET: 'contract-test-secret-contract-test-secret',
+    NSC__EMAIL__DEFAULT_SENDER__EMAIL: 'noreply@example.test',
+    NSC__EMAIL__SMTP__AUTH__PASS: 'contract-test-pass',
+    NSC__EMAIL__SMTP__AUTH__USER: 'contract-test-user',
+    NSC__EMAIL__SMTP__HOST: 'smtp.example.test',
+    NSC__MONGOOSE__URI: 'mongodb://127.0.0.1/contract-test',
+  };
+
+  async function load(nodeEnv: string, vars: Record<string, string> = {}) {
+    vi.resetModules();
+    for (const key of Object.keys(process.env)) {
+      if (key.startsWith('NSC__') || key === 'NEST_SERVER_CONFIG') delete process.env[key];
+    }
+    Object.assign(process.env, vars, { NODE_ENV: nodeEnv });
+    process.chdir(emptyDir);
+    try {
+      return await import('./config.env');
+    } finally {
+      process.chdir(ORIGINAL_CWD);
+    }
+  }
+
+  /** The env vars the guard enforces without an opt-in condition. */
+  async function unconditional(): Promise<string[]> {
+    const { REQUIRED_DEPLOYED_ENV_VARS } = await load('local');
+    return REQUIRED_DEPLOYED_ENV_VARS.filter(({ condition }) => !condition).map(({ envVar }) => envVar);
+  }
+
+  beforeEach(() => {
+    emptyDir = mkdtempSync(join(tmpdir(), 'config-env-contract-'));
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    rmSync(emptyDir, { force: true, recursive: true });
+    vi.resetModules();
+  });
+
+  it('covers every unconditional requirement with a value above', async () => {
+    expect(Object.keys(COMPLETE).sort()).toEqual((await unconditional()).sort());
+  });
+
+  it.each(['develop', 'test', 'production'])(
+    '%s refuses to start without the vars, naming all of them',
+    async (env) => {
+      const required = await unconditional();
+      const error = await load(env).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+
+      expect(error?.message).toMatch(`Missing required environment variables for NODE_ENV='${env}'`);
+      for (const envVar of required) {
+        expect(error?.message, envVar).toContain(envVar);
+      }
+    },
+  );
+
+  it.each(['develop', 'test', 'production'])('%s starts once every required var is set', async (env) => {
+    await expect(load(env, COMPLETE)).resolves.toBeDefined();
+  });
+
+  it('names exactly the one var that is missing', async () => {
+    // Per var, so a requirement whose check reads the wrong config path cannot hide behind the others.
+    for (const envVar of Object.keys(COMPLETE)) {
+      const { [envVar]: _left, ...rest } = COMPLETE;
+      const error = await load('production', rest).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+      expect(error?.message, `without ${envVar}`).toMatch(new RegExp(`: ${envVar}\\. `));
+    }
+  });
+
+  it.each(['local', 'e2e', 'ci'])('%s starts without any of them', async (env) => {
+    await expect(load(env)).resolves.toBeDefined();
   });
 });

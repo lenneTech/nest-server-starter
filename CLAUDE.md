@@ -145,9 +145,10 @@ pnpm start                 # Start with migrations (local env)
 pnpm run test:e2e          # Run E2E tests
 pnpm run build             # Build for production
 pnpm run check             # audit + format + lint + test + build + local-start
-pnpm run check:envs        # boot every NODE_ENV (host) — verifies fail-fast/no-.env contracts
-pnpm run check:envs:docker # same as above + same checks inside the production Dockerfile image
 ```
+
+The fail-fast contract of the deployed envs (and that local envs need no `.env`) is a unit test in
+`src/config.env.spec.ts`, so every `pnpm test` / `pnpm run check` verifies it.
 
 MongoDB must be running locally on default port (27017).
 
@@ -213,7 +214,10 @@ the "where to change what" guide. Quick map:
 
 1. Add an entry to `REQUIRED_DEPLOYED_ENV_VARS` (one line: `{ check, envVar }`).
 2. Add the `NSC__*` line to `.env.example`.
-3. Run `pnpm run check:envs` — Phase 1 confirms fail-fast triggers, Phase 2 confirms boot succeeds.
+3. Add a public dummy value for it to `COMPLETE` in `src/config.env.spec.ts`. The test
+   "covers every unconditional requirement" stays red until you do; then `pnpm test` confirms that
+   `develop`/`test`/`production` refuse to start without the var, name it in the error, and start
+   once it is set. (An entry with a `condition` is not in `COMPLETE`; cover its opt-in case there.)
 
 ### Pipelines
 
