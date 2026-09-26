@@ -147,7 +147,9 @@ overrides:
   # 2026-08-22: was an unqualified `axios: 1.18.1`, which had become a downgrade lock —
   # a fresh resolve without it lands on 1.19.0. Key bounded to the advisory floor and
   # target raised, so this can only ever lift a vulnerable version.
-  'axios@<1.18.0': 1.19.0
+  # 2026-09-26: 1.19.0 had become a downgrade lock in turn (a no-override resolve lands on
+  # 1.20.0, the newest 1.x). Key and target raised together, mirroring nest-server 11.41.4.
+  'axios@<1.20.0': 1.20.0
 
   # Security: 3x Hono, all moderate, all patched >=4.12.27 — GHSA-xgm2-5f3f-mvvc
   # (API-Gateway adapter), GHSA-hvrm-45r6-mjfj (jsx request-context bleed),
@@ -167,7 +169,9 @@ overrides:
   # GHSA-crvj-82cr-hjcx (query parser reads past the URL fragment). Key raised to the
   # new floor, target to the newest 4.x (4.13.7). nest-server does not pin hono, so this
   # is not tied to a framework release: per the rules above it stays as a floor.
-  'hono@>=4.0.0 <4.13.5': 4.13.7
+  # 2026-09-26: target raised 4.13.7 -> 4.13.9 (newest 4.x; a no-override resolve lands
+  # there, so 4.13.7 had become a downgrade lock), key with it — mirrors nest-server 11.41.4.
+  'hono@>=4.0.0 <4.13.9': 4.13.9
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).
@@ -209,15 +213,21 @@ overrides:
   # consumers across two majors AND capped the 4.x line one patch below latest. Key
   # bounded to the advisory range, target raised to 4.0.5. A no-override resolve keeps
   # picomatch@2.3.2 alongside 4.0.5 and audits clean, so 2.x needs no lift.
-  'picomatch@>=4.0.0 <4.0.4': 4.0.5
+  # 2026-09-26: target raised 4.0.5 -> 4.0.7 (newest 4.x). 4.0.5 had become a downgrade
+  # lock: a no-override resolve lands the ranged consumers on 4.0.7. The KEY stays at
+  # <4.0.4 on purpose — @angular-devkit/core exact-pins the (patched) 4.0.4, and widening
+  # the key would override that upstream pin for no advisory.
+  'picomatch@>=4.0.0 <4.0.4': 4.0.7
 
   # Security: Multiple CVEs in vite (arbitrary file read via WebSocket, fs.deny
   # bypass, path traversal in .map handling, plus the fs.deny bypass on Windows
   # alternate paths fixed in 8.0.16). Dev/test only (vitest, vite-plugin-node).
-  # 8.2.2 still satisfies the vite-plugin-node@8 peer (vite@^8) and pulls
+  # 8.3.1 still satisfies the vite-plugin-node@8 peer (vite@^8) and pulls
   # postcss@^8.5.x (see the postcss entry). Target raised 8.0.16 -> 8.2.2 and key
   # bounded 2026-08-22; a no-override resolve lands on 8.2.2.
-  'vite@<8.0.16': 8.2.2
+  # 2026-09-26: 8.2.2 had become a downgrade lock (a no-override resolve now lands on
+  # 8.3.1, the newest 8.x and nest-server's own vite devDependency). Key and target raised.
+  'vite@<8.3.1': 8.3.1
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf is
   # provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via @compodoc/compodoc.
@@ -294,7 +304,10 @@ overrides:
   # minimumReleaseAge (ERR_PNPM_NO_MATURE_MATCHING_VERSION). Staying inside 3.x on purpose —
   # 4.x exists, but a major jump for a transitive advisory is its own kind of outage.
   # Drop once ajv / ajv-formats request >=3.1.6 themselves.
-  'fast-uri@<3.1.6': 3.1.6
+  # 2026-09-26: 3.1.6 had become a downgrade lock (a no-override resolve lands on 3.1.8, the
+  # newest 3.x, now past the release-age gate). Key and target raised, mirroring nest-server
+  # 11.41.4.
+  'fast-uri@<3.1.8': 3.1.8
 
   # Security: body-parser DoS on malformed urlencoded input
   # (GHSA-v422-hmwv-36x6, low, patched >=2.3.0). Transitive via
@@ -339,17 +352,20 @@ overrides:
   # ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION. Verified 2026-08-22: 1.1.18, 2.1.4 and
   # 5.0.9 are still the newest in their lines. When bumping these, check
   # `npm view <pkg> time` against the cutoff first.
+  # 2026-09-26: raised to 5.0.12 / 1.1.21 / 2.1.7, the newest release in each line
+  # (all published 2026-09-14), keys with them — mirrors nest-server 11.41.4. The old
+  # targets had become downgrade locks: a no-override resolve lands on exactly these.
   #
   # The `>=3.0.0` lower bound also sweeps in 3.x/4.x. Those are ESM-only
   # (`type: module`), so lifting them to 5.x (dual ESM+CJS) is a widening, not a break.
   # Nothing in the tree uses them today.
-  'brace-expansion@>=3.0.0 <5.0.9': 5.0.9
-  'brace-expansion@<1.1.18': 1.1.18
+  'brace-expansion@>=3.0.0 <5.0.12': 5.0.12
+  'brace-expansion@<1.1.21': 1.1.21
   # Matches nothing today (the minimatch 9 -> 10 lift removed the only 2.x consumer),
-  # and is kept deliberately: the advisory is suppressed repo-wide via ignoreGhsas at
-  # the top of this file, so a 2.x path reappearing later would NOT turn the audit red.
-  # This pin is what keeps that silent case patched. Cheap insurance — do not tidy away.
-  'brace-expansion@>=2.0.0 <2.1.4': 2.1.4
+  # and is kept deliberately as a floor: should a 2.x path reappear, it lands on a
+  # patched release rather than reopening the advisory. (The ignoreGhsas suppression this
+  # comment used to cite is gone since 2026-08-22.) Cheap insurance — do not tidy away.
+  'brace-expansion@>=2.0.0 <2.1.7': 2.1.7
 
   # Security: lifts every minimatch 9.x consumer onto 10.x so it inherits the PATCHED
   # brace-expansion 5.x. 10.2.6 REQUESTS ^5.0.8 itself, so the fix arrives through the
@@ -380,7 +396,9 @@ overrides:
   # better-auth > vitest, but that peer is optional and pruned by `--prod`, so no
   # postcss reaches the production image either way.
   # Target raised 8.5.25 -> 8.5.26 on 2026-08-22 (newest 8.x).
-  'postcss@<8.5.25': 8.5.26
+  # 2026-09-26: raised 8.5.26 -> 8.5.28 (newest 8.x; a no-override resolve lands there),
+  # key with it — mirrors nest-server 11.41.4.
+  'postcss@<8.5.28': 8.5.28
 
   # Security: CRLF injection via unescaped multipart field names/filenames in
   # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
@@ -428,13 +446,15 @@ overrides:
   # (see minimumReleaseAgeExclude below — no exemption). Raise to 2.4.0 once it clears.
   # Keep the direct dependency in package.json on the same version. Remove the lead
   # after the nest-server release with the fix: set it back to the framework's version.
-  multer: 2.3.0
+  'multer@>=2.0.0 <2.4.0': 2.4.0
 
   # Security: various undici CVEs <7.29.0 — response desynchronization,
   # cross-user information disclosure, CRLF injection via a blob-like body type,
   # cookie attribute injection (2x high, 4x moderate). Transitive via
   # @compodoc/compodoc>cheerio>undici. 7.29.0 is the newest 7.x (8.x is a major).
-  'undici@>=7.0.0 <7.29.0': 7.29.0
+  # 2026-09-26: raised 7.29.0 -> 7.30.0 (newest 7.x; a no-override resolve lands there),
+  # key with it — mirrors nest-server 11.41.4.
+  'undici@>=7.0.0 <7.30.0': 7.30.0
 
   # Security: ip-address — Address4 decodes leading-zero octets as decimal
   # (GHSA-mwp4-54f8-5fhr, high, patched >=10.3.1), plus two moderates (CIDR
@@ -443,7 +463,9 @@ overrides:
   # express-rate-limit>ip-address, which declares a caret range — so the key still
   # matches by intersection and this is a hard pin, not a floor. Target raised
   # 10.3.1 -> 10.5.0 on 2026-08-22 (it was capping the package two minors back).
-  'ip-address@<10.3.1': 10.5.0
+  # 2026-09-26: the same had happened again — raised 10.5.0 -> 10.7.2 (newest 10.x; a
+  # no-override resolve lands there), key with it — mirrors nest-server 11.41.4.
+  'ip-address@<10.7.2': 10.7.2
 
   # Security: TWO advisories on the 3.x line, and the target must be the LATER of
   # the two — a 3.3.17 target closes the first and leaves the second wide open.
@@ -456,11 +478,15 @@ overrides:
   # unaffected and must not be dragged down. Note this override is REQUIRED here
   # even though @lenne.tech/nest-server carries the same one: pnpm overrides do
   # not reach consumers (see the framework's docs/security-overrides.md).
-  'nanoid@>=3.0.0 <3.3.18': 3.3.18
+  # 2026-09-26: raised 3.3.18 -> 3.3.19 (newest 3.x; a no-override resolve lands there),
+  # key with it — mirrors nest-server 11.41.4.
+  'nanoid@>=3.0.0 <3.3.19': 3.3.19
 
   # Security: high CVE in piscina <4.9.3 - transitive via the build/test toolchain.
   # 4.9.3 is the newest 4.x (5.x is a major).
-  'piscina@<4.9.3': 4.9.3
+  # 2026-09-26: 4.9.4 shipped and 4.9.3 had become a downgrade lock (a no-override resolve
+  # lands on 4.9.4). Key and target raised.
+  'piscina@<4.9.4': 4.9.4
 
   # Security: Zip-Slip — archive extraction can create files and links outside
   # the target directory (critical, >=11.0.0 <11.1.3). Transitive via
@@ -490,7 +516,9 @@ overrides:
   # tree resolves one copy instead of two. Bounded key — it can only raise a
   # vulnerable version, never cap a patched one. RAISE THE TARGET when a newer
   # 4.28.x ships. Verified 2026-09-01.
-  'browserslist@<4.28.7': 4.28.8
+  # 2026-09-26: raised 4.28.8 -> 4.29.1 (newest 4.x, same major; a no-override resolve
+  # lands there). Key unchanged — mirrors nest-server 11.41.4's entry exactly.
+  'browserslist@<4.28.7': 4.29.1
 
   # Security: fflate <0.8.3 — `unzipSync` loops indefinitely on a crafted ZIP64 archive
   # (moderate). Dev/test only, and the path is NOT the one an audit report suggests:
