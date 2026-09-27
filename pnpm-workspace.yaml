@@ -421,31 +421,30 @@ overrides:
   # can close it. The tree holds no 3.x, so the wider key catches nothing new.
   'js-yaml@<4.3.2': 4.3.2
 
-  # Security: Email injection / header-related CVEs in nodemailer <9.0.1 (high).
+  # Security: Email injection / header-related CVEs in nodemailer <9.0.1 (high), and
+  # four newer advisories on 9.0.5: GHSA-2x7j-588g-ccc2 (high, quadratic time
+  # complexity), GHSA-wmmp-3585-3rmp (IDN/Punycode allow-list bypass) and
+  # GHSA-cc9r-2j5m-2m83 (recipient-domain validation bypass), all <9.1.0, plus
+  # GHSA-8m3c-c648-2xjj (`resolveContent()` bypass, <=9.1.0). 9.1.1 is the fix.
   # Transitive via @lenne.tech/nest-server. LOCKSTEP entry: the target must equal the
-  # version the framework declares (9.0.5 today) — a lower target puts a second copy in
-  # the hoisted tree. Raised 9.0.3 -> 9.0.5 on 2026-08-22 alongside nest-server 11.36.1.
-  # 2026-09-14: TEMPORARILY AHEAD of the framework. 9.0.5 is inside four newer advisories:
-  # GHSA-2x7j-588g-ccc2 (high, quadratic time complexity), GHSA-wmmp-3585-3rmp
-  # (IDN/Punycode allow-list bypass) and GHSA-cc9r-2j5m-2m83 (recipient-domain
-  # validation bypass), all <9.1.0, plus GHSA-8m3c-c648-2xjj (`resolveContent()`
-  # bypass, <=9.1.0). 9.1.1 is the fix and the newest 9.x. The key is bare, so the tree
-  # still holds one copy. Remove the lead after the nest-server release with the fix:
-  # once the framework declares >= 9.1.1, set this back to exactly that version.
+  # version the framework declares — a lower target puts a second copy in the hoisted
+  # tree. Raised 9.0.3 -> 9.0.5 on 2026-08-22 (nest-server 11.36.1) and 9.0.5 -> 9.1.1 on
+  # 2026-09-14, briefly ahead of the framework; back in lockstep since nest-server
+  # 11.41.2, which declares 9.1.1.
   nodemailer: 9.1.1
 
-  # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high).
+  # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
+  # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
+  # crafted / oversized input) and GHSA-qvfw-j98x-7q72 (low, size-limit bypass), all
+  # <2.3.0, plus GHSA-qfvm-cv95-jqjf (high), which names exactly 2.2.0.
   # Transitive via @lenne.tech/nest-server and @nestjs/platform-express, and a direct
-  # dependency here. LOCKSTEP entry, aligned with the framework's exact 2.2.0
-  # (also the newest release).
-  # 2026-09-14: TEMPORARILY AHEAD of the framework and of @nestjs/platform-express
-  # 11.2.1, which both pin 2.2.0. Advisories GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4
-  # (high, DoS via crafted / oversized input) and GHSA-qvfw-j98x-7q72 (low, size-limit
-  # bypass) are all <2.3.0; GHSA-qfvm-cv95-jqjf (high) names exactly 2.2.0. Target 2.3.0,
-  # not the newest 2.4.0: 2.4.0 was published hours ago and trips the release-age gate
-  # (see minimumReleaseAgeExclude below — no exemption). Raise to 2.4.0 once it clears.
-  # Keep the direct dependency in package.json on the same version. Remove the lead
-  # after the nest-server release with the fix: set it back to the framework's version.
+  # dependency here — keep package.json on the same version. LOCKSTEP entry: key and
+  # target mirror the framework's own entry. Range-floored on purpose: a bare key also
+  # overrides the direct dependency, and during the 11.41.4 bump it pulled the raised
+  # 2.4.0 back down to the old target. Raised 2.2.0 -> 2.3.0 on 2026-09-14 and to 2.4.0
+  # with nest-server 11.41.4, which declares 2.4.0. Inert today — nest-server 11.41.4
+  # and @nestjs/platform-express 11.2.6 both request 2.4.0 themselves — and kept as
+  # insurance against a dependency that falls back below the framework's version.
   'multer@>=2.0.0 <2.4.0': 2.4.0
 
   # Security: various undici CVEs <7.29.0 — response desynchronization,
