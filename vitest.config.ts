@@ -28,6 +28,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.spec.ts', 'tests/unit/**/*.spec.ts'],
+    // A test may only signal processes it spawned — see the header of the guard.
+    setupFiles: ['tests/unit/support/signal-guard.setup.ts'],
     root: './',
     // The first dynamic `import('./config.env')` cold-compiles the whole config
     // graph, which exceeds the 5s default on cold CI runners (config.env.spec.ts

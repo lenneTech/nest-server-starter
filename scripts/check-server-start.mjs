@@ -59,11 +59,21 @@ export function isReadyOutput(text, patterns) {
 }
 
 /**
- * Pure: how to stop the server's process tree on this platform.
- * Same contract as `killTreePlan` in lt-monorepo's check.mjs, kept local so this
+ * Pure: whether a number may become a kill target at all — an integer above 1 on POSIX
+ * (1 is init, 0 and -1 address a group or every process of the user) and above 4 on
+ * Windows (0 is System Idle, 4 is System). A failed spawn leaves `child.pid` undefined.
+ */
+export function isKillablePid(pid, platform = process.platform) {
+  return Number.isInteger(pid) && pid > (platform === 'win32' ? 4 : 1);
+}
+
+/**
+ * Pure: how to stop the server's process tree on this platform, or null when `pid` must not
+ * be touched. Same contract as `killTreePlan` in lt-monorepo's check.mjs, kept local so this
  * file has no sibling imports and can be copied on its own.
  */
 export function killTreePlan(pid, signal, platform = process.platform) {
+  if (!isKillablePid(pid, platform)) return null;
   return platform === 'win32' ? { args: ['/PID', String(pid), '/T', '/F'], command: 'taskkill' } : { signal };
 }
 
@@ -101,8 +111,9 @@ const isAlive = (pid) => {
 /** Stop the child's tree. Only ever called with the pid of the child we spawned. */
 async function stop(child) {
   const pid = child.pid;
-  if (!pid || pid <= 1 || child.exitCode !== null || child.signalCode !== null) return;
+  if (child.exitCode !== null || child.signalCode !== null) return;
   const plan = killTreePlan(pid, 'SIGTERM');
+  if (!plan) return;
   if (plan.command) {
     try {
       execFileSync(plan.command, plan.args, { stdio: 'ignore' });

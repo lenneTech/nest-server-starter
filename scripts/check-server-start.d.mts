@@ -23,7 +23,9 @@ export type KillTreePlan = { args: string[]; command: 'taskkill' } | { signal: N
 export const NUXT_DEFAULTS: Readonly<Required<Omit<ServerStartOptions, 'cwd'>>>;
 export function isReadyOutput(text: string, patterns: RegExp[]): boolean;
 export function isRenderedStatus(status: number): boolean;
-export function killTreePlan(pid: number, signal: NodeJS.Signals, platform?: NodeJS.Platform): KillTreePlan;
+export function isKillablePid(pid: unknown, platform?: NodeJS.Platform): boolean;
+/** Null when `pid` must not be touched (see `isKillablePid`). */
+export function killTreePlan(pid: unknown, signal: NodeJS.Signals, platform?: NodeJS.Platform): KillTreePlan | null;
 export function parseArgs(argv: string[]): ServerStartOptions;
 /** Resolves to the exit code: 0 when the server came up and rendered, 1 otherwise. */
 export function run(options?: ServerStartOptions, log?: (line: string) => void): Promise<0 | 1>;
