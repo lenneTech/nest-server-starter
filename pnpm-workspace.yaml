@@ -521,7 +521,9 @@ overrides:
 
   # Security: fflate <0.8.3 — `unzipSync` loops indefinitely on a crafted ZIP64 archive
   # (moderate). Dev/test only, and the path is NOT the one an audit report suggests:
-  #   @vitest/ui > vitest > fflate      <- a DIRECT devDependency of this project
+  #   vitest > @vitest/ui > fflate      <- vitest is a direct devDependency; @vitest/ui is its
+  #                                        OPTIONAL PEER and gets installed through it (it is
+  #                                        no longer a direct devDependency — corrected 2026-09-27)
   # `pnpm audit` also renders a `better-auth > vitest > @vitest/ui > fflate` chain marked
   # `"dev": false`, which reads like production exposure and is not: `better-auth` declares
   # vitest as an OPTIONAL PEER, and pnpm walks that edge without marking it dev because a peer

@@ -17,6 +17,7 @@
 
 ## typescript 5.9.3 → 6.0.3
 **Status**: BLOCKED (re-validated 2026-05-24, session 9)
+**2026-09-26 (nest-server 11.41.4)**: typescript 7.0.2 checked in a scratch copy — 23 errors under the build config, 53 under the tests config (models, config.env.ts, the upload resolver). Still blocked; the framework stays on 5.9.3.
 **Session 9 update**: Re-attempted with typescript@6.0.3. Error count dropped from 26 to 21 (same 5 files), so the framework type updates have partially helped. Two distinct issues remain:
 1. `baseUrl` now triggers a HARD error TS5101 ("deprecated, will stop functioning in TS7"). Adding `"ignoreDeprecations": "6.0"` to tsconfig.json silences it cleanly — but baseUrl is needed for tsconfig-paths/register at dev runtime, so it cannot simply be removed.
 2. After silencing baseUrl, 21 model errors remain (TS2322 null-not-assignable in user.model.ts securityCheck(), TS2532 in user.service.ts, plus meta.model.ts / find-and-count-users-result.output.ts). These are the real blocker — fixing requires making model property types nullable across framework-extending classes (API-shaped change, >10 edits). Reverted typescript to 5.9.3.
