@@ -16,38 +16,58 @@
 #     from Mongoose at boot, and first-run is handled by the SystemSetup module.
 #   - No CLI in the image? Skip instead of crash-looping the container.
 #
-# A FAILED migration is a policy decision, because both answers are defensible and the
-# right one depends on the deployment: serving against a half-applied schema is how
-# silent data corruption happens, but for an availability-first service a boot loop is
-# worse than a stale schema. This template keeps the historical, availability-first
-# default (`warn`) so an update changes nothing; set MIGRATE_FAILURE_POLICY=abort to
-# refuse the start instead. @lenne.tech/nest-server's own entrypoint defaults to `abort`.
+# A migration that RAN AND FAILED aborts the start. A failed schema migration is otherwise
+# indistinguishable from a good deploy on every level anyone watches: health check 200,
+# /meta with the right commit, drift detection green, `turbo deploy --wait` converging —
+# over an app that works against the empty collections Mongoose created at boot while the
+# data still sits under the old names. The container runtime restarts and retries, so the
+# failure stays loud until it is fixed. Same default as @lenne.tech/nest-server's own
+# entrypoint.
 #
-# Worth knowing before choosing: since nest-server 11.32.4 a seed migration that uploads
-# an incomplete file to GridFS FAILS instead of silently storing a broken asset. Under
-# `warn` that new signal reaches the container log and nothing else — the server starts
-# and serves the broken file.
+# Opt out PER DEPLOY, deliberately, with MIGRATIONS_ALLOW_FAILURE=true (or the long form
+# MIGRATE_FAILURE_POLICY=warn; the long form wins when both are set) — and unset it again
+# once the migration is fixed. Worth knowing before you do: since nest-server 11.32.4 a
+# seed migration that uploads an incomplete file to GridFS FAILS instead of silently
+# storing a broken asset; with failures allowed that signal reaches the container log and
+# nothing else, and the server serves the broken file.
+#
+# A migration whose FILE IS GONE is not a failure. Migrations that ran everywhere are often
+# pruned from migrations/ later, and a new instance never needs them: the migrate CLI reports
+# a recorded migration without a file as a warning and the start goes on (only
+# NSC__MIGRATE__STRICT=true turns that into an error). This script deliberately passes no
+# --strict for that reason.
 #
 # Test seams (default to the real values in the container):
 #   APP_DIST                compiled output (/app/projects/api/dist in a monorepo, /app/dist standalone)
 #   MIGRATE_BIN             path to the npm-mode migrate CLI (overridden in unit tests)
 #   SERVER_CMD              command used to start the server (overridden in unit tests)
-#   MIGRATE_FAILURE_POLICY  what a FAILED migration does: `warn` (default) or `abort`
+#   MIGRATE_FAILURE_POLICY  what a FAILED migration does: `abort` (default) or `warn`
+#   MIGRATIONS_ALLOW_FAILURE  `true` = the per-deploy short form of MIGRATE_FAILURE_POLICY=warn
 set -e
 
 DIST="${APP_DIST:-/app/dist}"
 MIGRATE_BIN="${MIGRATE_BIN:-/app/node_modules/.bin/migrate}"
 VENDOR_MIGRATE="$DIST/bin/migrate.js"
-MIGRATE_FAILURE_POLICY="${MIGRATE_FAILURE_POLICY:-warn}"
 
-# Report a misspelled policy NOW rather than at failure time. A typo'd `abort` degrades
-# to `warn`, i.e. the operator asked for the strict behaviour and silently got the loose
-# one — and would only find out during the incident the setting was meant to catch.
+# MIGRATIONS_ALLOW_FAILURE is only consulted when the long form is not set.
+if [ -z "$MIGRATE_FAILURE_POLICY" ]; then
+  case "$MIGRATIONS_ALLOW_FAILURE" in
+    true) MIGRATE_FAILURE_POLICY=warn ;;
+    '' | false) MIGRATE_FAILURE_POLICY=abort ;;
+    *)
+      echo "[entrypoint] WARNING: unknown MIGRATIONS_ALLOW_FAILURE '$MIGRATIONS_ALLOW_FAILURE' (expected 'true') — using 'abort'."
+      MIGRATE_FAILURE_POLICY=abort
+      ;;
+  esac
+fi
+
+# Report a misspelled value NOW rather than at failure time — and fall back to the STRICT
+# default. A typo must never be the thing that lets a failed migration reach traffic.
 case "$MIGRATE_FAILURE_POLICY" in
   abort | warn) ;;
   *)
-    echo "[entrypoint] WARNING: unknown MIGRATE_FAILURE_POLICY '$MIGRATE_FAILURE_POLICY' — using 'warn'."
-    MIGRATE_FAILURE_POLICY=warn
+    echo "[entrypoint] WARNING: unknown MIGRATE_FAILURE_POLICY '$MIGRATE_FAILURE_POLICY' — using 'abort'."
+    MIGRATE_FAILURE_POLICY=abort
     ;;
 esac
 
@@ -59,10 +79,11 @@ run_migrations() {
     echo "[entrypoint] Migrations applied."
   elif [ "$MIGRATE_FAILURE_POLICY" = "abort" ]; then
     echo "[entrypoint] ERROR: migration step failed — refusing to start against a possibly half-applied schema."
+    echo "[entrypoint] Fix the migration, or set MIGRATIONS_ALLOW_FAILURE=true for this deploy to start anyway."
     exit 1
   else
-    echo "[entrypoint] WARNING: migration step failed — continuing to start server."
-    echo "[entrypoint] Set MIGRATE_FAILURE_POLICY=abort to refuse the start instead."
+    echo "[entrypoint] WARNING: migration step failed — continuing to start server (failures allowed for this deploy)."
+    echo "[entrypoint] Unset MIGRATIONS_ALLOW_FAILURE / MIGRATE_FAILURE_POLICY once the migration is fixed."
   fi
 }
 

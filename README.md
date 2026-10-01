@@ -136,9 +136,12 @@ The migration store reads the MongoDB URI from the `NSC__MONGOOSE__URI` environm
 
 | Variable | Default | Effect |
 |----------|---------|--------|
-| `MIGRATE_FAILURE_POLICY` | `warn` | What a **failed** migration does. `warn` starts the server anyway (the historical behaviour). `abort` refuses the start, so the container never serves against a possibly half-applied schema. A missing migration step — nothing bundled, no CLI in the image — never blocks the start under either value. |
+| `MIGRATE_FAILURE_POLICY` | `abort` | What a migration that **ran and failed** does. `abort` refuses the start, so the container never serves against a possibly half-applied schema. `warn` starts the server anyway. An unknown value falls back to `abort`. |
+| `MIGRATIONS_ALLOW_FAILURE` | unset | `true` is the per-deploy short form of `MIGRATE_FAILURE_POLICY=warn`. The long form wins when both are set. |
 
-Which one is right depends on the service: `abort` turns a broken migration into a failed deploy you notice immediately, `warn` keeps an availability-first service up at the price of serving a stale or partial schema. Set it per stage — `abort` in production is the safer default, and it is what `@lenne.tech/nest-server`'s own entrypoint uses.
+A failed schema migration is otherwise indistinguishable from a good deploy: health check 200, the right commit on `/meta`, `turbo deploy --wait` converging — over an app working against empty collections Mongoose created at boot. So `abort` is the default, the same as in `@lenne.tech/nest-server`'s own entrypoint, and allowing failures is a deliberate exception for one deploy: set `MIGRATIONS_ALLOW_FAILURE=true`, and unset it once the migration is fixed.
+
+What never blocks the start: nothing bundled, no CLI in the image, and a recorded migration whose **file is gone** — migrations that ran everywhere are often pruned later, and the migrate CLI reports those as a warning (only `NSC__MIGRATE__STRICT=true` makes them an error).
 
 ## Debugging
 
