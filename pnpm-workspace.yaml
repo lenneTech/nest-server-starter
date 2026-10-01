@@ -171,7 +171,11 @@ overrides:
   # is not tied to a framework release: per the rules above it stays as a floor.
   # 2026-09-26: target raised 4.13.7 -> 4.13.9 (newest 4.x; a no-override resolve lands
   # there, so 4.13.7 had become a downgrade lock), key with it — mirrors nest-server 11.41.4.
-  'hono@>=4.0.0 <4.13.9': 4.13.9
+  # 2026-10-01: same again — raised 4.13.9 -> 4.13.11, key with it, mirroring nest-server
+  # 11.41.5. 4.13.11 is the newest 4.x past the release-age gate (4.13.12, published
+  # 2026-09-30, is still inside it) and is where a no-override resolve lands. hono ships
+  # patches weekly, so expect this entry to need raising on every run.
+  'hono@>=4.0.0 <4.13.11': 4.13.11
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).
@@ -413,25 +417,56 @@ overrides:
   # 2026-08-22: was an unqualified `js-yaml: 4.3.1`. @nestjs/swagger@11.4.7 now declares
   # js-yaml ^5, so the bare key was force-DOWNGRADING a direct dependency's own dep
   # across a major. Key bounded to the advisory: ^4 consumers are lifted to 4.3.1, ^5
-  # consumers are left on the (unaffected, audit-clean) 5.x line.
+  # consumers are left on the (then unaffected, audit-clean) 5.x line. That no longer
+  # holds since 2026-09-29 — the 5.x line has its own advisory and its own entry, below.
   # 2026-09-14: GHSA-2883-xcg3-v3hh (high, >=4.0.0 <4.3.2) — `maxTotalMergeKeys` does not
   # limit CPU use. 4.3.1 is inside it, 4.3.2 is the fix and the newest 4.x. Paths:
   # @compodoc/compodoc>cosmiconfig and @nestjs/cli>fork-ts-checker-webpack-plugin>
   # cosmiconfig; compodoc is already on its newest release (2.0.0), so no direct bump
   # can close it. The tree holds no 3.x, so the wider key catches nothing new.
   'js-yaml@<4.3.2': 4.3.2
+  # Security: js-yaml 5.x — GHSA-r3ph-w7gj-g6xm (moderate, published 2026-09-29):
+  # `maxTotalMergeKeys` does not bound CPU use for empty merge sources. Covers
+  # >=5.0.0 <=5.4.0, patched >=5.4.1. Separate line from the 4.x entry above: same package,
+  # different major — the `<4.3.2` key cannot reach 5.x.
+  # RUNTIME path: @nestjs/swagger>js-yaml, reached both directly and via
+  # @lenne.tech/nest-server>@nestjs/swagger. @nestjs/swagger 11.4.7 — the newest 11.x —
+  # EXACT-pins 5.3.0, so no in-major bump reaches the fix, and this key deliberately FIRES on
+  # that exact pin. Overriding an upstream exact pin needs an advisory to justify it; this is
+  # one. Target 5.4.2 = newest 5.x (2026-09-13), a minor step inside the major.
+  # Mirrors the identical entry in @lenne.tech/nest-server 11.41.5 (its pnpm-workspace.yaml).
+  # pnpm overrides do not reach consumers, so every project needs its own copy — see
+  # node_modules/@lenne.tech/nest-server/docs/security-overrides.md. Added 2026-10-01.
+  # Remove once @nestjs/swagger pins >=5.4.1 itself.
+  'js-yaml@>=5.0.0 <5.4.2': 5.4.2
 
-  # Security: Email injection / header-related CVEs in nodemailer <9.0.1 (high), and
-  # four newer advisories on 9.0.5: GHSA-2x7j-588g-ccc2 (high, quadratic time
-  # complexity), GHSA-wmmp-3585-3rmp (IDN/Punycode allow-list bypass) and
-  # GHSA-cc9r-2j5m-2m83 (recipient-domain validation bypass), all <9.1.0, plus
-  # GHSA-8m3c-c648-2xjj (`resolveContent()` bypass, <=9.1.0). 9.1.1 is the fix.
-  # Transitive via @lenne.tech/nest-server. LOCKSTEP entry: the target must equal the
-  # version the framework declares — a lower target puts a second copy in the hoisted
-  # tree. Raised 9.0.3 -> 9.0.5 on 2026-08-22 (nest-server 11.36.1) and 9.0.5 -> 9.1.1 on
-  # 2026-09-14, briefly ahead of the framework; back in lockstep since nest-server
-  # 11.41.2, which declares 9.1.1.
-  nodemailer: 9.1.1
+  # Security: nodemailer. Transitive via @lenne.tech/nest-server only (not a direct
+  # dependency here). LOCKSTEP entry: the target must EQUAL the version the framework
+  # declares. The key is bare, so it pins every request — a lower target pulls the
+  # framework's own declared version DOWN (exactly what happened on 2026-10-01, see
+  # below), a higher one runs a combination the framework never tested. Move it in the
+  # same change as every framework bump: `pnpm run update` raises package.json only, it
+  # never touches this file.
+  #
+  # Current target 10.0.13 = what @lenne.tech/nest-server 11.41.5 declares.
+  # 2026-10-01: FIVE advisories published 2026-09-28..30 cover 9.1.1 — the last 9.x — and
+  # are fixed ONLY on the 10.x line, which is why the framework took the major in 11.41.5:
+  #   GHSA-v53p-9fqp-m79j  high      <=10.0.5          patched >=10.0.6
+  #   GHSA-prgh-xp8r-p3m5  high      >=9.1.0 <=10.0.4  patched >=10.0.5
+  #   GHSA-6vj9-mwq6-2f5v  moderate  >=5.0.0 <10.0.2   patched >=10.0.2
+  #   GHSA-8vvx-rff5-p5rq  moderate  <10.0.2           patched >=10.0.2
+  #   GHSA-g57g-f23g-4646  moderate  >=9.1.0 <10.0.9   patched >=10.0.9
+  # Left at 9.1.1, this entry held the tree on 9.1.1 after the framework bump and kept all
+  # five open. Raised 9.1.1 -> 10.0.13, and the key range-floored at the same time: a BARE key pins
+  # the version and pulls a newer framework nodemailer back DOWN on the next bump; `<10.0.13` only
+  # ever lifts, so it can no longer fall behind the framework. Inert while the framework declares
+  # 10.0.13 itself — insurance against anything requesting an older nodemailer.
+  #
+  # History: email injection / header-related CVEs <9.0.1 (high); then GHSA-2x7j-588g-ccc2
+  # (high), GHSA-wmmp-3585-3rmp, GHSA-cc9r-2j5m-2m83 (all <9.1.0) and GHSA-8m3c-c648-2xjj
+  # (<=9.1.0), fixed in 9.1.1. Raised 9.0.3 -> 9.0.5 on 2026-08-22 (nest-server 11.36.1),
+  # 9.0.5 -> 9.1.1 on 2026-09-14 (lockstep again from nest-server 11.41.2).
+  'nodemailer@<10.0.13': 10.0.13
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
@@ -517,7 +552,9 @@ overrides:
   # 4.28.x ships. Verified 2026-09-01.
   # 2026-09-26: raised 4.28.8 -> 4.29.1 (newest 4.x, same major; a no-override resolve
   # lands there). Key unchanged — mirrors nest-server 11.41.4's entry exactly.
-  'browserslist@<4.28.7': 4.29.1
+  # 2026-10-01: raised 4.29.1 -> 4.29.3 (newest 4.x; 4.29.1 had become a downgrade lock —
+  # a no-override resolve lands on 4.29.3). Key unchanged — mirrors nest-server 11.41.5.
+  'browserslist@<4.28.7': 4.29.3
 
   # Security: fflate <0.8.3 — `unzipSync` loops indefinitely on a crafted ZIP64 archive
   # (moderate). Dev/test only, and the path is NOT the one an audit report suggests:
