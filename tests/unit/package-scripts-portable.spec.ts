@@ -43,9 +43,9 @@ import { describe, expect, it } from 'vitest';
 const ROOT = process.cwd();
 const scripts: Record<string, string> = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')).scripts ?? {};
 
-const scriptsMatching = (re: RegExp) =>
+const scriptsMatching = (rule: ((command: string) => boolean) | RegExp) =>
   Object.entries(scripts)
-    .filter(([, command]) => re.test(command))
+    .filter(([, command]) => (rule instanceof RegExp ? rule.test(command) : rule(command)))
     .map(([name]) => name);
 
 /**
@@ -102,8 +102,22 @@ const POSIX_ONLY = [
 /**
  * POSIX shell syntax that no program name reveals: a function definition (`f() { …; }; f`) and the
  * positional parameters it takes (`"$1"`, `$@`). cmd.exe understands neither.
+ *
+ * A definition only counts OUTSIDE double quotes: inside them it is an argument's payload, e.g. the
+ * JavaScript of `node -e "…"`, which both shells hand over unchanged. A positional parameter counts
+ * everywhere, because sh expands `"$1"` inside double quotes too.
  */
-const SHELL_SYNTAX = /\b[\w-]+\s*\(\)\s*\{|\$[0-9@*#]/;
+const SHELL_FUNCTION = /\b[\w-]+\s*\(\)\s*\{/;
+const POSITIONAL_PARAMETER = /\$[0-9@*#]/;
+
+/** `command` with the content of every double-quoted argument blanked out. */
+const outsideDoubleQuotes = (command: string): string => command.replace(/"(?:[^"\\]|\\.)*"/g, '""');
+
+const usesShellSyntax = (command: string): boolean =>
+  SHELL_FUNCTION.test(outsideDoubleQuotes(command)) || POSITIONAL_PARAMETER.test(command);
+
+/** A single quote outside double quotes: sh strips it, cmd.exe passes it through literally. */
+const usesSingleQuote = (command: string): boolean => outsideDoubleQuotes(command).includes("'");
 
 /** The program in command position of every link in a `&&` / `||` / `;` / `|` chain. */
 function commandNames(command: string): string[] {
@@ -196,7 +210,7 @@ describe('commandNames — the detector itself', () => {
   });
 });
 
-describe('unportablePrograms / SHELL_SYNTAX — the rules themselves', () => {
+describe('unportablePrograms / usesShellSyntax / usesSingleQuote — the rules themselves', () => {
   // Samples from nest-server's unfixed build scripts, where this gap was found.
   it('flags mkdir -p on its own, not only because cp follows it', () => {
     expect(unportablePrograms('mkdir -p dist/types && cp src/types/*.d.ts dist/types/')).toEqual(['mkdir', 'cp']);
@@ -213,12 +227,23 @@ describe('unportablePrograms / SHELL_SYNTAX — the rules themselves', () => {
   });
 
   it('sees a shell function and its positional parameters', () => {
-    expect(SHELL_SYNTAX.test('f() { migrate create "$1"; }; f')).toBe(true);
+    expect(usesShellSyntax('f() { migrate create "$1"; }; f')).toBe(true);
     // Each half on its own, so neither can be dropped behind the other's back.
-    expect(SHELL_SYNTAX.test('clean() { rimraf dist; }; clean')).toBe(true);
-    expect(SHELL_SYNTAX.test('node x.js "$@"')).toBe(true);
-    expect(SHELL_SYNTAX.test('migrate create --template-file ./t.ts')).toBe(false);
-    expect(SHELL_SYNTAX.test('cpy ./package.json --rename=meta.json ./dist/')).toBe(false);
+    expect(usesShellSyntax('clean() { rimraf dist; }; clean')).toBe(true);
+    expect(usesShellSyntax('node x.js "$@"')).toBe(true);
+    expect(usesShellSyntax('migrate create --template-file ./t.ts')).toBe(false);
+    expect(usesShellSyntax('cpy ./package.json --rename=meta.json ./dist/')).toBe(false);
+  });
+
+  it('reads a double-quoted argument as payload, not as shell syntax', () => {
+    // The lt cli's vendor-mode `check:vendor-freshness` is a `node -e "…"` one-liner: JavaScript
+    // that both shells hand to Node unchanged. Flagging it failed every vendor-mode project.
+    expect(usesShellSyntax('node -e "setTimeout(function(){process.exit(0)},5000)"')).toBe(false);
+    expect(usesSingleQuote(`node -e "require('fs')"`)).toBe(false);
+    // Still caught: a single quote outside double quotes, and a positional parameter inside them —
+    // sh expands `"$1"` there too.
+    expect(usesSingleQuote("echo 'a b'")).toBe(true);
+    expect(usesShellSyntax('node -e "console.log($1)"')).toBe(true);
   });
 });
 
@@ -253,7 +278,7 @@ describe('package.json scripts run on Windows', () => {
   });
 
   it('quotes arguments with double quotes, not single ones', () => {
-    const bad = scriptsMatching(/'/);
+    const bad = scriptsMatching(usesSingleQuote);
     expect(bad, `cmd.exe passes single quotes through literally: ${bad.join(', ')}`).toEqual([]);
   });
 
@@ -277,6 +302,6 @@ describe('package.json scripts run on Windows', () => {
   it('does not use POSIX shell functions or positional parameters', () => {
     // `migrate:create` is the known exception: the lt cli generates the same function, so its Node
     // replacement has to land in both places together.
-    expectOnlyKnown(scriptsMatching(SHELL_SYNTAX), ['migrate:create'], 'POSIX shell syntax');
+    expectOnlyKnown(scriptsMatching(usesShellSyntax), ['migrate:create'], 'POSIX shell syntax');
   });
 });

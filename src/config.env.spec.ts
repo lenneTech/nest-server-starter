@@ -230,7 +230,14 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
   });
 
   afterEach(() => {
-    process.env = { ...ORIGINAL_ENV };
+    // Restored in place, never replaced: a vendored core reads it through
+    // `import * as process from 'node:process'`, which under vitest keeps the ORIGINAL object —
+    // after `process.env = {…}` it no longer saw NODE_ENV and resolved every env to `local`, so the
+    // guard never ran and every vendor-mode project failed the fail-fast cases.
+    for (const key of Object.keys(process.env)) {
+      if (!(key in ORIGINAL_ENV)) delete process.env[key];
+    }
+    Object.assign(process.env, ORIGINAL_ENV);
     rmSync(emptyDir, { force: true, recursive: true });
     vi.resetModules();
   });
