@@ -530,7 +530,10 @@ overrides:
   # ^11.1.1, so 11.1.4 satisfies it (patch bump, same engines).
   # Key bounded and target raised 11.1.3 -> 11.1.4 on 2026-08-22 (was an unqualified
   # entry capping the package one patch below latest).
-  '@xhmikosr/decompress@>=11.0.0 <11.1.3': 11.1.4
+  # Key widened to <11.1.4 on 2026-10-01: GHSA-hrh2-vp3x-79xf (critical, path
+  # traversal via symlink chain) also covers 11.1.3, so a project whose
+  # downloader resolves ^11.1.3 to 11.1.3 slipped past the old `<11.1.3` key.
+  '@xhmikosr/decompress@>=11.0.0 <11.1.4': 11.1.4
 
   # REMOVED 2026-08-22: 'effect: 3.21.2'.
   # It existed for @prisma/config@7.4.2 pinning effect to an exact vulnerable 3.18.4,
