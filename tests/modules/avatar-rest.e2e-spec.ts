@@ -126,11 +126,10 @@ describe('Avatar REST (e2e)', () => {
   });
 
   it('rejects an anonymous avatar upload', async () => {
-    const local = path.join(fixtureDir, 'anonymous.png');
-    await fs.promises.writeFile(local, PNG_HEADER, { flag: 'wx' });
-
+    // No attachment on purpose. The role guard decides before FileInterceptor reads the body, so
+    // the file cannot change the answer, and sending one races it: the 401 arrives while the client
+    // is still writing the multipart body, and the write fails with EPIPE about 1 run in 3.
     await testHelper.rest('/avatar/upload', {
-      attachments: { file: local },
       method: 'POST',
       statusCode: 401,
     });
@@ -138,7 +137,7 @@ describe('Avatar REST (e2e)', () => {
 
   it('stores the avatar in the central file storage and lets its owner read it back', async () => {
     const local = path.join(fixtureDir, 'avatar.png');
-    await fs.promises.writeFile(local, PNG_HEADER, { flag: 'wx' });
+    await fs.promises.writeFile(local, PNG_HEADER);
 
     const avatarId = await testHelper.rest('/avatar/upload', {
       attachments: { file: local },
@@ -173,7 +172,7 @@ describe('Avatar REST (e2e)', () => {
     expect(previous).toBeDefined();
 
     const local = path.join(fixtureDir, 'avatar-2.png');
-    await fs.promises.writeFile(local, PNG_HEADER, { flag: 'wx' });
+    await fs.promises.writeFile(local, PNG_HEADER);
 
     const avatarId = await testHelper.rest('/avatar/upload', {
       attachments: { file: local },
