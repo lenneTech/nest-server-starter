@@ -196,7 +196,10 @@ overrides:
   # 11.41.5. 4.13.11 is the newest 4.x past the release-age gate (4.13.12, published
   # 2026-09-30, is still inside it) and is where a no-override resolve lands. hono ships
   # patches weekly, so expect this entry to need raising on every run.
-  'hono@>=4.0.0 <4.13.11': 4.13.11
+  # 2026-10-03: raised 4.13.11 -> 4.13.12, key with it, mirroring nest-server 11.41.7. 4.13.12
+  # has cleared the release-age gate and is where a no-override resolve lands, so 4.13.11 had
+  # become a downgrade lock (no new advisory; pure hold-back).
+  'hono@>=4.0.0 <4.13.12': 4.13.12
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).
@@ -252,7 +255,10 @@ overrides:
   # bounded 2026-08-22; a no-override resolve lands on 8.2.2.
   # 2026-09-26: 8.2.2 had become a downgrade lock (a no-override resolve now lands on
   # 8.3.1, the newest 8.x and nest-server's own vite devDependency). Key and target raised.
-  'vite@<8.3.1': 8.3.1
+  # 2026-10-03: the same again — raised 8.3.1 -> 8.3.2, key with it. 8.3.2 is the newest 8.x
+  # past the release-age gate, where a no-override resolve lands, and nest-server 11.41.7's
+  # own vite devDependency (no new advisory; pure hold-back).
+  'vite@<8.3.2': 8.3.2
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf is
   # provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via @compodoc/compodoc.
@@ -520,7 +526,10 @@ overrides:
   # 10.3.1 -> 10.5.0 on 2026-08-22 (it was capping the package two minors back).
   # 2026-09-26: the same had happened again — raised 10.5.0 -> 10.7.2 (newest 10.x; a
   # no-override resolve lands there), key with it — mirrors nest-server 11.41.4.
-  'ip-address@<10.7.2': 10.7.2
+  # 2026-10-03: raised 10.7.2 -> 10.7.3, key with it, mirroring nest-server 11.41.7. 10.7.3
+  # (published 2026-10-01) is the newest 10.x past the release-age gate and where a
+  # no-override resolve lands, so 10.7.2 had become a downgrade lock.
+  'ip-address@<10.7.3': 10.7.3
 
   # Security: TWO advisories on the 3.x line, and the target must be the LATER of
   # the two — a 3.3.17 target closes the first and leaves the second wide open.
@@ -592,6 +601,13 @@ overrides:
   # do not let it drive a decision.
   # Target 0.8.3 is both the advisory floor and the newest release, so this cannot become a
   # downgrade lock. Bounded key, per the rules at the top of this block. Added 2026-09-04.
+  # 2026-10-03: the path above has LEFT this lockfile. @vitest/ui was a sticky resolved optional
+  # peer — removed as a direct devDependency on 2026-09-27, but a resolved optional peer never
+  # leaves a lockfile on its own, and neither vitest config uses the UI or the html reporter.
+  # Dropped from the lock (a fresh resolve does not contain it either), which took fflate and
+  # flatted with it. This entry is KEPT as a pre-emptive floor — `check:overrides` reports it as
+  # UNUSED, which is a warning, not a failure: anyone who runs `vitest --ui` installs @vitest/ui
+  # again, and every generated project inheriting this file is one such `pnpm add` away from it.
   'fflate@<0.8.3': 0.8.3
 
 
