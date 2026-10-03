@@ -372,11 +372,21 @@ function deployedConfig(
     // Deliberately UNSET here, because the correct value is the number of proxies
     // that actually sit in front of THIS deployment and no template can know it.
     //
-    // Set it as soon as you enable `auth.rateLimit` / `betterAuth.rateLimit` behind
-    // a reverse proxy (Caddy, nginx, a Kubernetes ingress, a cloud LB). Both limiters
-    // key on `request.ip`, which without this resolves to the PROXY for every request
-    // — so every client shares one bucket and the limit throttles all of them at once.
-    // A boot warning names this when a limiter is on and the value is unset.
+    // Set it as soon as ANYTHING in the deployment keys on `request.ip` behind a reverse proxy
+    // (Caddy, nginx, a Kubernetes ingress, a cloud LB) — without this it resolves to the PROXY
+    // for every request, so every client shares one bucket and the limit throttles all of them
+    // at once. That covers the framework limiters `auth.rateLimit` / `betterAuth.rateLimit`, and
+    // equally a limiter the project writes itself in one of its own controllers.
+    //
+    // The boot warning only covers the first kind: it fires when a FRAMEWORK limiter is on and
+    // the value is unset, because that is all the framework can see. A project whose only
+    // limiter is its own gets no warning at all — so adding one is a reason to come back here.
+    // Observed in a consumer project (DEV-3411): a hand-written limiter on a public endpoint
+    // counted five wrong access codes per minute, keyed on `request.ip`, and behind Traefik all
+    // customers of one document therefore shared a single budget. Five wrong guesses by anybody
+    // locked out the real customer, and a stranger who only knew the link could keep them out
+    // indefinitely without ever having the code. The only hint was a runtime warning from
+    // `express-rate-limit` itself, in the container log.
     //   trustProxy: 1,      // exactly one reverse proxy in front of the app
     //   trustProxy: 2,      // a reverse proxy behind a CDN
     //   trustProxy: false,  // nothing proxies us — states it explicitly, silences the warning
