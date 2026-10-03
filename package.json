@@ -78,7 +78,7 @@
     "prestart:prod": "rimraf dist && pnpm run build",
     "preversion": "pnpm run lint",
     "reinit": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm install && pnpm run lint && pnpm run test:e2e && pnpm run build",
-    "reinit:clean": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm store prune && pnpm install && pnpm run test:e2e && pnpm run build",
+    "reinit:clean": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm install && pnpm run test:e2e && pnpm run build",
     "release": "standard-version",
     "release:minor": "standard-version --release-as minor",
     "release:major": "standard-version --release-as major",
