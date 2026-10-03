@@ -101,7 +101,9 @@ describe('pnpm pin (packageManager as single source of truth)', () => {
 
   // Functional proof of the actual provisioning chain. Guarded: downloads the pnpm
   // tarball from the registry (network + ~10MB) — must not slow local pre-push hooks.
-  it.runIf(Boolean(process.env.CI || process.env.PIN_PROVISION_TEST))(
+  // Not on Windows: the derive-line runs inside the Linux build stages of the Dockerfile, and a
+  // Windows npm prefix has neither `bin/pnpm` nor a directly spawnable `npm` (a .cmd shim).
+  it.runIf(Boolean(process.env.CI || process.env.PIN_PROVISION_TEST) && process.platform !== 'win32')(
     'derive-line provisions exactly the pinned pnpm into a fresh npm prefix',
     () => {
       // 1. The derive expression yields the exact pin without the hash suffix —

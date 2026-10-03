@@ -66,7 +66,9 @@ function writeStub(path: string, body: string): void {
   chmodSync(path, 0o755);
 }
 
-describe('docker-entrypoint.sh (migrations before server start)', () => {
+// Skipped on win32: the script runs in Linux containers only, and there is no `sh` to run it with
+// (same as nest-server's own docker-entrypoint spec).
+describe.skipIf(process.platform === 'win32')('docker-entrypoint.sh (migrations before server start)', () => {
   let dir: string;
   /** A dist layout that contains one compiled migration. */
   let dist: string;
