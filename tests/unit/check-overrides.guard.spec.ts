@@ -290,6 +290,35 @@ describe('check-overrides — advisories without an override', () => {
 });
 
 describe('check-overrides — overrides for packages that left the tree', () => {
+  /**
+   * @regression   11.41.8 — the UNUSED search read the WHOLE lockfile, and pnpm echoes every
+   *   override into the lockfile's own top-level `overrides:` block. So every override was found
+   *   in its own echo and UNUSED never fired on a real lockfile; the cases below passed only
+   *   because their fixtures carried no such header.
+   * @seen-failing Search the whole lockfile again instead of the `packages:` part in
+   *   scripts/check-overrides.mjs — registered as mutation `check-overrides-unused-reads-override-echo`
+   *   in nest-server's tests/regression-mutations.json (ported from there).
+   */
+  it("reports one that only the lockfile's own overrides header still names", () => {
+    // A SELECTOR key (`pkg@<x`) is what makes the echo dangerous: the header line then carries
+    // `pkg@`, exactly what the "is it in the tree" search looks for. A bare key has no `@` there.
+    const r = run({
+      lock: "lockfileVersion: '9.0'\n\noverrides:\n  long-gone@<1.2.3: 1.2.3\n\npackages:\n  something-else@1.0.0:\n    resolution: {integrity: sha512-x}\n",
+      overrides: { 'long-gone@<1.2.3': '1.2.3' },
+    });
+    expect(r.status, 'dead weight is a warning, not a failure').toBe(0);
+    expect(r.out, `the header echo must not count as "in the tree", got:\n${r.out}`).toMatch(/not in the tree/i);
+    expect(r.out).toMatch(/long-gone/);
+  });
+
+  it('paired control: stays quiet when the package IS resolved below the header', () => {
+    const r = run({
+      lock: "lockfileVersion: '9.0'\n\noverrides:\n  long-gone@<1.2.3: 1.2.3\n\npackages:\n  long-gone@1.2.3:\n    resolution: {integrity: sha512-x}\n",
+      overrides: { 'long-gone@<1.2.3': '1.2.3' },
+    });
+    expect(r.out, `long-gone IS resolved, got:\n${r.out}`).not.toMatch(/not in the tree/i);
+  });
+
   it('reports one whose package is absent from the lockfile', () => {
     const r = run({
       lock: 'packages:\n  something-else@1.0.0:\n    resolution: {integrity: sha512-x}\n',
