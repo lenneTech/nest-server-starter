@@ -35,8 +35,23 @@ advisory if it later appears on a production path.
 
 So a suppression is not only a statement about today's tree — it is a standing hole in the
 detection. Whenever a suppressed advisory affects a package that also has a production
-path, record that explicitly and state what to re-check after a dependency bump. The
-current `GHSA-mh99-v99m-4gvg` entry does this; follow its shape.
+path, record that explicitly and state what to re-check after a dependency bump. The two
+current entries (`GHSA-ch52-4w7c-c8xp`, `GHSA-vfj7-8cjw-p6xm`, since 2026-10-03) follow that
+shape — copy it.
+
+### What keeps a suppression honest
+
+Two guards, one per way an entry goes wrong, and an entry needs both:
+
+| Question | Guard | Fails when |
+|----------|-------|------------|
+| Is it still TRUE? | `pnpm run check:overrides` (part of `check`) | the GitHub advisory gains a patched version or is withdrawn — the entry is obsolete, remove it. Under `CI` an unreachable API fails too, so the workflow passes `GITHUB_TOKEN` |
+| Is it still in SCOPE? | `tests/unit/audit-suppression-scope.spec.ts` | the package appears in the PRODUCTION tree, or an entry has no matching case there |
+
+A new entry therefore also needs a case in that spec. Both travel with the template into
+generated projects. In a generated **monorepo** the lt CLI hoists this file into the root,
+where lt-monorepo's own `check:overrides` covers the merged suppressions; the scope spec stands
+down there and says so.
 
 ### Verifying a patch claim
 

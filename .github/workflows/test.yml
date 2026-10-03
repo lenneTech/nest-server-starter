@@ -77,6 +77,12 @@ jobs:
       # the local gate drift apart silently. Its `--frozen-lockfile` install is a
       # no-op after the step above.
       - name: Run check
+        env:
+          # `check` includes `check:overrides`, which re-checks every `auditConfig.ignoreGhsas`
+          # entry against the GitHub Advisory API and FAILS under CI when it cannot (an unverified
+          # suppression is a skip nobody reads). Unauthenticated the quota is 60 requests/hour PER
+          # IP, shared by every repository on a hosted runner — the token lifts it to the repo's own.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm run check
 
   windows:
