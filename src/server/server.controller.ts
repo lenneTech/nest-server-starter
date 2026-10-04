@@ -2,6 +2,7 @@ import { ConfigService, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Controller, Get, Render } from '@nestjs/common';
 
 import metaData = require('../meta.json');
+import { redactSecrets } from './common/utils/redact-secrets.util';
 import { MetaService } from './modules/meta/meta.service';
 
 /**
@@ -35,11 +36,15 @@ export class ServerController {
   }
 
   /**
-   * Get configuration
+   * Get configuration, with every secret blanked.
+   *
+   * It used to return the configuration verbatim — the database URI, the JWT
+   * and Better-Auth secrets, the mail password. Whoever holds an administrator
+   * session should not get the database credentials from an HTTP response.
    */
   @Get('config')
   @Roles(RoleEnum.ADMIN)
   config() {
-    return JSON.parse(JSON.stringify(this.configService.configFastButReadOnly));
+    return redactSecrets(JSON.parse(JSON.stringify(this.configService.configFastButReadOnly)));
   }
 }
