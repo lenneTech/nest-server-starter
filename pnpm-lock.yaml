@@ -48,8 +48,8 @@ importers:
         specifier: 1.7.7
         version: 1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(better-call@1.4.0(zod@4.6.5))(nanostores@1.3.0)
       '@lenne.tech/nest-server':
-        specifier: 11.42.2
-        version: 11.42.2(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/passkey@1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(better-call@1.4.0(zod@4.6.5))(nanostores@1.3.0))(@types/express@5.0.6)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(ioredis@5.11.0)(zod@4.6.5)
+        specifier: 11.42.3
+        version: 11.42.3(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/passkey@1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(better-call@1.4.0(zod@4.6.5))(nanostores@1.3.0))(@types/express@5.0.6)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(ioredis@5.11.0)(zod@4.6.5)
       '@nestjs/common':
         specifier: 11.2.7
         version: 11.2.7(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -708,8 +708,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lenne.tech/nest-server@11.42.2':
-    resolution: {integrity: sha512-H0Smb/Ro/ygmFro/KnMZRSjnO7VlIRJzHCC2unKmNO+1zLvQG3g/zX5CU29Ymj4acfs73yCqqvrXmsdmcRAG5w==}
+  '@lenne.tech/nest-server@11.42.3':
+    resolution: {integrity: sha512-LxDxxFXtPSqwFfY9MoASfcYSvS1lV0GMVETFGIPmEmJ1uD62MXmGLdaF9q2srbA327ATFRT8/6WvRmoFOlblxA==}
     engines: {node: '>= 22.12', pnpm: ^11.0.0}
     hasBin: true
     peerDependencies:
@@ -6008,7 +6008,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lenne.tech/nest-server@11.42.2(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/passkey@1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(better-call@1.4.0(zod@4.6.5))(nanostores@1.3.0))(@types/express@5.0.6)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(ioredis@5.11.0)(zod@4.6.5)':
+  '@lenne.tech/nest-server@11.42.3(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/passkey@1.7.7(@better-auth/core@1.7.7(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-call@1.4.0(zod@4.6.5))(jose@6.2.12)(kysely@0.28.17)(nanostores@1.3.0))(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.2)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(better-call@1.4.0(zod@4.6.5))(nanostores@1.3.0))(@types/express@5.0.6)(better-auth@1.7.7(mongodb@7.6.0)(vitest@4.1.11))(ioredis@5.11.0)(zod@4.6.5)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.2)
       '@as-integrations/express5': 1.1.2(@apollo/server@5.5.1(graphql@16.14.2))(express@5.2.1)
