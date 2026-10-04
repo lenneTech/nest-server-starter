@@ -293,7 +293,7 @@ describe('TUS Module (e2e)', () => {
       // Start HTTP server on random port
       const server = app.getHttpServer();
       await new Promise<void>((resolve) => {
-        server.listen(0, () => {
+        server.listen(0, '127.0.0.1', () => {
           const address = server.address();
           baseUrl = `http://127.0.0.1:${(address as { port: number }).port}`;
           resolve();
