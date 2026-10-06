@@ -10,12 +10,10 @@ import {
   installProcessDiagnostics,
   isCookiesEnabled,
   isCorsDisabled,
+  setupSwagger,
 } from '@lenne.tech/nest-server';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-// #region rest
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-// #endregion rest
 import { exec } from 'child_process';
 import compression = require('compression');
 import cookieParser = require('cookie-parser');
@@ -95,21 +93,17 @@ async function bootstrap() {
   }
 
   // #region rest
-  // Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('Nest Server Starter API')
-    .setDescription('API lenne.Tech Nest Server Starter')
-    .setVersion(packageJson.version)
-    .addBearerAuth()
-    .build();
-  const documentFactory = () =>
-    SwaggerModule.createDocument(server, config, {
-      autoTagControllers: true,
-      deepScanRoutes: true,
+  // Swagger documentation. setupSwagger() reads security, API-token scopes and the tenant header from
+  // the same decorators the guards read, so "Authorize" applies to every route and the document cannot
+  // drift from what the server enforces. `apiTokenView: true` adds a document with only the routes an
+  // API token may call (UI /swagger-api-tokens).
+  setupSwagger(server, {
+    description: 'API lenne.Tech Nest Server Starter',
+    documentOptions: {
       extraModels: [CoreUserModel, CoreAuthModel, User, PersistenceModel, CorePersistenceModel, FilterArgs],
-    });
-  SwaggerModule.setup('swagger', server, documentFactory, {
-    jsonDocumentUrl: '/api-docs-json',
+    },
+    title: 'Nest Server Starter API',
+    version: packageJson.version,
   });
   // #endregion rest
 

@@ -447,7 +447,11 @@ overrides:
   # Target raised 8.5.25 -> 8.5.26 on 2026-08-22 (newest 8.x).
   # 2026-09-26: raised 8.5.26 -> 8.5.28 (newest 8.x; a no-override resolve lands there),
   # key with it — mirrors nest-server 11.41.4.
-  'postcss@<8.5.28': 8.5.28
+  # 2026-10-06: raised 8.5.28 -> 8.5.29, key with it — mirrors nest-server 11.42.7. 8.5.29
+  # (2026-10-05) is the newest 8.x past the release-age gate. vite 8.3.2 requests ^8.5.28, which
+  # the new key intersects, so the entry fires and pins the newest 8.x (no hold-back). 8.5.29 also
+  # requests source-map-js ^1.2.2 itself (the GHSA-68fv-2mgg-jv7q fix the lock already carries).
+  'postcss@<8.5.29': 8.5.29
 
   # Security: CRLF injection via unescaped multipart field names/filenames in
   # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
@@ -493,7 +497,8 @@ overrides:
   # same change as every framework bump: `pnpm run update` raises package.json only, it
   # never touches this file.
   #
-  # Current target 10.0.14 = what @lenne.tech/nest-server 11.42.4 declares (10.0.13 from 11.41.5).
+  # Current target 10.0.15 = what @lenne.tech/nest-server 11.42.7 declares (10.0.14 from 11.42.4,
+  # 10.0.13 from 11.41.5).
   # 2026-10-01: FIVE advisories published 2026-09-28..30 cover 9.1.1 — the last 9.x — and
   # are fixed ONLY on the 10.x line, which is why the framework took the major in 11.41.5:
   #   GHSA-v53p-9fqp-m79j  high      <=10.0.5          patched >=10.0.6
@@ -516,7 +521,11 @@ overrides:
   # 10.0.14), but the key is matched against REQUESTED ranges, so anything asking `^10` would
   # have been pinned to a second, older 10.0.13 next to the framework's copy. 10.0.15 exists but
   # is inside the release-age gate and above the framework's version, so it is not the target.
-  'nodemailer@<10.0.14': 10.0.14
+  # 2026-10-06: raised 10.0.14 -> 10.0.15, key with it — nest-server 11.42.7 declares 10.0.15
+  # (NodemailerError typing fix against @types/node 26, no advisory). Same reasoning as the
+  # 10.0.14 raise: the framework's exact 10.0.15 never intersected `<10.0.14`, so the tree already
+  # held a single 10.0.15 copy; the raise keeps a `^10` requester from being pinned to 10.0.14.
+  'nodemailer@<10.0.15': 10.0.15
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
@@ -567,7 +576,12 @@ overrides:
   # not reach consumers (see the framework's docs/security-overrides.md).
   # 2026-09-26: raised 3.3.18 -> 3.3.19 (newest 3.x; a no-override resolve lands there),
   # key with it — mirrors nest-server 11.41.4.
-  'nanoid@>=3.0.0 <3.3.19': 3.3.19
+  # 2026-10-06: raised 3.3.19 -> 3.3.20, key with it — mirrors nest-server 11.42.7. Not a new
+  # advisory: 3.3.20 (2026-10-05) is a types-only fix for the `nanoid/async` export. But the old
+  # entry was a real DOWNGRADE LOCK, not an inert floor: postcss requests ^3.3.18, which
+  # INTERSECTS `<3.3.19`, so the key fired and held nanoid at 3.3.19 once 3.3.20 had cleared
+  # the release-age gate.
+  'nanoid@>=3.0.0 <3.3.20': 3.3.20
 
   # Security: high CVE in piscina <4.9.3 - transitive via the build/test toolchain.
   # 4.9.3 is the newest 4.x (5.x is a major).
