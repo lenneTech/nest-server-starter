@@ -74,6 +74,11 @@ auditConfig:
     # @xhmikosr/bin-wrapper > @xhmikosr/downloader > got > cacheable-request — the HTTP cache
     # of a build CLI's binary downloader. Verified 2026-10-03: newest release 4.2.0, the
     # advisory names no first patched version.
+    # Re-verified 2026-10-06: 4.3.0 (2026-10-04) now exists and falls OUTSIDE the advisory's
+    # `<= 4.2.0` range, but it is NOT a fix — its max-stale code is unchanged; the maintainer
+    # closed the report as disputed (kornelski/http-cache-semantics#56), a range dispute is open
+    # (github/advisory-database#10139). So this lockfile stays on 4.2.0 and the entry stays; a
+    # fresh resolve (every generated project) lands on 4.3.0, where it suppresses nothing.
     - GHSA-ch52-4w7c-c8xp
     # braces <= 3.0.3, HIGH: stack exhaustion through deeply nested patterns. Dev tooling only:
     # nodemon > chokidar@3 > braces, and cpy-cli > cpy / globby > fast-glob > micromatch >
@@ -199,7 +204,20 @@ overrides:
   # 2026-10-03: raised 4.13.11 -> 4.13.12, key with it, mirroring nest-server 11.41.7. 4.13.12
   # has cleared the release-age gate and is where a no-override resolve lands, so 4.13.11 had
   # become a downgrade lock (no new advisory; pure hold-back).
-  'hono@>=4.0.0 <4.13.12': 4.13.12
+  # 2026-10-06: raised 4.13.12 -> 4.13.13, key with it, mirroring nest-server 11.42.4. 4.13.13
+  # (published 2026-10-04) is the newest 4.x past the release-age gate and is where a
+  # no-override resolve lands, so 4.13.12 had become a downgrade lock (no new advisory; pure
+  # hold-back).
+  'hono@>=4.0.0 <4.13.13': 4.13.13
+  # Security: @graphql-tools/utils — prototype pollution in mergeDeep (GHSA-7mx3-vvmw-hjmv, high,
+  #   patched >=12.0.1) (added 2026-10-06, mirrors nest-server 11.42.4)
+  # RUNTIME: mergeDeep runs while the GraphQL schema is assembled. LOAD-BEARING: @nestjs/graphql
+  # 13.4.5 — the newest 13.x — EXACT-pins `12.0.0`, so no update reaches the fix; only 14.x moves it.
+  # Target 12.0.1, not the newest 12.x: 12.0.2+ pulls @whatwg-node/promise-helpers@2, which needs
+  # Node >=22.15. Note it does NOT reach a utils 11.x from an older @graphql-tools/schema 10.0.x
+  # (see nest-server migration-guides/11.42.3-to-11.42.4.md §3).
+  # Remove once @nestjs/graphql pins >=12.0.1 in the major this project uses.
+  '@graphql-tools/utils@>=12.0.0 <12.0.1': 12.0.1
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).
@@ -475,7 +493,7 @@ overrides:
   # same change as every framework bump: `pnpm run update` raises package.json only, it
   # never touches this file.
   #
-  # Current target 10.0.13 = what @lenne.tech/nest-server 11.41.5 declares.
+  # Current target 10.0.14 = what @lenne.tech/nest-server 11.42.4 declares (10.0.13 from 11.41.5).
   # 2026-10-01: FIVE advisories published 2026-09-28..30 cover 9.1.1 — the last 9.x — and
   # are fixed ONLY on the 10.x line, which is why the framework took the major in 11.41.5:
   #   GHSA-v53p-9fqp-m79j  high      <=10.0.5          patched >=10.0.6
@@ -493,7 +511,12 @@ overrides:
   # (high), GHSA-wmmp-3585-3rmp, GHSA-cc9r-2j5m-2m83 (all <9.1.0) and GHSA-8m3c-c648-2xjj
   # (<=9.1.0), fixed in 9.1.1. Raised 9.0.3 -> 9.0.5 on 2026-08-22 (nest-server 11.36.1),
   # 9.0.5 -> 9.1.1 on 2026-09-14 (lockstep again from nest-server 11.41.2).
-  'nodemailer@<10.0.13': 10.0.13
+  # 2026-10-06: raised 10.0.13 -> 10.0.14, key with it — nest-server 11.42.4 declares 10.0.14.
+  # Nothing in the tree moved (the old `<10.0.13` key never intersected the framework's exact
+  # 10.0.14), but the key is matched against REQUESTED ranges, so anything asking `^10` would
+  # have been pinned to a second, older 10.0.13 next to the framework's copy. 10.0.15 exists but
+  # is inside the release-age gate and above the framework's version, so it is not the target.
+  'nodemailer@<10.0.14': 10.0.14
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via

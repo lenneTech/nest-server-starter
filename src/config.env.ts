@@ -99,6 +99,21 @@ const PROJECT_HEALTH_CHECK = { configs: { database: { enabled: true } }, enabled
  */
 const PROJECT_FILE = { downloadRoles: [RoleEnum.S_USER] };
 
+/**
+ * Request body limits (nest-server 11.42.4+), SHARED by `localConfig()` and `deployedConfig()`
+ * so the limit is the same in production, under `lt dev up` and in the e2e suite.
+ *
+ * `undefined` keeps body-parser's 100 kB for JSON and for URL-encoded bodies — what this starter
+ * runs on. Over the limit a request gets 413 `#LTNS_0304: Request body too large [...]`, before
+ * authentication and routing. Raise a limit only where the data model needs it, and only as far:
+ * `JSON.parse` blocks the event loop for the whole body (~0.5 ms per 100 kB, ~55 ms for 2 MB).
+ * Set it here rather than with `useBodyParser()` in main.ts, which the e2e suite never runs.
+ * Per-environment override without a code change: `NSC__BODY_PARSER__JSON__LIMIT=2mb`.
+ *
+ *   const PROJECT_BODY_PARSER: IServerOptions['bodyParser'] = { json: { limit: '2mb' } };
+ */
+const PROJECT_BODY_PARSER: IServerOptions['bodyParser'] = undefined;
+
 /*
  * FROM nest-server 11.35.0 ON, the rule in `FileService.checkRights()` is also available as a
  * DECLARATION — add `access` to PROJECT_FILE and you can delete the override:
@@ -285,6 +300,7 @@ function deployedConfig(
       // See nest-server migration-guides/11.36.x-to-11.37.0.md §7.
       twoFactor: { appName: process.env.TWO_FACTOR_APP_NAME || brand },
     },
+    bodyParser: PROJECT_BODY_PARSER,
     // Brevo overlay — only active when BREVO_API_KEY is set
     ...(process.env.BREVO_API_KEY
       ? {
@@ -456,6 +472,7 @@ function localConfig(
       secret: `BETTER_AUTH_SECRET_${upper}_LOCAL_32_CHARS`,
       twoFactor: { appName: brand },
     },
+    bodyParser: PROJECT_BODY_PARSER,
     compression: true,
     cors: { allowAll: true },
     email: {
