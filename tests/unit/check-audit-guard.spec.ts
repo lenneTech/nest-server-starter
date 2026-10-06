@@ -16,7 +16,12 @@
  */
 import { describe, expect, it } from 'vitest';
 
-import { auditDegradedText, isAuditEndpointUnavailable, resolveAuditDegradation } from '../../scripts/check.mjs';
+import {
+  advisoryBulkUrl,
+  auditDegradedText,
+  isAuditEndpointUnavailable,
+  resolveAuditDegradation,
+} from '../../scripts/check.mjs';
 
 const envelope = (error: Record<string, unknown>) => JSON.stringify({ error });
 
@@ -106,5 +111,36 @@ describe('auditDegradedText — every cause reads distinctly', () => {
   it('never claims a check happened', () => {
     expect(auditDegradedText('unreadable', { short: false })).toContain('NOT CHECKED');
     expect(auditDegradedText('unreadable', { short: true })).toContain('not blocking');
+  });
+});
+
+describe('check.mjs: advisoryBulkUrl', () => {
+  it('asks the registry pnpm actually uses', () => {
+    expect(advisoryBulkUrl('https://npm.internal.example/')).toBe(
+      'https://npm.internal.example/-/npm/v1/security/advisories/bulk',
+    );
+  });
+
+  it('tolerates a missing trailing slash and surrounding whitespace', () => {
+    // `pnpm config get registry` returns a trailing newline, and not every registry carries a slash.
+    expect(advisoryBulkUrl('  https://npm.internal.example  ')).toBe(
+      'https://npm.internal.example/-/npm/v1/security/advisories/bulk',
+    );
+  });
+
+  it.each([
+    ['', 'empty'],
+    ['undefined', 'the literal pnpm prints when unset'],
+    ['not-a-url', 'garbage'],
+  ])('falls back to npmjs.org for %s (%s)', (value) => {
+    // A malformed setting must degrade to the PREVIOUS behaviour. A probe that throws would
+    // report every clean repo as an outage — worse than the bug being fixed.
+    expect(advisoryBulkUrl(value)).toBe('https://registry.npmjs.org/-/npm/v1/security/advisories/bulk');
+  });
+
+  it('falls back when the value is not a string at all', () => {
+    expect(advisoryBulkUrl(undefined as unknown as string)).toBe(
+      'https://registry.npmjs.org/-/npm/v1/security/advisories/bulk',
+    );
   });
 });

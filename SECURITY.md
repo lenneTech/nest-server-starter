@@ -18,9 +18,15 @@ There are exactly two ways an advisory leaves the report:
 An entry is only acceptable with all four of these written next to it:
 
 1. **Name the advisory** (GHSA id, and the CVE if one exists).
-2. **State which claim you are making** — either *the dependency provably cannot be fixed*,
-   or *the code IS fixed and the advisory is a false positive* (an upstream range that was
-   never narrowed after a backport). These are different claims; do not blur them.
+2. **State which claim you are making** — one of three, and they are different claims, so do
+   not blur them:
+   - *the dependency provably cannot be fixed* (no patched release exists — verify against the
+     REGISTRY's version list, not the advisory's claim: an advisory naming a version nobody
+     published is not a rarity);
+   - *the code IS fixed and the advisory is a false positive* (an upstream range that was never
+     narrowed after a backport);
+   - *a patched release exists, but the consumer provably cannot use it* — then the entry needs a
+     matching `auditConfig.unusableFixConsumers` line as well, see below.
 3. **Say why the residual risk is acceptable**, naming the affected paths and whether any
    of them reaches the production image.
 4. **Date the verification**, and say what would make the entry removable.
@@ -39,6 +45,28 @@ path, record that explicitly and state what to re-check after a dependency bump.
 current entries (`GHSA-ch52-4w7c-c8xp`, `GHSA-vfj7-8cjw-p6xm`, since 2026-10-03) follow that
 shape — copy it.
 
+### Before the third claim: can a patch make the fix usable?
+
+The third claim is the one to be strict about, because "the consumer cannot use it" is also what
+it looks like when nobody tried hard enough. When the patched major only fails to LOAD — a removed
+default export, a renamed entry point — a one-line `pnpm patch` can turn the dead end into a real
+fix, and then the advisory closes instead of being suppressed. Measured case (lt-crm, 2026-10-06):
+one CRITICAL and two HIGH simple-git advisories whose only fix was 4.x, which dropped the ESM
+default export `@nuxt/devtools` imports. A patch restoring that one export — the same binding the
+module already exports under its named form, so security-neutral — closed all three.
+
+Three conditions, and the third is the one that usually fails:
+
+1. The patch is **pinned to an exact version**, so the next release makes `pnpm install` fail
+   LOUDLY rather than silently patching something else. A patch against a minified symbol is
+   acceptable only with that pin, and the failure is then the signal to re-check upstream.
+2. The patch restores an **interface**, it does not change behaviour. If you cannot say what else
+   that major changed and why it does not matter here, the patch is a guess in the costume of a fix.
+3. Someone will carry it. A patch is a standing obligation on every future bump. For a dev-tooling
+   path outside the production image, weigh that against simply declaring the residual.
+
+Record that you evaluated patching and why you declined, or the next person pays to rediscover it.
+
 ### What keeps a suppression honest
 
 Two guards, one per way an entry goes wrong, and an entry needs both:
@@ -46,7 +74,13 @@ Two guards, one per way an entry goes wrong, and an entry needs both:
 | Question | Guard | Fails when |
 |----------|-------|------------|
 | Is it still TRUE? | `pnpm run check:overrides` (part of `check`) | the GitHub advisory gains a patched version or is withdrawn — the entry is obsolete, remove it. Under `CI` an unreachable API fails too, so the workflow passes `GITHUB_TOKEN` |
+| Is the THIRD claim still true? | the same guard, against `auditConfig.unusableFixConsumers` | the declared consumer moves or leaves the tree, the advisory gains a patched version nobody assessed (a BACKPORT into a line the consumer *can* use), or anything other than exactly `consumer@version` starts pulling the affected package — including a dependency this repository declares itself, which is a version bump nobody made rather than a dead end |
 | Is it still in SCOPE? | `tests/unit/audit-suppression-scope.spec.ts` | the package appears in the PRODUCTION tree, or an entry has no matching case there |
+
+A declaration for the third claim records the consumer, **the version it was assessed against**
+and the patched version it rejected — `'@nuxt/devtools@3.4.1 cannot use 4.0.1'` — because each of
+those can change without anybody revisiting the entry. That is what makes it expire by itself
+instead of ageing into a permanent exception.
 
 A new entry therefore also needs a case in that spec. Both travel with the template into
 generated projects. In a generated **monorepo** the lt CLI hoists this file into the root,

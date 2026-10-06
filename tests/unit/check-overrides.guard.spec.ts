@@ -23,8 +23,7 @@
  *   suite used only bare and one-sided (`pkg@<X`) keys, so it was structurally incapable
  *   of going red on it.
  * @seen-failing Restore the naive split in `scripts/check-overrides.mjs` — registered as
- *   mutation `check-overrides-range-key-blind` in nest-server's tests/regression-mutations.json
- *   (this spec is ported from there, with the script).
+ *   mutation `check-overrides-range-key-blind` in tests/regression-mutations.json.
  *   The workspace-yaml reader is covered by `check-overrides-ignores-workspace-yaml`.
  */
 import { spawn, spawnSync } from 'node:child_process';
@@ -297,7 +296,7 @@ describe('check-overrides — overrides for packages that left the tree', () => 
    *   because their fixtures carried no such header.
    * @seen-failing Search the whole lockfile again instead of the `packages:` part in
    *   scripts/check-overrides.mjs — registered as mutation `check-overrides-unused-reads-override-echo`
-   *   in nest-server's tests/regression-mutations.json (ported from there).
+   *   in tests/regression-mutations.json.
    */
   it("reports one that only the lockfile's own overrides header still names", () => {
     // A SELECTOR key (`pkg@<x`) is what makes the echo dangerous: the header line then carries
@@ -444,7 +443,7 @@ describe('check-overrides — suppressed advisories that got a fix', () => {
     expect(r.out).not.toMatch(/FIX AVAILABLE/);
     // Must still say it looked — otherwise this is indistinguishable from a run
     // that never checked the suppression at all.
-    expect(r.out).toMatch(/1\/1 suppression\(s\) confirmed to still have no fix/);
+    expect(r.out).toMatch(/1\/1 suppression\(s\) verified/);
   });
 
   it('FIRES once upstream publishes a patched version', () => {
@@ -455,6 +454,264 @@ describe('check-overrides — suppressed advisories that got a fix', () => {
     expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
     expect(r.out).toMatch(/FIX AVAILABLE/);
     expect(r.out).toMatch(/2\.1\.0/);
+  });
+
+  /**
+   * The THIRD shape, and the one the two above used to swallow.
+   *
+   * "A fix exists" and "the fix is usable" are different facts. A patched major
+   * can remove an export its consumer imports, or the consumer can pin the
+   * vulnerable range itself — and then FIX AVAILABLE is not advice, it is a dead
+   * end that leaves a real, unfixable finding with nowhere to go but a red build
+   * forever, or the guard switched off for that entry.
+   *
+   * Measured case (lt-crm, 2026-10-06): three `simple-git` advisories, one
+   * CRITICAL requiring >=4.0.1, reachable only through
+   * `nuxt > @nuxt/devtools > simple-git`. simple-git 4 dropped the default export
+   * @nuxt/devtools imports, so the override made `nuxt prepare` fail outright; the
+   * newest devtools in the 3.x line still imports it that way, and devtools is a
+   * hard dependency of nuxt, so it can be neither raised nor dropped.
+   *
+   * The declaration records the consumer, the version it was assessed against,
+   * AND the rejected patched versions — because each of those can change without
+   * anybody revisiting the entry. Three checks, one per way the reason can
+   * evaporate, each pinned by its own case below and its own mutation.
+   *
+   * @regression   11.42.5 — the guard read "a fix exists" and "the fix is usable"
+   *   as one fact, so an unfixable finding had nowhere to go but a permanently red
+   *   build or a switched-off guard. The first version of this feature then went
+   *   too far the other way: it watched only the declared consumer's VERSION, so a
+   *   backport into a line that consumer could use, or a second package pulling
+   *   the same vulnerable version, left the suppression accepted and the printed
+   *   "cannot use it" false. Found in review before release.
+   * @seen-failing   six mutations in scripts/check-overrides.mjs, each applied
+   *   alone, run, reverted — registered in tests/regression-mutations.json as
+   *   `unusable-fix-ignores-moved-consumer`, `unusable-fix-accepts-absent-consumer`,
+   *   `unusable-fix-ignores-backport`, `unusable-fix-ignores-second-consumer`,
+   *   `unusable-fix-skips-workspace-importer` and
+   *   `unusable-fix-first-consumer-version-wins`. None of them touches the happy
+   *   path, which is the point: a guard whose expiry is gone still passes its own
+   *   success case. The last one is the exception that proves it from the other
+   *   side — it breaks ONLY the happy path, by rejecting a declaration that is
+   *   still true, and a guard that does that gets switched off.
+   */
+  const DEVTOOLS_LOCK = (version: string, extra = '') =>
+    `lockfileVersion: '9.0'\n\npackages:\n  '@nuxt/devtools@${version}':\n    resolution: {integrity: sha512-x}\n  simple-git@3.36.0:\n    resolution: {integrity: sha512-x}\n${extra}\nsnapshots:\n\n  '@nuxt/devtools@${version}':\n    dependencies:\n      simple-git: 3.36.0\n${extra ? `\n  new-parent@1.0.0:\n    dependencies:\n      simple-git: 3.36.0\n` : ''}`;
+  const DECLARE = (value: string) => `auditConfig:\n  unusableFixConsumers:\n    ${GHSA}: '${value}'\n`;
+  const FIXED = { affectedPackages: ['simple-git'], patchedVersions: ['4.0.1'], withdrawn: false };
+
+  it('accepts a fixed advisory whose fix the declared consumer provably cannot use', () => {
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: DEVTOOLS_LOCK('3.4.1'),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected pass, got:\n${r.out}`).toBe(0);
+    expect(r.out).not.toMatch(/FIX AVAILABLE/);
+    expect(r.out).not.toMatch(/RE-TEST/);
+    // Named on the green path, every run — a residual that can stop being true
+    // without anything here changing must not be able to settle into silence.
+    expect(r.out, `the residual must be reported, got:\n${r.out}`).toMatch(/residual/i);
+    expect(r.out).toMatch(/@nuxt\/devtools@3\.4\.1/);
+  });
+
+  it('FIRES when the declared consumer has moved, and says MOVED', () => {
+    // Two checks can fire here, and which one speaks matters. Since the
+    // consumer-set check started comparing `name@version` rather than just the
+    // name, it catches a moved consumer by itself — so this case is no longer
+    // about WHETHER the guard fires. It is about the sentence it prints: "moved
+    // from 3.4.1 to 3.5.0" tells the reader to re-assess against 3.5.0, while
+    // "3.5.0 also pulls an affected package" describes the same package as if a
+    // second consumer had appeared, and sends them looking for one.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: DEVTOOLS_LOCK('3.5.0'),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out, `both versions belong in the message, got:\n${r.out}`).toMatch(/moved from 3\.4\.1 to 3\.5\.0/);
+  });
+
+  it('FIRES when the declared consumer left the tree entirely', () => {
+    // Then the suppression is moot rather than justified: nothing pulls the
+    // vulnerable version in any more, so the finding should have disappeared.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: "lockfileVersion: '9.0'\n\npackages:\n  something-else@1.0.0:\n    resolution: {integrity: sha512-x}\n",
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out).toMatch(/moot/);
+  });
+
+  it('FIRES on a BACKPORT — a fix in a line the consumer could use', () => {
+    // The case that made the first version of this feature unsafe. Upstream
+    // backports the fix into 3.36.2, which @nuxt/devtools CAN take; the consumer's
+    // own version never moves, so every other check stays quiet and the residual
+    // message would keep claiming the fix is unusable.
+    const r = run({
+      advisoryData: {
+        [GHSA]: { affectedPackages: ['simple-git'], patchedVersions: ['4.0.1', '3.36.2'], withdrawn: false },
+      },
+      ignoreGhsas: [GHSA],
+      lock: DEVTOOLS_LOCK('3.4.1'),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out, `the unassessed version must be named, got:\n${r.out}`).toMatch(/3\.36\.2/);
+  });
+
+  it('FIRES when a SECOND consumer pulls the affected package', () => {
+    // `ignoreGhsas` hides the finding everywhere, so a new parent — possibly one
+    // in the production closure — would otherwise be silent while the declaration
+    // still argues "only this one dev-tooling consumer".
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: DEVTOOLS_LOCK('3.4.1', '  new-parent@1.0.0:\n    resolution: {integrity: sha512-x}\n'),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out, `the new parent must be named, got:\n${r.out}`).toMatch(/new-parent/);
+  });
+
+  /**
+   * A lockfile in which a WORKSPACE package depends on the affected package
+   * directly. `importers:` holds the repo's OWN dependencies and sits BEFORE
+   * `packages:`, so a scan that starts at `snapshots:` misses exactly this shape —
+   * and it is the shape in which the declaration is least defensible, because a
+   * dependency the project declares itself is one the project can raise itself.
+   */
+  const WORKSPACE_LOCK = (importer: string) =>
+    `lockfileVersion: '9.0'\n\nimporters:\n\n  ${importer}:\n    dependencies:\n      simple-git:\n        specifier: 3.36.0\n        version: 3.36.0\n\npackages:\n\n  '@nuxt/devtools@3.4.1':\n    resolution: {integrity: sha512-x}\n  simple-git@3.36.0:\n    resolution: {integrity: sha512-x}\n\nsnapshots:\n\n  '@nuxt/devtools@3.4.1':\n    dependencies:\n      simple-git: 3.36.0\n`;
+
+  it('FIRES when the PROJECT ITSELF depends on the affected package', () => {
+    // The root importer. Nothing in the snapshot graph says the repo took a
+    // direct dependency on simple-git, so the declaration's "only @nuxt/devtools
+    // has it" survived untouched while the package sat in the project's own
+    // package.json — where a plain version bump would have closed the advisory.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: WORKSPACE_LOCK('.'),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out, `the importer must be named, got:\n${r.out}`).toMatch(/workspace package '\.'/);
+  });
+
+  it('FIRES when a WORKSPACE PACKAGE depends on the affected package', () => {
+    // Same blind spot one level down, and the common one in this monorepo: the
+    // dependency belongs to projects/api rather than to the root.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: WORKSPACE_LOCK('projects/api'),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out, `the importer path must be named, got:\n${r.out}`).toMatch(/projects\/api/);
+  });
+
+  it('FIRES when the declared consumer does not pull the affected package at all', () => {
+    // A declaration naming the WRONG consumer. Every version-shaped check passes
+    // — typescript@5.9.3 is in the tree at the assessed version and no fix was
+    // left unassessed — so only comparing the declaration against the actual
+    // edges catches it. Until that comparison existed, a plausible-looking but
+    // unrelated consumer name silenced the advisory indefinitely.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: DEVTOOLS_LOCK('3.4.1').replace(
+        '  simple-git@3.36.0:\n    resolution: {integrity: sha512-x}\n',
+        '  simple-git@3.36.0:\n    resolution: {integrity: sha512-x}\n  typescript@5.9.3:\n    resolution: {integrity: sha512-x}\n',
+      ),
+      workspaceYaml: DECLARE('typescript@5.9.3 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out, `the real parent must be named, got:\n${r.out}`).toMatch(/@nuxt\/devtools@3\.4\.1/);
+  });
+
+  /**
+   * Two versions of ONE consumer, listed newest first. pnpm keeps versions side
+   * by side whenever their ranges are incompatible, so this is ordinary — and
+   * reading only the FIRST match for "which version is in the tree?" made the
+   * verdict depend on that order. The two cases below are the same fixture read
+   * from both ends: one must pass, one must fire, and neither may be decided by
+   * the listing order.
+   */
+  const TWO_VERSIONS = (pullers: string[]) =>
+    `lockfileVersion: '9.0'\n\npackages:\n\n  '@nuxt/devtools@3.9.0':\n    resolution: {integrity: sha512-x}\n  '@nuxt/devtools@3.4.1':\n    resolution: {integrity: sha512-x}\n  simple-git@3.36.0:\n    resolution: {integrity: sha512-x}\n\nsnapshots:\n\n${pullers.map((v) => `  '@nuxt/devtools@${v}':\n    dependencies:\n      simple-git: 3.36.0\n`).join('\n')}`;
+
+  it("accepts the declaration when the consumer's OTHER version pulls nothing", () => {
+    // 3.9.0 exists but does not touch simple-git, so the declaration about 3.4.1
+    // is still exactly true. Taking the first match called this "moved from 3.4.1
+    // to 3.9.0" and demanded a re-assessment of a correct entry — a guard that
+    // cries wolf gets switched off, which is how the hole this feature closes
+    // came about in the first place.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: TWO_VERSIONS(['3.4.1']),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected pass, got:\n${r.out}`).toBe(0);
+    expect(r.out).not.toMatch(/RE-TEST/);
+    expect(r.out).toMatch(/residual/i);
+  });
+
+  it('FIRES on the unassessed version even when it is listed LAST', () => {
+    // Both versions pull simple-git and the declaration covers 3.9.0, so 3.4.1 is
+    // an unassessed path. The finding must name THAT, not report a move: 3.9.0 is
+    // right where the declaration says it is.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: TWO_VERSIONS(['3.9.0', '3.4.1']),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.9.0 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/RE-TEST/);
+    expect(r.out, `the unassessed version must be named, got:\n${r.out}`).toMatch(/3\.4\.1 also pulls/);
+    expect(r.out, `3.9.0 has not moved, got:\n${r.out}`).not.toMatch(/moved from/);
+  });
+
+  it('still FIRES for a fixed advisory with no declaration at all', () => {
+    // The gate must not have widened: the declaration is the only way in, and
+    // forgetting it is indistinguishable from not having considered the fix.
+    const r = run({
+      advisoryData: { [GHSA]: FIXED },
+      ignoreGhsas: [GHSA],
+      lock: DEVTOOLS_LOCK('3.4.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/FIX AVAILABLE/);
+    // And it must point at the declaration rather than only at "take the fix",
+    // which is the advice that does not apply in this shape.
+    expect(r.out).toMatch(/unusableFixConsumers/);
+  });
+
+  it('IGNORES a declaration for a WITHDRAWN advisory', () => {
+    // A withdrawn advisory needs no suppression at all, so "the fix is unusable"
+    // is not a reason to keep one — there is nothing left to be unfixable about.
+    const r = run({
+      advisoryData: { [GHSA]: { patchedVersions: [], withdrawn: true } },
+      ignoreGhsas: [GHSA],
+      lock: DEVTOOLS_LOCK('3.4.1'),
+      workspaceYaml: DECLARE('@nuxt/devtools@3.4.1 cannot use 4.0.1'),
+    });
+    expect(r.status, `expected failure, got:\n${r.out}`).toBe(1);
+    expect(r.out).toMatch(/WITHDRAWN/);
   });
 
   it('FIRES when the advisory was withdrawn', () => {
@@ -677,6 +934,33 @@ describe('check-overrides — degraded runs', () => {
     expect(`${r.stdout}${r.stderr}`).toMatch(/cannot read audit report/i);
   });
 
+  /**
+   * @regression   11.42.6 — a captured report that records a FAILED audit (pnpm 11 writes
+   *   `{"error": {"message": "fetch failed"}}` when the registry is unreachable) read as
+   *   "0 advisories, none failing". `--audit-file` is the CI path, so CI printed "ok" for a run
+   *   that verified nothing.
+   * @seen-failing Remove the error-report check after the audit is obtained — registered as
+   *   mutation `guard-audit-error-reads-as-clean` in tests/regression-mutations.json.
+   */
+  it('fails on a captured report that records a failed audit (the CI path)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'overrides-guard-'));
+    dirs.push(dir);
+    mkdirSync(join(dir, 'scripts'), { recursive: true });
+    copyFileSync(GUARD, join(dir, 'scripts', 'check-overrides.mjs'));
+    writeFileSync(join(dir, 'package.json'), `${JSON.stringify({ pnpm: { overrides: { a: '1' } } })}\n`);
+    const reportPath = join(dir, 'audit.json');
+    writeFileSync(reportPath, `${JSON.stringify({ error: { code: 'pnpm', message: 'fetch failed' } })}\n`);
+
+    const r = spawnSync(process.execPath, [join(dir, 'scripts', 'check-overrides.mjs'), '--audit-file', reportPath], {
+      encoding: 'utf8',
+    });
+    const out = `${r.stdout}${r.stderr}`;
+    assertReachedAVerdict(out, r.error);
+    expect(out, `a failed audit must not read as checked, got:\n${out}`).not.toMatch(/ok — /);
+    expect(out).toMatch(/records a failed audit, not a result \(fetch failed\)/);
+    expect(r.status).toBe(1);
+  });
+
   it('passes trivially when nothing is declared', () => {
     // The state every base repo is in today (lt-monorepo, both starters,
     // nest-server, nuxt-extensions: zero overrides). It must not cost a run.
@@ -711,7 +995,7 @@ describe('check-overrides — an unverified suppression is a skip, and CI must n
       ignoreGhsas: [GHSA_CI],
     });
     expect(r.status, `expected pass, got:\n${r.out}`).toBe(0);
-    expect(r.out).toMatch(/1\/1 suppression\(s\) confirmed/);
+    expect(r.out).toMatch(/1\/1 suppression\(s\) verified/);
   });
 });
 
@@ -829,23 +1113,57 @@ describe('check-overrides — a clean LIVE audit is probed, not assumed', () => 
   // which the guard asks npm's bulk endpoint whether "0 advisories" meant "nothing found" or
   // "could not ask". A fake `pnpm` on PATH supplies the clean report, and a loopback server
   // stands in for the endpoint, so the case stays offline and deterministic.
-  async function runLiveClean(status: number) {
+  async function runLiveClean(
+    status: number,
+    opts: {
+      advisoryData?: Record<string, unknown>;
+      auditExit?: number;
+      auditReport?: string;
+      ignoreGhsas?: string[];
+      registry?: string;
+      registryEnv?: 'npm_config_registry' | 'pnpm_config_registry';
+      useApiOverride?: boolean;
+    } = {},
+  ) {
     const dir = mkdtempSync(join(tmpdir(), 'overrides-guard-'));
     dirs.push(dir);
     mkdirSync(join(dir, 'scripts'), { recursive: true });
     copyFileSync(GUARD, join(dir, 'scripts', 'check-overrides.mjs'));
-    writeFileSync(
-      join(dir, 'package.json'),
-      `${JSON.stringify({ name: 's', pnpm: { overrides: { 'fast-uri': '3.1.3' } } }, null, 2)}\n`,
-    );
+    const pnpmBlock: Record<string, unknown> = { overrides: { 'fast-uri': '3.1.3' } };
+    if (opts.ignoreGhsas) {
+      pnpmBlock.auditConfig = { ignoreGhsas: opts.ignoreGhsas };
+    }
+    writeFileSync(join(dir, 'package.json'), `${JSON.stringify({ name: 's', pnpm: pnpmBlock }, null, 2)}\n`);
+    // Suppressions are verified against the GitHub Advisory API; a file keeps that offline.
+    const guardArgs = [join(dir, 'scripts', 'check-overrides.mjs')];
+    if (opts.advisoryData) {
+      const advisoryPath = join(dir, 'advisories.json');
+      writeFileSync(advisoryPath, `${JSON.stringify(opts.advisoryData)}\n`);
+      guardArgs.push('--advisory-file', advisoryPath);
+    }
     const bin = join(dir, 'bin');
     mkdirSync(bin);
-    const clean = JSON.stringify({
-      advisories: {},
-      metadata: { vulnerabilities: { critical: 0, high: 0, info: 0, low: 0, moderate: 0 } },
-    });
-    writeFileSync(join(bin, 'pnpm'), `#!/bin/sh\nprintf '%s' '${clean}'\n`, { mode: 0o755 });
-    writeFileSync(join(bin, 'pnpm.cmd'), `@echo ${clean}\r\n`);
+    const clean =
+      opts.auditReport ??
+      JSON.stringify({
+        advisories: {},
+        metadata: { vulnerabilities: { critical: 0, high: 0, info: 0, low: 0, moderate: 0 } },
+      });
+    const auditExit = opts.auditExit ?? 0;
+    // The stand-in answers BOTH sub-commands the guard uses. What it reports for
+    // `config get registry` is the lever of the registry-resolution case below: pointing it at
+    // a dead port means a guard that asks pnpm instead of reading the environment reaches
+    // nothing, so "the stub was called" becomes a real discriminator rather than a formality.
+    const pnpmRegistry = opts.registry ?? 'https://registry.npmjs.org/';
+    writeFileSync(
+      join(bin, 'pnpm'),
+      `#!/bin/sh\ncase "$*" in\n  *'config get registry'*) printf '%s\\n' '${pnpmRegistry}' ;;\n  *) printf '%s' '${clean}'; exit ${auditExit} ;;\nesac\n`,
+      { mode: 0o755 },
+    );
+    writeFileSync(
+      join(bin, 'pnpm.cmd'),
+      `@echo off\r\nif "%*"=="config get registry" (echo ${pnpmRegistry}) else (echo ${clean}& exit /b ${auditExit})\r\n`,
+    );
 
     const { createServer } = await import('node:http');
     const requests: string[] = [];
@@ -860,10 +1178,17 @@ describe('check-overrides — a clean LIVE audit is probed, not assumed', () => 
     const pathKey = Object.keys(process.env).find((key) => key.toUpperCase() === 'PATH') ?? 'PATH';
     try {
       // ASYNC: the stub answers the child from THIS process's event loop (see runAsync()).
-      const child = spawn(process.execPath, [join(dir, 'scripts', 'check-overrides.mjs')], {
+      // CHECK_OVERRIDES_ADVISORY_API routes the bulk URL directly and therefore BYPASSES the
+      // registry resolution. The default keeps that (it is what the two outage cases need);
+      // `useApiOverride: false` steers the probe through the registry environment variable
+      // instead (`registryEnv`, default `pnpm_config_registry`), which is the lever a real
+      // private registry or proxy pulls.
+      const child = spawn(process.execPath, guardArgs, {
         env: {
           ...process.env,
-          CHECK_OVERRIDES_ADVISORY_API: `http://127.0.0.1:${port}`,
+          ...(opts.useApiOverride === false
+            ? { [opts.registryEnv ?? 'pnpm_config_registry']: `http://127.0.0.1:${port}/` }
+            : { CHECK_OVERRIDES_ADVISORY_API: `http://127.0.0.1:${port}` }),
           CI: '',
           [pathKey]: `${bin}${delimiter}${process.env[pathKey] ?? ''}`,
         },
@@ -890,7 +1215,7 @@ describe('check-overrides — a clean LIVE audit is probed, not assumed', () => 
    *   answering 200. CI passes `--audit-file` and skips the probe, so only local runs lost it.
    * @seen-failing Point the probe at a binding that does not exist yet, which is what the
    *   temporal dead zone did — registered as mutation `overrides-probe-reads-undeclared-bulk-url`
-   *   in nest-server's tests/regression-mutations.json (ported from there).
+   *   in tests/regression-mutations.json.
    */
   it('reports the overrides as checked when the advisory service answers', async () => {
     const r = await runLiveClean(200);
@@ -907,5 +1232,99 @@ describe('check-overrides — a clean LIVE audit is probed, not assumed', () => 
     expect(r.out, `a 503 must be reported as an outage, got:\n${r.out}`).toMatch(/unreachable/);
     expect(r.out).toMatch(/COULD NOT ASK/);
     expect(r.exit, 'an outage must not fail the chain').toBe(0);
+  });
+
+  /**
+   * @regression   11.42.6 — `configuredRegistry()` asked pnpm and nothing else, in BOTH copies of
+   *   the shared block. The probe has to ask the registry the AUDIT used, and the environment can
+   *   name one: under pnpm 11 that variable is `pnpm_config_registry`. Reading it first is what
+   *   this case pins; the next case pins that it is the RIGHT variable.
+   * @seen-failing Drop the environment branch from `configuredRegistry()` — registered as mutation
+   *   `probe-registry-ignores-environment` in tests/regression-mutations.json.
+   */
+  it('asks the registry pnpm AUDITS against, which the environment can name', async () => {
+    // The environment names the stub while the fake pnpm reports a DEAD port, which is what
+    // makes the assertion sharp: only a guard that reads the environment first reaches the stub
+    // at all, and one that trusts pnpm's answer reaches nothing and reports an outage.
+    const r = await runLiveClean(200, { registry: 'http://127.0.0.1:1/', useApiOverride: false });
+    expect(r.requests, `the audited registry was never asked, got:\n${r.out}`).toContain(
+      'POST /-/npm/v1/security/advisories/bulk',
+    );
+    expect(r.out, `the probe reached the registry, so this is no outage, got:\n${r.out}`).not.toMatch(/unreachable/);
+    expect(r.exit).toBe(0);
+  });
+
+  /**
+   * @regression   11.42.6 — the first version of the environment branch read `npm_config_registry`,
+   *   from a measurement on an older pnpm. pnpm 11 IGNORES that variable for the audit (measured
+   *   with 11.13.1), so the probe asked a registry the audit never talked to.
+   * @seen-failing Read `npm_config_registry` instead of `pnpm_config_registry` in the shared block —
+   *   registered as mutation `probe-reads-npm-config-registry` in tests/regression-mutations.json.
+   */
+  it('ignores npm_config_registry, which pnpm 11 does not audit against', async () => {
+    // Inverted levers: the npm variable points at the stub, pnpm reports a DEAD port. A guard that
+    // honours the npm variable reaches the stub; one that follows pnpm 11 does not, and reports
+    // that it could not ask.
+    const r = await runLiveClean(200, {
+      registry: 'http://127.0.0.1:1/',
+      registryEnv: 'npm_config_registry',
+      useApiOverride: false,
+    });
+    expect(r.requests, `npm_config_registry steered the probe, got:\n${r.out}`).toEqual([]);
+    expect(r.out).toMatch(/unreachable/);
+    expect(r.exit).toBe(0);
+  });
+
+  /**
+   * @regression   11.42.6 — pnpm 11 answers an audit it could not run with valid JSON
+   *   (`{"error": {"message": "fetch failed"}}`) and no `advisories`. The guard read that as
+   *   "0 advisories, none failing" and printed "ok — N override(s) checked", under CI too.
+   * @seen-failing Remove the error-report check after the audit is obtained — registered as
+   *   mutation `guard-audit-error-reads-as-clean` in tests/regression-mutations.json.
+   */
+  it('does not report an audit that failed as a clean one', async () => {
+    const r = await runLiveClean(200, {
+      auditExit: 1,
+      auditReport: JSON.stringify({ error: { code: 'pnpm', message: 'fetch failed' } }),
+    });
+    expect(r.out, `a failed audit must not read as checked, got:\n${r.out}`).not.toMatch(/ok — /);
+    expect(r.out).toMatch(/could not obtain an audit report \(fetch failed\)/);
+    expect(r.out).toMatch(/NONE of them were verified/);
+    expect(r.exit, 'a live run without a report must not fail the chain').toBe(0);
+  });
+
+  /**
+   * @regression   11.42.6 — the first fix for a failed audit EXITED where it detected one, and the
+   *   suppression checks run later. They ask the GitHub Advisory API, not the audit, so they had
+   *   nothing to lose by running — but with the early exit a suppressed advisory that had gained a
+   *   fix (FIX AVAILABLE, exit 1 before) passed with exit 0 for as long as the audit failed, and
+   *   `pnpm audit` hides suppressed advisories completely, so nothing else reported it.
+   * @seen-failing Put the early exit back in the failed-audit block — registered as mutation
+   *   `guard-unavailable-audit-skips-suppressions` in tests/regression-mutations.json.
+   */
+  it('still checks the suppressions when the audit failed', async () => {
+    const GHSA = 'GHSA-aaaa-bbbb-cccc';
+    const failed = JSON.stringify({ error: { code: 'pnpm', message: 'fetch failed' } });
+    const fixed = await runLiveClean(200, {
+      advisoryData: { [GHSA]: { first_patched_version: '2.1.0', withdrawn: false } },
+      auditExit: 1,
+      auditReport: failed,
+      ignoreGhsas: [GHSA],
+    });
+    expect(fixed.out, `a fixed suppressed advisory must still be reported, got:\n${fixed.out}`).toMatch(
+      /FIX AVAILABLE/,
+    );
+    expect(fixed.exit).toBe(1);
+
+    // The paired control: an unfixed suppression passes, and the run says which half it verified.
+    const unfixed = await runLiveClean(200, {
+      advisoryData: { [GHSA]: { first_patched_version: null, withdrawn: false } },
+      auditExit: 1,
+      auditReport: failed,
+      ignoreGhsas: [GHSA],
+    });
+    expect(unfixed.out).not.toMatch(/ok — /);
+    expect(unfixed.out).toMatch(/override\(s\) were NOT verified; 1\/1 suppression\(s\) verified/);
+    expect(unfixed.exit).toBe(0);
   });
 });

@@ -296,10 +296,75 @@ function isAuditResultAmbiguous(parsed) {
   return SEVERITIES.every((severity) => !raw[severity]);
 }
 
+/**
+ * The registry pnpm ACTUALLY audits against, and that registry's bulk advisory endpoint.
+ *
+ * The probe below is the only thing standing between a silent registry outage and a green check,
+ * and a probe pointed at the wrong host answers confidently about a service nobody asked. This
+ * file used to name `registry.npmjs.org` outright, which reproduces that failure one layer in:
+ * behind a private registry or a proxy, pnpm fails against the configured one, npmjs.org answers,
+ * and the ambiguity resolves to "clean".
+ *
+ * DUPLICATED, not imported, and kept byte-identical with the copy in
+ * `scripts/check-overrides.mjs` — that guard is spawned ALONE in a temp directory by its spec, so
+ * it cannot import a sibling. `tests/unit/shared-registry-resolution.spec.ts` asserts the two
+ * marked blocks match, which is the only reason two copies are safe. The block keeps nest-server's
+ * single-quote style for exactly that reason, although this file otherwise uses double quotes:
+ * byte-identical means byte-identical, and `scripts/` is outside this repository's oxfmt chain.
+ */
+// >>> SHARED-WITH-CHECK-MJS (kept verbatim; see the note below)
+function configuredRegistry() {
+  // The probe must ask the registry the AUDIT used, so it reads the variable the audit reads.
+  // Under pnpm 11 that is `pnpm_config_registry`; `npm_config_registry` is IGNORED by both
+  // `pnpm audit` and `pnpm config get registry` — measured 2026-10-06 with pnpm 11.13.1:
+  //
+  //   pnpm_config_registry=http://127.0.0.1:9/ pnpm audit --json   {"error": … "fetch failed"}
+  //   npm_config_registry=http://127.0.0.1:9/  pnpm audit --json   a normal report from npmjs.org
+  //
+  // An earlier version read `npm_config_registry` first, from a measurement taken on an older
+  // pnpm. Under pnpm 11 that sends the probe to a registry the audit never talked to. The pnpm
+  // spawn below would report `pnpm_config_registry` as well; reading it here saves the spawn
+  // and keeps the answer independent of how a pnpm shim forwards the environment.
+  const fromEnv = process.env.pnpm_config_registry ?? process.env.PNPM_CONFIG_REGISTRY;
+  if (typeof fromEnv === 'string' && fromEnv.trim()) {
+    return fromEnv.trim();
+  }
+  try {
+    // One command STRING, not an args array: pnpm is a .cmd/.ps1/.exe shim on Windows,
+    // which Node has refused to spawn directly since 20.12 (CVE-2024-27980) — hence the
+    // shell. Node then deprecates passing args ALONGSIDE it (DEP0190), because it just
+    // concatenates them unescaped. Every token here is a literal, so we write the line
+    // out and there is nothing to escape.
+    return execFileSync('pnpm config get registry', {
+      encoding: 'utf8',
+      shell: true,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    return '';
+  }
+}
+
+function advisoryBulkUrl(registry) {
+  const fallback = 'https://registry.npmjs.org/';
+  let base = typeof registry === 'string' ? registry.trim() : '';
+  if (!/^https?:\/\//i.test(base)) {
+    base = fallback;
+  }
+  return `${base.replace(/\/+$/, '')}/-/npm/v1/security/advisories/bulk`;
+}
+// <<< SHARED-WITH-CHECK-MJS
+
+// Exported so the registry-resolution rule is testable without a network call: the probe below is
+// the only thing between a silent registry outage and a green check, and a probe pointed at the
+// wrong host answers confidently about a service nobody asked. Covered by
+// `tests/unit/check-audit-guard.spec.ts`.
+export { advisoryBulkUrl, configuredRegistry };
+
 /** Ask the advisory service directly. Only reached for an ambiguous report, so it is nearly free. */
 async function advisoryServiceReachable() {
   try {
-    const response = await fetch("https://registry.npmjs.org/-/npm/v1/security/advisories/bulk", {
+    const response = await fetch(advisoryBulkUrl(configuredRegistry()), {
       body: "{}",
       headers: { "content-type": "application/json" },
       method: "POST",
