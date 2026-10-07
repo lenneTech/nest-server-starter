@@ -2,7 +2,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   deriveTestDbUri,
+  EXTERNALLY_DROPPABLE_DB_PATTERN,
   isDroppableTestDb,
+  isExternallyDroppableTestDb,
   isStaleTestDb,
   NON_DISPOSABLE_DB_PATTERN,
   RUN_DB_PATTERN,
@@ -164,6 +166,58 @@ describe('NON_DISPOSABLE_DB_PATTERN / isDroppableTestDb', () => {
     expect(NON_DISPOSABLE_DB_PATTERN.global).toBe(false);
     expect(isDroppableTestDb('ci-portal-local')).toBe(false);
     expect(isDroppableTestDb('ci-portal-local')).toBe(false);
+  });
+});
+
+describe('EXTERNALLY_DROPPABLE_DB_PATTERN / isExternallyDroppableTestDb', () => {
+  /**
+   * The narrower guard on the one drop site that has no second condition: an externally pinned
+   * `NSC__MONGOOSE__URI`. It differs from `isDroppableTestDb` in exactly one way — a bare `test`
+   * marker is not enough — and that difference is the whole point, so it gets its own table.
+   */
+  it('accepts the runner databases an external pin legitimately names', () => {
+    for (const name of [
+      'nest-server-starter-ci',
+      'nest-server-starter-e2e',
+      'app-acctest',
+      'e2e',
+      'ci',
+      'my_project_ci',
+    ]) {
+      expect(isExternallyDroppableTestDb(name), name).toBe(true);
+    }
+  });
+
+  it('refuses `<slug>-test` — the lt dev test stack database — which the wider guard accepts', () => {
+    // The regression this pattern exists for. Both halves asserted together, because the finding
+    // was precisely that the two guards had been the same function.
+    for (const name of ['nest-server-starter-test', 'nest-server-starter-test-2', 'lt-crm-test', 'test', 'app-test']) {
+      expect(isDroppableTestDb(name), `${name} stays droppable by the wide guard`).toBe(true);
+      expect(isExternallyDroppableTestDb(name), `${name} is refused for an external pin`).toBe(false);
+    }
+  });
+
+  it('still refuses every environment-suffixed name', () => {
+    for (const name of [
+      'nest-server-starter-ci-local',
+      'app-e2e-prod',
+      'ci-portal-local',
+      'nest-server-starter-local',
+      'nest-server-starter-production',
+    ]) {
+      expect(isExternallyDroppableTestDb(name), name).toBe(false);
+    }
+  });
+
+  it('anchors its markers, so a slug containing them as a substring does not qualify', () => {
+    for (const name of ['social-hub', 'speciality', 'shope2e', 'financial']) {
+      expect(isExternallyDroppableTestDb(name), name).toBe(false);
+    }
+  });
+
+  it('is stateless — no /g flag, so repeated .test() cannot desync via lastIndex', () => {
+    expect(EXTERNALLY_DROPPABLE_DB_PATTERN.test('nest-server-starter-ci')).toBe(true);
+    expect(EXTERNALLY_DROPPABLE_DB_PATTERN.test('nest-server-starter-ci')).toBe(true);
   });
 });
 

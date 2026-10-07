@@ -5,7 +5,8 @@ import { MongoClient } from 'mongodb';
 
 import envConfig from '../src/config.env';
 import {
-  isDroppableTestDb,
+  EXTERNALLY_DROPPABLE_DB_PATTERN,
+  isExternallyDroppableTestDb,
   isStaleTestDb,
   NON_DISPOSABLE_DB_PATTERN,
   SAFE_TEST_DB_PATTERN,
@@ -82,17 +83,25 @@ export async function setup() {
     // This is the ONE drop site with no second condition — the sweep below and the reporter's
     // collection both additionally require isStaleTestDb(), i.e. the name must belong to this
     // project's own base. So the name is the only evidence here, and it gets the strictest
-    // reading available: the marker must be a delimited segment AND the name must not carry an
-    // environment suffix (`-local`, `-prod`, …). Without the second half, a project slug that
-    // legitimately contains `ci` (Corporate Identity) or `test` (an exam product) still lost its
-    // `lt dev` database.
-    if (!isDroppableTestDb(db.databaseName)) {
+    // reading available: `isExternallyDroppableTestDb`, which is NARROWER than the
+    // `isDroppableTestDb` used everywhere else — the marker must be a delimited segment, the name
+    // must not carry an environment suffix (`-local`, `-prod`, …), and a bare `test` marker is
+    // not accepted at all.
+    //
+    // Both halves of that have been paid for. Without the environment suffix, a project slug
+    // that legitimately contains `ci` (Corporate Identity) or `test` (an exam product) lost its
+    // `lt dev` database. Without excluding `test`, `<slug>-test` passes — and that is the
+    // database `lt dev test` gives its isolated Playwright stack, which may be RUNNING while
+    // this executes. See EXTERNALLY_DROPPABLE_DB_PATTERN for the full reasoning, including why
+    // comparing against the project's CONFIGURED database name does not work as an alternative.
+    if (!isExternallyDroppableTestDb(db.databaseName)) {
       await connection.close();
       throw new Error(
-        `Refusing to dropDatabase("${db.databaseName}"): not a recognized disposable test ` +
-          `database (needs a delimited e2e/ci/test/acctest segment — ${SAFE_TEST_DB_PATTERN} — ` +
-          `and must not carry an environment suffix — ${NON_DISPOSABLE_DB_PATTERN}). ` +
-          'NSC__MONGOOSE__URI must point at a disposable test database.',
+        `Refusing to dropDatabase("${db.databaseName}"): not a recognized disposable test-runner ` +
+          `database. An externally pinned NSC__MONGOOSE__URI needs a delimited e2e/ci/acctest ` +
+          `segment — ${EXTERNALLY_DROPPABLE_DB_PATTERN} — and must not carry an environment ` +
+          `suffix — ${NON_DISPOSABLE_DB_PATTERN}. A bare "test" marker is deliberately NOT ` +
+          'enough: `<slug>-test` is the database of the `lt dev test` stack, which may be running.',
       );
     }
 

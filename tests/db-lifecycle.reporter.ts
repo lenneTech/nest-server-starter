@@ -68,6 +68,48 @@ export function isDroppableTestDb(name: string): boolean {
 }
 
 /**
+ * The markers an EXTERNALLY SUPPLIED database name must carry before `tests/global-setup.ts`
+ * will drop it. Deliberately narrower than SAFE_TEST_DB_PATTERN: `test` is missing.
+ *
+ * Why `test` is not enough at THAT site while it stays on the accept list here: `<slug>-test` is
+ * a convention with an owner. `lt dev test` gives its isolated Playwright stack exactly that name
+ * (plus `<slug>-test-<shard>` and `<slug>-<ticket>-test`, all the same shape), migrates it before
+ * starting the API, and keeps it alive for the length of the run. A consuming project's own
+ * Playwright setup typically EMPTIES that database rather than dropping it, because dropping
+ * discards the Mongoose indexes a running server holds. So a name ending in `-test` is the one
+ * shape that reads disposable and may belong to something live. Measured on one developer
+ * machine: 43 of 156 databases passed the wider guard, among them `<slug>-test` for three
+ * different projects and the bare `test`.
+ *
+ * `e2e`, `ci` and `acctest` carry no such convention — they name a test RUNNER's own database,
+ * which is what that branch exists to reset. The externally-pinned case this file documents is a
+ * CI service container, and that names `<slug>-ci`.
+ *
+ * The anchoring is the same as SAFE_TEST_DB_PATTERN's and load-bearing for the same reason: the
+ * marker must be a delimited segment, or `ci` inside "soCIal" would qualify. `acctest` stays a
+ * separate alternative because the anchoring stops `test` from matching inside it.
+ *
+ * A project whose test database legitimately ends in `-test` and that pins the URI externally is
+ * refused and has to rename to `-e2e` / `-ci`. That is the intended direction: the cost is a
+ * rename, and the alternative cost is dropping a database somebody is using.
+ */
+export const EXTERNALLY_DROPPABLE_DB_PATTERN = /(^|[-_])(e2e|ci|acctest)([-_]|$)/i;
+
+/**
+ * May a database named by an EXTERNALLY supplied `NSC__MONGOOSE__URI` be dropped?
+ *
+ * Stricter than `isDroppableTestDb`, and the only guard on the one drop site that has no second
+ * condition to lean on. See EXTERNALLY_DROPPABLE_DB_PATTERN for why the two differ.
+ *
+ * Note for anyone tempted to replace this with a check against the project's CONFIGURED database
+ * name: that does not work. `NSC__MONGOOSE__URI` overrides exactly that value in the resolved
+ * config, so the base and the target are the same string and the comparison always passes.
+ */
+export function isExternallyDroppableTestDb(name: string): boolean {
+  return EXTERNALLY_DROPPABLE_DB_PATTERN.test(name) && !NON_DISPOSABLE_DB_PATTERN.test(name);
+}
+
+/**
  * Age limit for stale run databases. Normally staleness is detected via a dead
  * PID; this cap only exists for the rare case of PID recycling (the old PID now
  * belongs to an unrelated long-lived process, so the DB would never be

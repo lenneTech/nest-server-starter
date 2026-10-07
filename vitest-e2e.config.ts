@@ -51,7 +51,10 @@ if (LOW_RESOURCE) {
     : ACTIVE_E2E_RUNS > 0
       ? `${ACTIVE_E2E_RUNS} other e2e run(s) active on this machine`
       : `machine is busy (load ${NORMALISED_LOAD.toFixed(2)}/core >= ${LOAD_THRESHOLD})`;
-  process.stderr.write(`[e2e] low-resource mode: ${why} -> maxForks=${LOW_RESOURCE_FORKS}, timeouts raised\n`);
+  // Names the option actually set below. It said `maxForks` while the option it named had been
+  // removed from vitest — so the one line that could have revealed the dead setting instead
+  // asserted it was working. A log line that names its own option keeps that honest.
+  process.stderr.write(`[e2e] low-resource mode: ${why} -> maxWorkers=${LOW_RESOURCE_FORKS}, timeouts raised\n`);
 }
 
 export default defineConfig({
@@ -122,9 +125,28 @@ export default defineConfig({
     teardownTimeout: 30000,
     // Use forks instead of threads for better NestJS performance
     pool: 'forks',
-    // Cap parallel fork workers ONLY in low-resource mode (see CHECK_LOW_RESOURCE
-    // above); default = vitest's own (~CPU count) for full-speed solo runs.
-    ...(LOW_RESOURCE ? { poolOptions: { forks: { maxForks: LOW_RESOURCE_FORKS, minForks: 1 } } } : {}),
+    // Cap parallel workers ONLY in low-resource mode (see CHECK_LOW_RESOURCE above); default =
+    // vitest's own (~CPU count) for full-speed solo runs.
+    //
+    // `maxWorkers`, NOT `poolOptions.forks.maxForks`. Vitest 4 removed `poolOptions`: in 4.1.11
+    // the key occurs exactly once in `vitest/dist`, inside `logger.deprecate(...)`, and
+    // `maxForks` / `minForks` do not occur at all. So the cap was logged and discarded — measured
+    // in a consuming project, a run announcing "maxForks=4" used 11 forks on a 12-core machine
+    // across four runs, while an explicit `--max-workers=4` used 4. Low-resource mode was
+    // therefore a pure timeout extension: it waited twice as long before calling a timeout
+    // instead of removing the contention that caused it, which is the opposite of what the block
+    // above promises.
+    //
+    // Worth knowing WHY nothing caught it, because the next removed option will hit the same gap:
+    // no type-check guards this file. Even where `typecheck:tests` loads it (the spec below imports
+    // it), this repo's `module: commonjs` cannot resolve vitest's ESM-only type imports (`vite`,
+    // `@vitest/utils/display`); `skipLibCheck` hides that, the config type collapses to `any`, and
+    // an unknown or removed option passes. The guard is tests/unit/vitest-e2e-config.spec.ts,
+    // which asserts the RESOLVED `maxWorkers`, so a dead option fails there.
+    // `maxWorkers?: number | string`, so `undefined` is the correct "leave at the default".
+    //
+    // `minWorkers` is deliberately absent: it does not exist in 4.1.11 either.
+    maxWorkers: LOW_RESOURCE ? LOW_RESOURCE_FORKS : undefined,
     // PARALLEL CONFIGURATION: Fast execution with retry mechanism
     // Files run in parallel for maximum speed
     // Flaky tests are automatically retried up to 3 times

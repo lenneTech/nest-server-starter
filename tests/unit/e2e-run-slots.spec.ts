@@ -1,4 +1,15 @@
-import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import os from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -102,5 +113,71 @@ describe('e2e-run-slots', () => {
     const release = await acquireRunSlot({ maxRuns: 0 });
     expect(readdirSync(dir)).toHaveLength(0);
     release();
+  });
+  it('reclaims a slot whose PID is alive but whose age says it cannot be a run (PID recycling)', () => {
+    // The failure this prevents: a recycled PID makes a slot immortal, because upstream reclaims
+    // by liveness alone. `process.ppid` is alive for the duration of this test, so the only thing
+    // that can free this slot is the age cap.
+    const foreignPid = process.ppid;
+    const sevenHoursAgo = Date.now() - 7 * 60 * 60 * 1000;
+    writeFileSync(join(dir, `${foreignPid}.slot`), JSON.stringify({ pid: foreignPid, startedAt: sevenHoursAgo }));
+
+    expect(activeRuns()).toHaveLength(0);
+    expect(readdirSync(dir)).toHaveLength(0);
+  });
+
+  it('keeps a live slot that is inside the age cap', () => {
+    const foreignPid = process.ppid;
+    writeFileSync(join(dir, `${foreignPid}.slot`), JSON.stringify({ pid: foreignPid, startedAt: Date.now() - 60_000 }));
+
+    expect(activeRuns().map((s) => s.pid)).toContain(foreignPid);
+  });
+
+  // The two tests below each fail against the unhardened claimOwnSlot (bare `mkdirSync`, flag
+  // 'w'). They must create the slot directory THEMSELVES or plant the link THEMSELVES: `dir` comes
+  // from mkdtempSync, which is always 0700 and always empty, so asserting on it proves nothing.
+  it('creates a missing slot directory private (0700)', async () => {
+    // 0700: on a shared host the directory must not be writable by anyone else, or a slot path
+    // can be pre-created as a symlink that the write would then follow.
+    const slots = join(dir, 'slots');
+    process.env.LT_E2E_SLOT_DIR = slots;
+
+    const release = await acquireRunSlot({ maxRuns: 2, pollMs: 5 });
+    try {
+      expect(statSync(slots).mode & 0o777).toBe(0o700);
+    } finally {
+      release();
+    }
+  });
+
+  it('does not follow a symlink planted at the own slot path', async () => {
+    const slots = join(dir, 'slots');
+    mkdirSync(slots);
+    process.env.LT_E2E_SLOT_DIR = slots;
+    const victim = join(dir, 'victim.txt');
+    writeFileSync(victim, 'PRECIOUS');
+    const slot = join(slots, `${process.pid}.slot`);
+    symlinkSync(victim, slot);
+
+    const release = await acquireRunSlot({ maxRuns: 2, pollMs: 5 });
+    try {
+      // A followed write would have truncated the target and put the slot JSON into it.
+      expect(readFileSync(victim, 'utf8')).toBe('PRECIOUS');
+      expect(lstatSync(slot).isSymbolicLink()).toBe(false);
+    } finally {
+      release();
+    }
+  });
+
+  it('proceeds without the governor instead of killing the run when no slot can be written', async () => {
+    // Fail-open is this module's stated contract, and the case that broke it upstream is an
+    // unwritable slot directory (another user owns it on a shared host, a read-only tmpdir).
+    process.env.LT_E2E_SLOT_DIR = join(dir, 'not-a-directory', 'nested');
+    writeFileSync(join(dir, 'not-a-directory'), 'a file, so mkdir below it must fail');
+
+    const logs: string[] = [];
+    const release = await acquireRunSlot({ log: (m) => logs.push(m), maxRuns: 2, pollMs: 5 });
+    expect(logs.some((m) => m.includes('proceeding without the governor'))).toBe(true);
+    expect(() => release()).not.toThrow();
   });
 });
