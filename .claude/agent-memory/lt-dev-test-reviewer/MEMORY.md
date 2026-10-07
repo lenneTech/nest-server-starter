@@ -1,0 +1,1 @@
+- [vitest config is never type-checked](vitest-config-not-typechecked.md) — module commonjs collapses vitest's config type to `any`; the runtime spec is the guard; mkdtemp dirs are already 0700
