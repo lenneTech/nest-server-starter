@@ -133,9 +133,13 @@ describe('e2e-run-slots', () => {
     expect(activeRuns().map((s) => s.pid)).toContain(foreignPid);
   });
 
-  // The two tests below each fail against the unhardened claimOwnSlot (bare `mkdirSync`, flag
-  // 'w'). They must create the slot directory THEMSELVES or plant the link THEMSELVES: `dir` comes
-  // from mkdtempSync, which is always 0700 and always empty, so asserting on it proves nothing.
+  // The two tests below each pin one part of the hardened claimOwnSlot. The 0700 test fails
+  // against a bare `mkdirSync`. The symlink test fails only once the `unlinkSync` before the write
+  // is gone: unlink removes a planted link instead of following it, so it alone defends against
+  // this test. `flag: 'wx'` guards the race between unlink and write, which no deterministic test
+  // can hit — it stays justified in the implementation, not tested here. Both tests must create
+  // the slot directory THEMSELVES or plant the link THEMSELVES: `dir` comes from mkdtempSync,
+  // which is always 0700 and always empty, so asserting on it proves nothing.
   //
   // Both are POSIX-only. Windows has no permission bits (`statSync` reports 0666 whatever mode was
   // asked for), `symlinkSync` needs Developer Mode or admin rights there, and the attack they guard
