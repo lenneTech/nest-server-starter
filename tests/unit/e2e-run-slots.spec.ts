@@ -136,7 +136,13 @@ describe('e2e-run-slots', () => {
   // The two tests below each fail against the unhardened claimOwnSlot (bare `mkdirSync`, flag
   // 'w'). They must create the slot directory THEMSELVES or plant the link THEMSELVES: `dir` comes
   // from mkdtempSync, which is always 0700 and always empty, so asserting on it proves nothing.
-  it('creates a missing slot directory private (0700)', async () => {
+  //
+  // Both are POSIX-only. Windows has no permission bits (`statSync` reports 0666 whatever mode was
+  // asked for), `symlinkSync` needs Developer Mode or admin rights there, and the attack they guard
+  // against does not exist on it: `os.tmpdir()` is per user, not a shared world-writable `/tmp`.
+  const posixOnly = it.skipIf(process.platform === 'win32');
+
+  posixOnly('creates a missing slot directory private (0700)', async () => {
     // 0700: on a shared host the directory must not be writable by anyone else, or a slot path
     // can be pre-created as a symlink that the write would then follow.
     const slots = join(dir, 'slots');
@@ -150,7 +156,7 @@ describe('e2e-run-slots', () => {
     }
   });
 
-  it('does not follow a symlink planted at the own slot path', async () => {
+  posixOnly('does not follow a symlink planted at the own slot path', async () => {
     const slots = join(dir, 'slots');
     mkdirSync(slots);
     process.env.LT_E2E_SLOT_DIR = slots;
