@@ -276,7 +276,10 @@ overrides:
   # 2026-10-03: the same again — raised 8.3.1 -> 8.3.2, key with it. 8.3.2 is the newest 8.x
   # past the release-age gate, where a no-override resolve lands, and nest-server 11.41.7's
   # own vite devDependency (no new advisory; pure hold-back).
-  'vite@<8.3.2': 8.3.2
+  # 2026-10-07: 8.3.2 had become a downgrade lock again — raised 8.3.2 -> 8.3.3, key with it.
+  # 8.3.3 (dev-server `fs.serve` fixes, identical dependency manifest) is the newest 8.x past
+  # the release-age gate and nest-server 11.42.8's own vite devDependency (no new advisory).
+  'vite@<8.3.3': 8.3.3
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf is
   # provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via @compodoc/compodoc.
@@ -487,7 +490,12 @@ overrides:
   # pnpm overrides do not reach consumers, so every project needs its own copy — see
   # node_modules/@lenne.tech/nest-server/docs/security-overrides.md. Added 2026-10-01.
   # Remove once @nestjs/swagger pins >=5.4.1 itself.
-  'js-yaml@>=5.0.0 <5.4.2': 5.4.2
+  # 2026-10-07: target raised 5.4.2 -> 5.4.3, key with it, mirroring @lenne.tech/nest-server
+  # 11.42.8. 5.4.3 (2026-10-05, parser fix for a whitespace-only block scalar followed by a
+  # less indented line, no advisory) is the newest 5.x past the release-age gate. Not a
+  # hold-back fix — the swagger exact pin is still the only 5.x requester; 5.4.2 already
+  # cleared GHSA-r3ph-w7gj-g6xm.
+  'js-yaml@>=5.0.0 <5.4.3': 5.4.3
 
   # Security: nodemailer. Transitive via @lenne.tech/nest-server only (not a direct
   # dependency here). LOCKSTEP entry: the target must EQUAL the version the framework
