@@ -114,6 +114,22 @@ const PROJECT_FILE = { downloadRoles: [RoleEnum.S_USER] };
  */
 const PROJECT_BODY_PARSER: IServerOptions['bodyParser'] = undefined;
 
+/**
+ * TUS resumable uploads, SHARED by `localConfig()` and `deployedConfig()`. `TusModule.forRoot()` in
+ * server.module.ts gets no `config`, so this key is what configures it — read since nest-server
+ * 11.42.9; before, a `tus` block here did nothing at all.
+ *
+ * `undefined` keeps the framework defaults: endpoint `/tus`, signed-in users only (`[S_USER]`), any
+ * file type, 50 GB per upload. Restrict it like this:
+ *
+ *   const PROJECT_TUS: IServerOptions['tus'] = { allowedTypes: ['image/*', 'application/pdf'], maxSize: 100 * 1024 * 1024 };
+ *
+ * `false` switches TUS off. Upload URLs follow the request, so they stay correct when you enable the
+ * global prefix in main.ts. `relativeLocation: true` for a frontend that reaches TUS through a
+ * same-origin proxy. See the framework's 11.42.8-to-11.42.9 guide § 5.
+ */
+const PROJECT_TUS: IServerOptions['tus'] = undefined;
+
 /*
  * FROM nest-server 11.35.0 ON, the rule in `FileService.checkRights()` is also available as a
  * DECLARATION — add `access` to PROJECT_FILE and you can delete the override:
@@ -384,6 +400,7 @@ function deployedConfig(
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
     templates: PROJECT_TEMPLATES,
+    tus: PROJECT_TUS,
     // Express `trust proxy`, passed through by CoreModule (nest-server 11.33.0+).
     // Deliberately UNSET here, because the correct value is the number of proxies
     // that actually sit in front of THIS deployment and no template can know it.
@@ -531,6 +548,7 @@ function localConfig(
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
     templates: PROJECT_TEMPLATES,
+    tus: PROJECT_TUS,
   };
 
   return options.config ? merge({}, base, options.config) : base;
