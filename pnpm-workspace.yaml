@@ -217,16 +217,16 @@ overrides:
   #   patched >=12.0.1) (added 2026-10-06, mirrors nest-server 11.42.4)
   # RUNTIME: mergeDeep runs while the GraphQL schema is assembled. LOAD-BEARING: @nestjs/graphql
   # 13.4.5 — the newest 13.x — EXACT-pins `12.0.0`, so no update reaches the fix; only 14.x moves it.
-  # Target 12.0.1, not the newest 12.x: 12.0.2+ pulls @whatwg-node/promise-helpers@2, which needs
-  # Node >=22.15. Note it does NOT reach a utils 11.x from an older @graphql-tools/schema 10.0.x
+  # Note it does NOT reach a utils 11.x from an older @graphql-tools/schema 10.0.x
   # (see nest-server migration-guides/11.42.3-to-11.42.4.md §3).
-  # 2026-10-09: the fresh-resolve lockfile ALSO carries utils 12.0.3 + @whatwg-node/promise-helpers@2
-  # on a path this key does not match: @apollo/server 5.5.1 > @graphql-tools/schema ^10 (10.1.3) >
-  # merge 9.2.6 > utils ^12.0.3. Every generated project already resolves that, so the Node >=22.15
-  # floor is in the tree regardless. Target kept at 12.0.1 to mirror nest-server's own entry; revisit
-  # together with the framework.
+  # 2026-10-09: raised 12.0.1 -> 12.0.3, key with it, mirroring nest-server 11.42.10
+  # (migration-guides/11.42.9-to-11.42.10.md §2). 12.0.1 was chosen because 12.0.2+ pulls
+  # @whatwg-node/promise-helpers@2 (Node >=22.15); that floor was in every fresh tree anyway
+  # (@apollo/server 5.5.1 > @graphql-tools/schema 10.1.3 > merge 9.2.6 > utils ^12.0.3), and the
+  # framework now declares engines.node >=22.15, so the newest 12.x is the target. The key intersects
+  # the ^12.0.0 that schema/merge request, so an older target would hold them back too.
   # Remove once @nestjs/graphql pins >=12.0.1 in the major this project uses.
-  '@graphql-tools/utils@>=12.0.0 <12.0.1': 12.0.1
+  '@graphql-tools/utils@>=12.0.0 <12.0.3': 12.0.3
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).
@@ -514,8 +514,8 @@ overrides:
   # same change as every framework bump: `pnpm run update` raises package.json only, it
   # never touches this file.
   #
-  # Current target 10.0.15 = what @lenne.tech/nest-server 11.42.7 declares (10.0.14 from 11.42.4,
-  # 10.0.13 from 11.41.5).
+  # Current target 10.0.16 = what @lenne.tech/nest-server 11.42.10 declares (10.0.15 from 11.42.7,
+  # 10.0.14 from 11.42.4, 10.0.13 from 11.41.5).
   # 2026-10-01: FIVE advisories published 2026-09-28..30 cover 9.1.1 — the last 9.x — and
   # are fixed ONLY on the 10.x line, which is why the framework took the major in 11.41.5:
   #   GHSA-v53p-9fqp-m79j  high      <=10.0.5          patched >=10.0.6
@@ -542,7 +542,9 @@ overrides:
   # (NodemailerError typing fix against @types/node 26, no advisory). Same reasoning as the
   # 10.0.14 raise: the framework's exact 10.0.15 never intersected `<10.0.14`, so the tree already
   # held a single 10.0.15 copy; the raise keeps a `^10` requester from being pinned to 10.0.14.
-  'nodemailer@<10.0.15': 10.0.15
+  # 2026-10-09: raised 10.0.15 -> 10.0.16, key with it — nest-server 11.42.10 declares 10.0.16
+  # (address parser and cookie handling fixes, no advisory). Same reasoning as above.
+  'nodemailer@<10.0.16': 10.0.16
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
