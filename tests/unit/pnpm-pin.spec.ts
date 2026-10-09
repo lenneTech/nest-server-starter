@@ -118,7 +118,11 @@ describe('pnpm pin (packageManager as single source of truth)', () => {
       const prefix = mkdtempSync(join(tmpdir(), 'pnpm-pin-'));
       try {
         execFileSync('npm', ['install', '-g', '--prefix', prefix, derived], { encoding: 'utf-8', stdio: 'pipe' });
+        // cwd MUST be outside any project: inside one, pnpm 11 switches to that directory's
+        // packageManager pin and reports the pin, not its own version — so run from ROOT, any
+        // provisioned version would echo the pin back and this assertion could never fail.
         const version = execFileSync(process.execPath, [join(prefix, 'bin', 'pnpm'), '--version'], {
+          cwd: prefix,
           encoding: 'utf-8',
         }).trim();
         expect(`pnpm@${version}`).toBe(derived);
