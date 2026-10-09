@@ -79,11 +79,15 @@ auditConfig:
     # closed the report as disputed (kornelski/http-cache-semantics#56), a range dispute is open
     # (github/advisory-database#10139). So this lockfile stays on 4.2.0 and the entry stays; a
     # fresh resolve (every generated project) lands on 4.3.0, where it suppresses nothing.
+    # Re-verified 2026-10-09: advisory unchanged (`<= 4.2.0`, no first patched version, not
+    # withdrawn). This lockfile was replaced with a fresh resolve that day and carries 4.3.0 too,
+    # so the entry suppresses nothing here either. It stays until the removal condition above is
+    # met (a patched release, which `check:overrides` reports as FIX AVAILABLE).
     - GHSA-ch52-4w7c-c8xp
     # braces <= 3.0.3, HIGH: stack exhaustion through deeply nested patterns. Dev tooling only:
     # nodemon > chokidar@3 > braces, and cpy-cli > cpy / globby > fast-glob > micromatch >
     # braces. Patterns come from this repository's own scripts, never from input. Verified
-    # 2026-10-03: newest release 3.0.3, no first patched version.
+    # 2026-10-03: newest release 3.0.3, no first patched version. Re-verified 2026-10-09: unchanged.
     - GHSA-vfj7-8cjw-p6xm
 
 # pnpm 11 configuration
@@ -216,6 +220,11 @@ overrides:
   # Target 12.0.1, not the newest 12.x: 12.0.2+ pulls @whatwg-node/promise-helpers@2, which needs
   # Node >=22.15. Note it does NOT reach a utils 11.x from an older @graphql-tools/schema 10.0.x
   # (see nest-server migration-guides/11.42.3-to-11.42.4.md §3).
+  # 2026-10-09: the fresh-resolve lockfile ALSO carries utils 12.0.3 + @whatwg-node/promise-helpers@2
+  # on a path this key does not match: @apollo/server 5.5.1 > @graphql-tools/schema ^10 (10.1.3) >
+  # merge 9.2.6 > utils ^12.0.3. Every generated project already resolves that, so the Node >=22.15
+  # floor is in the tree regardless. Target kept at 12.0.1 to mirror nest-server's own entry; revisit
+  # together with the framework.
   # Remove once @nestjs/graphql pins >=12.0.1 in the major this project uses.
   '@graphql-tools/utils@>=12.0.0 <12.0.1': 12.0.1
 
