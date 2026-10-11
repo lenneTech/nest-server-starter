@@ -39,7 +39,8 @@ export const SAFE_TEST_DB_PATTERN = /(^|[-_])(e2e|ci|test|acctest)([-_]|$)/i;
 
 /**
  * Environment suffixes that mark a database as NOT disposable, whatever else its
- * name says. Applied ON TOP of SAFE_TEST_DB_PATTERN by `isDroppableTestDb()`.
+ * name says. Applied ON TOP of the marker patterns by `isDroppableTestDb()` and
+ * `isExternallyDroppableTestDb()`.
  *
  * Why this exists: SAFE_TEST_DB_PATTERN is a name heuristic, and a project slug
  * may legitimately carry one of its markers as a whole word — `ci` is the
@@ -58,10 +59,12 @@ export const NON_DISPOSABLE_DB_PATTERN =
   /(^|[-_])(local|dev|develop|development|prod|production|staging|stage|live)([-_]|$)/i;
 
 /**
- * May this database be dropped by a path that has no other condition to lean on?
+ * May this database be dropped, judged by its name alone? The WIDE reading: any delimited
+ * e2e/ci/test/acctest segment qualifies, so `<slug>-test` passes.
  *
- * Use this — not SAFE_TEST_DB_PATTERN alone — wherever the name is the ONLY
- * evidence available, i.e. for an externally supplied Mongo URI.
+ * Do NOT use it for an externally supplied Mongo URI. That drop site has nothing but the name to
+ * go on, and there `<slug>-test` may be the database of a running `lt dev test` stack — use
+ * `isExternallyDroppableTestDb` (see EXTERNALLY_DROPPABLE_DB_PATTERN for why the two differ).
  */
 export function isDroppableTestDb(name: string): boolean {
   return SAFE_TEST_DB_PATTERN.test(name) && !NON_DISPOSABLE_DB_PATTERN.test(name);

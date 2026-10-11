@@ -61,14 +61,14 @@ let releaseRunSlot: (() => void) | undefined;
 export async function setup() {
   if (process.env.NSC__MONGOOSE__URI) {
     // A URI without a path (`mongodb://host`, `mongodb://host/`) makes the driver resolve to its
-    // DEFAULT database, `test` — a name the guard below accepts, so a truncated or malformed URI
-    // would drop the server's `test` database instead of failing. Nobody chose that database, so
-    // refuse before connecting rather than acting on an accident.
+    // DEFAULT database, `test`. Nobody chose that database. The guard below refuses the name `test`
+    // as well, but only after connecting and with an error about the name, which points at the
+    // wrong problem — so refuse here first and say what is actually wrong: the URI names nothing.
     if (!splitMongoUri(process.env.NSC__MONGOOSE__URI).dbName) {
       throw new Error(
         `Refusing to use NSC__MONGOOSE__URI="${process.env.NSC__MONGOOSE__URI}": it names no ` +
-          'database, so the driver would fall back to its default ("test") and this setup would ' +
-          'drop that. Give the URI an explicit database path.',
+          'database, so the driver would fall back to its default ("test"). Give the URI an ' +
+          'explicit database path.',
       );
     }
 
@@ -83,10 +83,11 @@ export async function setup() {
     // This is the ONE drop site with no second condition — the sweep below and the reporter's
     // collection both additionally require isStaleTestDb(), i.e. the name must belong to this
     // project's own base. So the name is the only evidence here, and it gets the strictest
-    // reading available: `isExternallyDroppableTestDb`, which is NARROWER than the
-    // `isDroppableTestDb` used everywhere else — the marker must be a delimited segment, the name
-    // must not carry an environment suffix (`-local`, `-prod`, …), and a bare `test` marker is
-    // not accepted at all.
+    // reading available: `isExternallyDroppableTestDb`, which is NARROWER than both
+    // `isDroppableTestDb` and the SAFE_TEST_DB_PATTERN check the sweep and the reporter pair with
+    // isStaleTestDb(). The marker must be a delimited segment, the name must not carry an
+    // environment suffix (`-local`, `-prod`, …), and, unlike under either of the other two, a bare
+    // `test` marker is not accepted at all.
     //
     // Both halves of that have been paid for. Without the environment suffix, a project slug
     // that legitimately contains `ci` (Corporate Identity) or `test` (an exam product) lost its

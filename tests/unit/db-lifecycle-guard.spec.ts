@@ -301,7 +301,8 @@ describe('splitMongoUri', () => {
     'reports an EMPTY dbName for %s, which names no database',
     (uri) => {
       // global-setup.ts relies on this to refuse a path-less URI: the driver would otherwise
-      // fall back to its default database ("test"), which the name guard happily accepts. The
+      // fall back to its default database ("test"). The name guard refuses `test` as well, but
+      // only after connecting and with an error about the name, not the missing path. The
       // greedy predecessor returned the HOST here, so the refusal could never fire.
       expect(splitMongoUri(uri).dbName).toBe('');
     },
