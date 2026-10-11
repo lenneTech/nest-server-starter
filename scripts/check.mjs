@@ -60,6 +60,25 @@ const IDLE_TIMEOUT_MS = (() => {
   }
   return seconds * 1000;
 })();
+// Hang cap for the AUDIT step: kill it when it has not finished after this long. `pnpm audit`
+// against a dead registry does not fail, it HANGS — no output, no exit, no error envelope — and the
+// idle watchdog above deliberately leaves audit alone. Without a cap `check` waits forever, locally
+// and in CI, which is worse than any failure. Ten minutes is deliberately generous: the longest
+// REAL audit measured in nest-server took 4m11s (pnpm's own retry ladder during the npm advisory
+// outage of 2026-09-04), so the cap fires on "never came back", never on "took a while". Ported
+// from nest-server 11.40.0. Override with CHECK_AUDIT_TIMEOUT (seconds); 0 disables it.
+const AUDIT_TIMEOUT_MS = (() => {
+  const raw = process.env.CHECK_AUDIT_TIMEOUT;
+  const DEFAULT_MS = 600 * 1000;
+  if (raw === undefined || raw === "") return DEFAULT_MS;
+  const seconds = Number(raw);
+  if (seconds === 0) return 0; // explicit opt-out
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    process.stderr.write(`[check] ignoring invalid audit-timeout "${raw}", using ${DEFAULT_MS / 1000}s\n`);
+    return DEFAULT_MS;
+  }
+  return seconds * 1000;
+})();
 // Verbose streams raw output, so the in-place live view is disabled there.
 const TTY = Boolean(process.stdout.isTTY) && !VERBOSE;
 
@@ -207,9 +226,13 @@ export function auditDegradedText(reason, { short }) {
         : "the npm advisory service was unreachable"
       : reason === "unreadable"
         ? "it exited 0 but produced no readable report, so nothing was actually checked"
-        : short
-          ? "npm retired the audit endpoint pnpm uses"
-          : "npm retired the endpoint pnpm uses";
+        : reason === "hung"
+          ? short
+            ? `it did not finish within ${Math.round(AUDIT_TIMEOUT_MS / 1000)}s and was killed`
+            : `it did not finish within ${Math.round(AUDIT_TIMEOUT_MS / 1000)}s and was killed; the registry never answered`
+          : short
+            ? "npm retired the audit endpoint pnpm uses"
+            : "npm retired the endpoint pnpm uses";
   return short
     ? `could not run — ${cause}; not blocking`
     : `audit could not run (${cause}) — vulnerabilities NOT CHECKED`;
@@ -223,17 +246,19 @@ export function auditDegradedText(reason, { short }) {
 /**
  * Is an audit failure an INFRASTRUCTURE problem rather than a finding?
  *
- * Three families, all found the hard way (ported from nest-server, 2026-09-04):
+ * Four families, all found the hard way (ported from nest-server, 2026-09-04):
  *
  *  - `retired`     — npm retired the legacy endpoint older pnpm calls. Waiting never fixes it;
  *                    it needs a pnpm upgrade.
  *  - `unreachable` — the working bulk endpoint timing out, 5xx-ing, or refusing the connection.
  *                    A later run fixes it.
+ *  - `hung`        — the audit never came back and the hang cap (AUDIT_TIMEOUT_MS) killed it.
+ *                    Recognised by the cap's own marker, because the killed process said nothing.
  *  - `unreadable`  — exit 0 with nothing parseable. Decided in `resolveAuditDegradation`, not
  *                    here, because there is no error envelope to match a signature against.
  *
- * The two are reported separately BECAUSE the reader's next action differs; a single neutral
- * sentence would leave somebody waiting forever on the first.
+ * They are reported separately BECAUSE the reader's next action differs; a single neutral
+ * sentence would leave somebody waiting forever on `retired`.
  *
  * The auth guard comes FIRST, before the rule it is an exception to: a 4xx refusal is ACTIONABLE
  * (a token, a registry setting) and must stay fatal. A proxy that rejects the request while
@@ -242,6 +267,8 @@ export function auditDegradedText(reason, { short }) {
  * "infrastructure, not blocking": the audit stops running for good and nobody is told why.
  */
 export function isAuditEndpointUnavailable(out) {
+  // Checked FIRST: the killed process wrote nothing of its own, so no other branch could match.
+  if (/AUDIT_STEP_HUNG/.test(out)) return "hung";
   if (/ERR_PNPM_AUDIT_BAD_RESPONSE/.test(out) || (/\baudit\b/i.test(out) && /\bretired\b/i.test(out))) {
     return "retired";
   }
@@ -376,9 +403,10 @@ async function advisoryServiceReachable() {
   }
 }
 
-async function runAudit(auditCmd) {
+// Exported for tests/unit/check-audit-guard.spec.ts (the hang cap end to end).
+export async function runAudit(auditCmd) {
   const cmd = /(^|\s)--json(\s|$)/.test(auditCmd) ? auditCmd : `${auditCmd} --json`;
-  const { code, out } = await capture(cmd, ROOT);
+  const { code, out } = await capture(cmd, ROOT, 0, AUDIT_TIMEOUT_MS);
   let counts = null;
   let ignored = 0;
   try {
@@ -552,14 +580,18 @@ function killTree(child, signal = "SIGTERM") {
 // idleTimeoutMs > 0 arms the no-output watchdog for this child; 0 (the default)
 // runs it unwatched. Only callers that KNOW the child streams progress (test
 // steps) should pass a timeout — see runGroup.
-function capture(cmd, cwd, idleTimeoutMs = 0) {
+// absoluteTimeoutMs > 0 kills the child once that much time has passed, output or not (the audit
+// hang cap, see AUDIT_TIMEOUT_MS). Exported for tests/unit/check-audit-guard.spec.ts.
+export function capture(cmd, cwd, idleTimeoutMs = 0, absoluteTimeoutMs = 0) {
   return new Promise((resolve) => {
     const child = spawn(cmd, { cwd, shell: true });
     RUNNING.add(child);
     let out = "";
     let idleTimer = null;
     let killTimer = null;
+    let absoluteTimer = null;
     let watchdogHit = false;
+    let absoluteHit = false;
     // Any output resets the watchdog — only complete silence for the full
     // window counts as wedged. Escalate to SIGKILL for processes that ignore
     // SIGTERM (deadlocked event loops usually still honor TERM, but be sure).
@@ -582,12 +614,32 @@ function capture(cmd, cwd, idleTimeoutMs = 0) {
       if (VERBOSE) process.stdout.write(d);
     };
     armWatchdog();
+    // A second, independent limit, and deliberately not the idle watchdog: that one only ever
+    // watches test steps, because build / typecheck / audit buffer their output to the end and
+    // silence there means nothing. This one fires on "never came back", whatever was printed.
+    if (absoluteTimeoutMs) {
+      absoluteTimer = setTimeout(() => {
+        absoluteHit = true;
+        killTree(child);
+        killTimer = setTimeout(() => killTree(child, "SIGKILL"), 5000);
+        killTimer.unref();
+      }, absoluteTimeoutMs);
+      absoluteTimer.unref();
+    }
     child.stdout.on("data", onData);
     child.stderr.on("data", onData);
     const done = (code, extra) => {
       clearTimeout(idleTimer);
       clearTimeout(killTimer);
+      clearTimeout(absoluteTimer);
       RUNNING.delete(child);
+      if (absoluteHit) {
+        // AUDIT_STEP_HUNG is the marker isAuditEndpointUnavailable() recognises as `hung`.
+        const note =
+          `[watchdog] step did not finish within ${Math.round(absoluteTimeoutMs / 1000)}s — ` +
+          "process tree killed as hung. AUDIT_STEP_HUNG";
+        return resolve({ code: 1, out: `${out}\n${note}` });
+      }
       if (watchdogHit) {
         const note =
           `[watchdog] step produced no output for ${Math.round(idleTimeoutMs / 1000)}s — ` +
