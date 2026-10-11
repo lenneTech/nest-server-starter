@@ -40,3 +40,11 @@ Traps verified 2026-07-30 (re-verify, these move):
   only, so reformatting under `tests/` used to slip past CI even when `oxfmt --check` would reject
   it). Project formatter is `singleQuote: true` (`.oxfmtrc.jsonc`). Note `.claude/` is outside both
   paths, so agent-memory Markdown is NOT formatter-checked here.
+
+Retiring an `ignoreGhsas` entry by commenting it out (`# - GHSA-…`) is safe, verified 2026-10-11:
+every parser skips `#` lines (pnpm's YAML, this repo's and lt-monorepo's `check-overrides.mjs`
+via `/^\s*#/`, nuxt-base-starter's `check-suppressions.mjs`, the scope spec's
+`/^\s*-\s*(GHSA-…)\s*$/m`), and the lt CLI hoist (`cli/src/lib/hoist-workspace-pnpm-config.ts`)
+re-dumps via js-yaml and only carries comments sitting above FIRST-level keys of `auditConfig`,
+so no comment under `ignoreGhsas` items reaches a generated monorepo root. In a monorepo, a
+hoisted entry with no vulnerable version in the lockfile fails `pnpm run check` ("NOT IN TREE").

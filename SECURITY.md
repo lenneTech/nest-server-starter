@@ -33,6 +33,14 @@ An entry is only acceptable with all four of these written next to it:
 
 If you cannot write those honestly, fix the dependency instead.
 
+Remove an entry as soon as the lockfile no longer resolves a vulnerable version, even when the
+release that left the range is not a real fix. An entry that hides nothing does no work today,
+and the day the advisory's range grows to cover the new version it would silence that finding
+without anyone re-assessing it. It also breaks generated monorepos: this list is hoisted into
+the workspace root, and the app's `scripts/check-suppressions.mjs` fails `pnpm run check` on
+every entry that hides nothing ("NOT IN TREE"). Leave the assessment as a comment next to the
+retired entry; if `pnpm audit` reports the advisory again, re-check it and put the entry back.
+
 ### The scoping trap
 
 `ignoreGhsas` matches on the **GHSA id alone**. pnpm applies no package, version or path
@@ -41,9 +49,9 @@ advisory if it later appears on a production path.
 
 So a suppression is not only a statement about today's tree — it is a standing hole in the
 detection. Whenever a suppressed advisory affects a package that also has a production
-path, record that explicitly and state what to re-check after a dependency bump. The two
-current entries (`GHSA-ch52-4w7c-c8xp`, `GHSA-vfj7-8cjw-p6xm`, since 2026-10-03) follow that
-shape — copy it.
+path, record that explicitly and state what to re-check after a dependency bump. The current
+entry (`GHSA-vfj7-8cjw-p6xm`, since 2026-10-03) and the retired `GHSA-ch52-4w7c-c8xp` follow
+that shape — copy it.
 
 ### Before the third claim: can a patch make the fix usable?
 

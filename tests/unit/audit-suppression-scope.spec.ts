@@ -25,10 +25,13 @@ const ROOT = join(__dirname, '../..');
 /**
  * Packages whose advisories are currently suppressed, and must stay dev-only.
  *
- * Two entries since 2026-10-03, both advisories with NO patched release at all, both
- * reached only through dev tooling (see the comments in `pnpm-workspace.yaml`). The
- * patterns match ANY version on purpose: with no fixed release, every version in the
- * production tree is a vulnerable one, so any appearance there voids the justification.
+ * One entry: GHSA-vfj7-8cjw-p6xm (braces, since 2026-10-03), an advisory with NO patched
+ * release at all, reached only through dev tooling (see the comment in `pnpm-workspace.yaml`).
+ * A second, GHSA-ch52-4w7c-c8xp (http-cache-semantics), was retired on 2026-10-11 once every
+ * resolve landed on 4.3.0, outside the advisory's range; its assessment stays commented out
+ * there for the day the range grows. The patterns match ANY version on purpose: with no fixed
+ * release, every version in the production tree is a vulnerable one, so any appearance there
+ * voids the justification.
  *
  * PORTED from @lenne.tech/nest-server on 2026-10-03, together with
  * `scripts/check-overrides.mjs`. It matters MORE here than there: since lt CLI 1.42.0 this
@@ -71,8 +74,6 @@ const ROOT = join(__dirname, '../..');
  * when upstream moves, not when your own reasoning stopped applying.
  */
 const DEV_ONLY_SUPPRESSIONS: { ghsa: string; pkg: string; vulnerableInProd: RegExp }[] = [
-  // via @swc/cli > @xhmikosr/bin-wrapper > @xhmikosr/downloader > got > cacheable-request
-  { ghsa: 'GHSA-ch52-4w7c-c8xp', pkg: 'http-cache-semantics', vulnerableInProd: /http-cache-semantics@/ },
   // via nodemon > chokidar@3, and cpy-cli > cpy / globby > fast-glob > micromatch
   { ghsa: 'GHSA-vfj7-8cjw-p6xm', pkg: 'braces', vulnerableInProd: /braces@/ },
 ];
@@ -81,7 +82,7 @@ const DEV_ONLY_SUPPRESSIONS: { ghsa: string; pkg: string; vulnerableInProd: RegE
  * In a generated MONOREPO this project has no `pnpm-workspace.yaml` of its own: the lt CLI hoists
  * its settings — these suppressions included — into the root file and deletes this one. The root
  * file then holds the union of every sub-project's suppressions, and lt-monorepo's own
- * `scripts/check-overrides.mjs` checks them there, in CI. Asserting "exactly these two" against
+ * `scripts/check-overrides.mjs` checks them there, in CI. Asserting "exactly these" against
  * that union would fail on the frontend's entries, so the spec stands down and says why.
  */
 const OWN_WORKSPACE = existsSync(join(ROOT, 'pnpm-workspace.yaml'));

@@ -27,15 +27,16 @@ strictPeerDependencies: false
 # prints "1 high (1 ignored)" and still exits 0. The count is informational; the exit
 # code is the gate. Do not chase the number to zero by widening this list.
 # ----------------------------------------------------------------------------------
-# Two suppressions since 2026-10-03 — the `auditConfig` block right below this comment.
-# Both are advisories with NO patched release anywhere, both reach this tree only through
-# dev tooling. They are guarded on both axes, which is what made them acceptable:
+# The suppressions live in the `auditConfig` block right below this comment (retired ones
+# stay there as comments, with their assessment). Every active entry is an advisory with NO
+# patched release anywhere that reaches this tree only through dev tooling. Each is guarded
+# on both axes, which is what makes it acceptable:
 #   - still TRUE?    `pnpm run check:overrides` (part of `check`) re-checks each GHSA
 #                    against the GitHub Advisory API and FAILS with "FIX AVAILABLE" the
 #                    moment a patched version exists. Then remove the entry.
-#   - still in SCOPE? tests/unit/audit-suppression-scope.spec.ts fails as soon as either
-#                    package appears in the PRODUCTION tree — here, or in a generated
-#                    project, which inherits this block (see point 1 below).
+#   - still in SCOPE? tests/unit/audit-suppression-scope.spec.ts fails as soon as a
+#                    suppressed package appears in the PRODUCTION tree — here, or in a
+#                    generated project, which inherits this block (see point 1 below).
 #
 # GHSA-mh99-v99m-4gvg (brace-expansion, HIGH) lived here until 2026-08-22 as a
 # documented false positive — GitHub's range was then a blanket `<= 5.0.7` that swept
@@ -69,23 +70,24 @@ strictPeerDependencies: false
 
 auditConfig:
   ignoreGhsas:
-    # http-cache-semantics <= 4.2.0, HIGH: max-stale handling can serve one user's cached
-    # response to another. Dev tooling only: @swc/cli (also via @nestjs/cli) >
-    # @xhmikosr/bin-wrapper > @xhmikosr/downloader > got > cacheable-request — the HTTP cache
-    # of a build CLI's binary downloader. Verified 2026-10-03: newest release 4.2.0, the
-    # advisory names no first patched version.
-    # Re-verified 2026-10-06: 4.3.0 (2026-10-04) now exists and falls OUTSIDE the advisory's
-    # `<= 4.2.0` range, but it is NOT a fix — its max-stale code is unchanged; the maintainer
-    # closed the report as disputed (kornelski/http-cache-semantics#56), a range dispute is open
-    # (github/advisory-database#10139). So this lockfile stays on 4.2.0 and the entry stays; a
-    # fresh resolve (every generated project) lands on 4.3.0, where it suppresses nothing.
-    # Re-verified 2026-10-09: advisory unchanged (`<= 4.2.0`, no first patched version, not
-    # withdrawn). This lockfile was replaced with a fresh resolve that day and carries 4.3.0 too,
-    # so the entry suppresses nothing here either. It stays until the removal condition above is
-    # met (a patched release, which `check:overrides` reports as FIX AVAILABLE).
-    # Re-verified 2026-10-11: unchanged (`<= 4.2.0`, no first patched version, not withdrawn);
-    # the lockfile still carries 4.3.0.
-    - GHSA-ch52-4w7c-c8xp
+    # RETIRED 2026-10-11 (listed since 2026-10-03), kept here as the assessment to re-add it with.
+    # GHSA-ch52-4w7c-c8xp, http-cache-semantics <= 4.2.0, HIGH: max-stale handling can serve one
+    # user's cached response to another. Dev tooling only: @swc/cli (also via @nestjs/cli) >
+    # @xhmikosr/bin-wrapper > @xhmikosr/downloader > got > cacheable-request — the HTTP cache of
+    # a build CLI's binary downloader. The advisory names no first patched version.
+    # Since 4.3.0 (2026-10-04) every resolve, this lockfile included, lands outside the range, so
+    # the entry hid nothing. 4.3.0 is NOT a fix: its max-stale code is unchanged. The maintainer
+    # calls the report bogus (kornelski/http-cache-semantics#56); a request to withdraw the
+    # advisory is open (github/advisory-database#10139), and an independent re-test posted there
+    # reproduces the behaviour through 4.3.0. It is retired anyway, because an entry that hides
+    # nothing breaks every generated monorepo: `lt fullstack init` hoists this list into the
+    # workspace root, where the app's `scripts/check-suppressions.mjs` (nuxt-base-starter) fails
+    # `pnpm run check` on it ("NOT IN TREE"). Kept, it would also pre-silence the advisory the
+    # day the range grows. A withdrawal needs nothing here. Should the range instead be widened
+    # to cover 4.3.0, `pnpm audit` goes red again: confirm the package is still dev-only, then
+    # re-add the entry with this assessment and a matching case in
+    # tests/unit/audit-suppression-scope.spec.ts.
+    # - GHSA-ch52-4w7c-c8xp
     # braces <= 3.0.3, HIGH: stack exhaustion through deeply nested patterns. Dev tooling only:
     # nodemon > chokidar@3 > braces, and cpy-cli > cpy / globby > fast-glob > micromatch >
     # braces. Patterns come from this repository's own scripts, never from input. Verified
