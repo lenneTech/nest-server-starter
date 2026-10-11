@@ -83,11 +83,14 @@ auditConfig:
     # withdrawn). This lockfile was replaced with a fresh resolve that day and carries 4.3.0 too,
     # so the entry suppresses nothing here either. It stays until the removal condition above is
     # met (a patched release, which `check:overrides` reports as FIX AVAILABLE).
+    # Re-verified 2026-10-11: unchanged (`<= 4.2.0`, no first patched version, not withdrawn);
+    # the lockfile still carries 4.3.0.
     - GHSA-ch52-4w7c-c8xp
     # braces <= 3.0.3, HIGH: stack exhaustion through deeply nested patterns. Dev tooling only:
     # nodemon > chokidar@3 > braces, and cpy-cli > cpy / globby > fast-glob > micromatch >
     # braces. Patterns come from this repository's own scripts, never from input. Verified
-    # 2026-10-03: newest release 3.0.3, no first patched version. Re-verified 2026-10-09: unchanged.
+    # 2026-10-03: newest release 3.0.3, no first patched version. Re-verified 2026-10-09 and
+    # 2026-10-11: unchanged.
     - GHSA-vfj7-8cjw-p6xm
 
 # pnpm 11 configuration
@@ -288,7 +291,11 @@ overrides:
   # 2026-10-07: 8.3.2 had become a downgrade lock again — raised 8.3.2 -> 8.3.3, key with it.
   # 8.3.3 (dev-server `fs.serve` fixes, identical dependency manifest) is the newest 8.x past
   # the release-age gate and nest-server 11.42.8's own vite devDependency (no new advisory).
-  'vite@<8.3.3': 8.3.3
+  # 2026-10-11: 8.3.3 had become a downgrade lock once more (fresh resolve WITHOUT the block
+  # lands on 8.3.4, WITH it on 8.3.3) — raised 8.3.3 -> 8.3.4, key with it. 8.3.4 is past the
+  # release-age gate and nest-server 11.42.11's own vite devDependency (requests postcss
+  # ^8.5.29 = the postcss entry's target, rolldown ~1.2.12; no new advisory).
+  'vite@<8.3.4': 8.3.4
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf is
   # provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via @compodoc/compodoc.
@@ -304,7 +311,11 @@ overrides:
   # reports as unmet. The advisory floor is unchanged in effect (everything below
   # 11.1.1 is still lifted); the key simply now also covers the one patch between the
   # resolved version and what the consumers ask for.
-  'uuid@<14.0.2': 14.0.2
+  # 2026-10-11: key and target raised <14.0.2 -> <14.0.3 / 14.0.3 (newest 14.x, past the
+  # release-age gate; release notes: a CITGM fix only, no API change, no advisory). Still
+  # load-bearing: @compodoc/compodoc@2.0.0 exact-pins uuid 14.0.1, and a fresh resolve WITHOUT
+  # the block lands there. vis-network@10.1.2 / vis-data@8.0.5 now peer `^14.0.0`.
+  'uuid@<14.0.3': 14.0.3
 
   # Security: THREE advisories in qs, all covered by 6.16.0:
   #   >=6.11.1 <=6.15.1  remotely triggerable DoS in qs.stringify (GHSA-q8mj-m7cp-5q26)
@@ -514,8 +525,8 @@ overrides:
   # same change as every framework bump: `pnpm run update` raises package.json only, it
   # never touches this file.
   #
-  # Current target 10.0.16 = what @lenne.tech/nest-server 11.42.10 declares (10.0.15 from 11.42.7,
-  # 10.0.14 from 11.42.4, 10.0.13 from 11.41.5).
+  # Current target 10.1.0 = what @lenne.tech/nest-server 11.42.11 declares (10.0.16 from 11.42.10,
+  # 10.0.15 from 11.42.7, 10.0.14 from 11.42.4, 10.0.13 from 11.41.5).
   # 2026-10-01: FIVE advisories published 2026-09-28..30 cover 9.1.1 — the last 9.x — and
   # are fixed ONLY on the 10.x line, which is why the framework took the major in 11.41.5:
   #   GHSA-v53p-9fqp-m79j  high      <=10.0.5          patched >=10.0.6
@@ -544,7 +555,10 @@ overrides:
   # held a single 10.0.15 copy; the raise keeps a `^10` requester from being pinned to 10.0.14.
   # 2026-10-09: raised 10.0.15 -> 10.0.16, key with it — nest-server 11.42.10 declares 10.0.16
   # (address parser and cookie handling fixes, no advisory). Same reasoning as above.
-  'nodemailer@<10.0.16': 10.0.16
+  # 2026-10-11: raised 10.0.16 -> 10.1.0, key with it — nest-server 11.42.11 declares 10.1.0
+  # (minor: hardened message streams, SMTP connection and pool handling, no API change, no
+  # advisory; migration guide 11.42.10 -> 11.42.11 §6). Same reasoning as above.
+  'nodemailer@<10.1.0': 10.1.0
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
