@@ -89,9 +89,11 @@ const OWN_WORKSPACE = existsSync(join(ROOT, 'pnpm-workspace.yaml'));
 describe.skipIf(!OWN_WORKSPACE)(
   'audit suppressions stay within their justification (skipped without an own pnpm-workspace.yaml: hoisted into a monorepo root)',
   () => {
-    const workspace = readFileSync(join(ROOT, 'pnpm-workspace.yaml'), 'utf8');
-
     it('suppresses only the advisories this spec knows about', () => {
+      // Read HERE, not in the describe body: vitest executes a skipped describe's body anyway to
+      // collect its tests, so a read up there throws ENOENT in exactly the monorepo layout the
+      // skip exists for, and fails the file instead of skipping it (tests/unit/hoisted-layout.spec.ts).
+      const workspace = readFileSync(join(ROOT, 'pnpm-workspace.yaml'), 'utf8');
       // A new entry must come with a matching guard here, or it is unguarded by
       // definition — which is the failure mode this file exists to prevent.
       const listed = Array.from(workspace.matchAll(/^\s*-\s*(GHSA-[\w-]+)\s*$/gm)).map((m) => m[1]);
