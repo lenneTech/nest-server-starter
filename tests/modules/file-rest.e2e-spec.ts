@@ -281,18 +281,14 @@ describe('File Module REST (e2e)', () => {
     // A syntactically valid id that does not exist — the guard must reject before the
     // handler ever looks it up, so the response must not depend on the id existing.
     const foreignId = '000000000000000000000000';
-    let probeFile: string;
 
-    beforeAll(async () => {
-      // The attachment has to exist on disk for the request to be built at all;
-      // the point of these tests is that it must never be stored.
-      probeFile = path.join(fixtureDir, 'permission-probe.txt');
-      await fs.promises.writeFile(probeFile, 'must not be stored', { flag: 'wx' });
-    });
-
+    // No attachment on purpose, in both upload cases. The role guard decides before FileInterceptor
+    // reads the body, so a file cannot change the answer, and sending one races it: the 401/403
+    // arrives while the client is still writing the multipart body, and the write fails with EPIPE
+    // (nest-server measured 1 run in 14 with retries off). Without the guard the open route answers
+    // 400 "No file provided", so both tests still fail when the guard is gone.
     it('rejects upload without authentication', async () => {
       await testHelper.rest('/files/upload', {
-        attachments: { file: probeFile },
         method: 'POST',
         statusCode: 401,
       });
@@ -300,7 +296,6 @@ describe('File Module REST (e2e)', () => {
 
     it('rejects upload for a non-admin user', async () => {
       await testHelper.rest('/files/upload', {
-        attachments: { file: probeFile },
         cookies: users[1].token,
         method: 'POST',
         statusCode: 403,
