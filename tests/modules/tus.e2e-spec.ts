@@ -39,6 +39,8 @@ interface TusCreateOptions {
 }
 
 interface TusUploadResult {
+  /** The id the server named in `X-File-Id` on the completing response (nest-server 11.42.13+) */
+  fileId?: string;
   filename: string;
   gridFsId?: string;
   location?: string;
@@ -219,6 +221,7 @@ describe('TUS Module (e2e)', () => {
     const fileBuffer = typeof options.content === 'string' ? Buffer.from(options.content) : options.content;
 
     return new Promise((resolve, reject) => {
+      let fileId: string | undefined;
       const upload = new tus.Upload(fileBuffer as unknown as Blob, {
         chunkSize: options.chunkSize || 1024 * 1024,
         endpoint: `${baseUrl}/tus`,
@@ -230,10 +233,19 @@ describe('TUS Module (e2e)', () => {
         onError: (error) => {
           reject(error);
         },
+        // The response that completes the upload names the stored file. Never use the last segment
+        // of `upload.url` for that: it is the TUS upload id, and /files/id/ cannot answer it.
+        onAfterResponse: (_req, res) => {
+          const id = res.getHeader('X-File-Id');
+          if (id) {
+            fileId = id;
+          }
+        },
         onProgress: options.onProgress,
         onSuccess: async () => {
           const gridFsFile = await waitForGridFsMigration(options.filename);
           resolve({
+            fileId,
             filename: options.filename,
             gridFsId: gridFsFile?._id?.toString(),
             location: upload.url || undefined,
@@ -267,6 +279,7 @@ describe('TUS Module (e2e)', () => {
     expect(gridFsFile).toBeDefined();
 
     return {
+      fileId: patchResponse.headers.get('x-file-id') ?? undefined,
       filename,
       gridFsId: gridFsFile?._id?.toString(),
       location,
@@ -688,22 +701,42 @@ describe('TUS Module (e2e)', () => {
   // ===================================================================================================================
 
   describe('FileController Download Integration', () => {
-    let testFile: { content: string; filename: string; gridFsId: string };
+    let testFile: { content: string; fileId?: string; filename: string; gridFsId: string; location?: string };
 
     beforeAll(async () => {
       const filename = `tus-download-test-${Date.now()}.txt`;
       const content = 'This file was uploaded via TUS and will be downloaded via FileController';
 
       const result = await uploadViaTusClient({ content, filename });
-      testFile = { content, filename, gridFsId: result.gridFsId! };
+      testFile = { content, fileId: result.fileId, filename, gridFsId: result.gridFsId!, location: result.location };
       uploadedFiles.push(result);
     });
 
-    it('should download TUS-uploaded file by ID', async () => {
-      const res = await testHelper.download(`/files/id/${testFile.gridFsId}`, { cookies: users[0].token });
+    it('should name the stored file in X-File-Id on the completing response', async () => {
+      expect(testFile.fileId, 'tus-js-client must see the header (exposed for CORS)').toMatch(/^[0-9a-f]{24}$/);
+      expect(testFile.fileId).toBe(testFile.gridFsId);
+
+      const viaFetch = await completeTusUpload(`tus-file-id-${Date.now()}.txt`, 'completed via fetch');
+      uploadedFiles.push(viaFetch);
+      expect(viaFetch.fileId).toBe(viaFetch.gridFsId);
+    });
+
+    it('should download TUS-uploaded file by the ID the server named', async () => {
+      const res = await testHelper.download(`/files/id/${testFile.fileId}`, { cookies: users[0].token });
 
       expect(res.statusCode).toBe(200);
       expect(res.data).toBe(testFile.content);
+    });
+
+    it('should answer 404, not 500, for the TUS upload id taken as a file id', async () => {
+      expect(testFile.location, 'the TUS upload URL').toBeTruthy();
+      const tusUploadId = new URL(testFile.location!).pathname.split('/').pop();
+      expect(tusUploadId).toMatch(/^[0-9a-f]{32}$/);
+      const res = await testHelper.download(`/files/id/${tusUploadId}`, { cookies: users[0].token });
+
+      // Same answer as an unknown id. Up to nest-server 11.42.12 this id reached new ObjectId() and
+      // the route answered 500.
+      expect(res.statusCode).toBe(404);
     });
 
     it('should download TUS-uploaded file by filename', async () => {
