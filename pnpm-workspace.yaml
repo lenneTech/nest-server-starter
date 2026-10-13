@@ -596,7 +596,11 @@ overrides:
   # 2026-10-03: raised 10.7.2 -> 10.7.3, key with it, mirroring nest-server 11.41.7. 10.7.3
   # (published 2026-10-01) is the newest 10.x past the release-age gate and where a
   # no-override resolve lands, so 10.7.2 had become a downgrade lock.
-  'ip-address@<10.7.3': 10.7.3
+  # 2026-10-13: raised 10.7.3 -> 10.7.4, key with it, mirroring nest-server 11.42.14. 10.7.4
+  # (published 2026-10-11) is the newest 10.x past the release-age gate; express-rate-limit
+  # 8.7.1, the newest, still requests `^10.2.0`, which intersected `<10.7.3`, so the old entry
+  # held the tree at 10.7.3. Remove once express-rate-limit requests >=10.3.1.
+  'ip-address@<10.7.4': 10.7.4
 
   # Security: TWO advisories on the 3.x line, and the target must be the LATER of
   # the two — a 3.3.17 target closes the first and leaves the second wide open.
