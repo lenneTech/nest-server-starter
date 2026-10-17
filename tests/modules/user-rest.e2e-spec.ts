@@ -38,6 +38,8 @@ describe('User Module REST (e2e)', () => {
   let gRestPrepareUserToken: string;
   let gRestUserId: string;
   let gRestUserEmail: string;
+  let gRestMemberId: string;
+  let gRestMemberToken: string;
 
   // ===================================================================================================================
   // Preparations
@@ -96,6 +98,13 @@ describe('User Module REST (e2e)', () => {
     if (db && gRestUserId) {
       try {
         await db.collection('users').deleteOne({ _id: new ObjectId(gRestUserId) });
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+    if (db && gRestMemberId) {
+      try {
+        await db.collection('users').deleteOne({ _id: new ObjectId(gRestMemberId) });
       } catch {
         // Ignore cleanup errors
       }
@@ -230,6 +239,96 @@ describe('User Module REST (e2e)', () => {
     expect(res.totalCount).toBeDefined();
     expect(Array.isArray(res.items)).toEqual(true);
     expect(res.totalCount).toBeGreaterThan(0);
+  });
+
+  // -------------------------------------------------------------------------------------------------------------------
+  // Refusals. The controller relies on `@Roles()` alone (the global role guard authenticates AND authorizes); the
+  // route-level `AuthGuard(BETTER_AUTH)` it used to carry was a second layer that never changed a decision. These
+  // cases are what notices if the remaining layer ever stops refusing — without them every case above stays green,
+  // because the admin is still admitted.
+  // -------------------------------------------------------------------------------------------------------------------
+
+  /**
+   * Prepare a verified user WITHOUT any role
+   */
+  it('REST: prepare a non-admin user', async () => {
+    const random = Math.random().toString(36).substring(7);
+    const password = `${random}R1!`;
+    const email = `rest-member-${random}@rest-test.com`;
+
+    await testHelper.rest('/iam/sign-up/email', {
+      method: 'POST',
+      payload: { email, name: 'RESTMember', password: hashPassword(password), termsAndPrivacyAccepted: true },
+      statusCode: 201,
+    });
+    const user = await db.collection('users').findOne({ email });
+    gRestMemberId = user._id.toString();
+    await db
+      .collection('users')
+      .updateOne({ _id: new ObjectId(gRestMemberId) }, { $set: { emailVerified: true, roles: [], verified: true } });
+
+    const signInRes = await testHelper.rest('/iam/sign-in/email', {
+      method: 'POST',
+      payload: { email, password: hashPassword(password) },
+      returnResponse: true,
+      statusCode: 200,
+    });
+    gRestMemberToken = TestHelper.extractSessionToken(signInRes);
+    expect(gRestMemberToken).toBeDefined();
+  });
+
+  /**
+   * Every user route refuses an anonymous caller with 401, and nothing is written
+   */
+  it('REST: refuses every user route to an anonymous caller', async () => {
+    const newUser = { email: `anon-${Date.now()}@rest-test.com`, password: 'Anon1234!' };
+    await testHelper.rest('/users', { statusCode: 401 });
+    await testHelper.rest('/users/count', { statusCode: 401 });
+    await testHelper.rest(`/users/${gRestUserId}`, { statusCode: 401 });
+    await testHelper.rest('/users', { method: 'POST', payload: newUser, statusCode: 401 });
+    await testHelper.rest(`/users/${gRestUserId}`, {
+      method: 'PATCH',
+      payload: { firstName: 'AnonymousEdit' },
+      statusCode: 401,
+    });
+    await testHelper.rest(`/users/${gRestUserId}`, { method: 'DELETE', statusCode: 401 });
+
+    const target = await db.collection('users').findOne({ _id: new ObjectId(gRestUserId) });
+    expect(target).not.toBeNull();
+    expect(target.firstName).toEqual('RestTest');
+    expect(await db.collection('users').countDocuments({ email: newUser.email })).toEqual(0);
+  });
+
+  /**
+   * The admin-only routes refuse an authenticated user without the admin role with 403
+   */
+  it('REST: refuses the admin routes to a non-admin user', async () => {
+    const newUser = { email: `member-${Date.now()}@rest-test.com`, password: 'Member1234!' };
+    await testHelper.rest('/users', { cookies: gRestMemberToken, statusCode: 403 });
+    await testHelper.rest('/users/count', { cookies: gRestMemberToken, statusCode: 403 });
+    await testHelper.rest('/users', { cookies: gRestMemberToken, method: 'POST', payload: newUser, statusCode: 403 });
+    expect(await db.collection('users').countDocuments({ email: newUser.email })).toEqual(0);
+  });
+
+  /**
+   * A non-admin user may read their own record, but not another user's — and may neither change nor delete it
+   */
+  it('REST: limits a non-admin user to their own record', async () => {
+    const own = await testHelper.rest(`/users/${gRestMemberId}`, { cookies: gRestMemberToken });
+    expect(own.id).toEqual(gRestMemberId);
+
+    await testHelper.rest(`/users/${gRestUserId}`, { cookies: gRestMemberToken, statusCode: 403 });
+    await testHelper.rest(`/users/${gRestUserId}`, {
+      cookies: gRestMemberToken,
+      method: 'PATCH',
+      payload: { firstName: 'MemberEdit' },
+      statusCode: 403,
+    });
+    await testHelper.rest(`/users/${gRestUserId}`, { cookies: gRestMemberToken, method: 'DELETE', statusCode: 403 });
+
+    const target = await db.collection('users').findOne({ _id: new ObjectId(gRestUserId) });
+    expect(target).not.toBeNull();
+    expect(target.firstName).toEqual('RestTest');
   });
 
   /**

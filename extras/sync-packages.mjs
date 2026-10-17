@@ -21,7 +21,7 @@ const require = createRequire(import.meta.url);
 import * as https from 'https';
 import { execSync } from 'child_process';
 import fs from 'fs';
-const semver = require('semver');
+import { alignPackageVersions, DEPENDENCY_SECTIONS } from './align-package-versions.mjs';
 
 // Get directory path
 import { fileURLToPath } from 'url';
@@ -63,63 +63,29 @@ if (meta.name !== npmPackage) {
   process.exit(1);
 }
 
-// Check packageJson
-if (!packageJson.devDependencies) {
-  packageJson.devDependencies = {};
-}
-
-// Update versions
+// Update versions — the rule lives in align-package-versions.mjs: a package this project declares is
+// raised to the framework's version in the section the project keeps it. What the framework ships
+// (`dependencies`) counts for either section; what it only develops with counts for devDependencies.
 console.log(addMissing ? 'Update existing and add missing packages' : 'Update existing packages');
-let counter = 0;
-let added = 0;
-for (const dep of ['dependencies', 'devDependencies']) {
-  // console.log(dep, meta['versions'][version][dep]);
-  if (!meta['versions']?.[version]?.[dep]) {
-    continue;
-  }
-  for (const [pack, ver] of Object.entries(meta['versions'][version][dep])) {
-    if (!packageJson[dep][pack]) {
-      if (addMissing) {
-        packageJson[dep][pack] = ver;
-        console.log(dep, pack, 'added ' + ver);
-        added++;
-      }
-      continue;
-    }
-    const current = packageJson[dep][pack];
-
-    // `semver.gt` needs two exact versions and THROWS on a range — a single
-    // `^4.21.0` anywhere in the project aborted the whole script with
-    // `TypeError: Invalid Version`, so `pnpm run update` did nothing at all and
-    // the reason pointed at semver rather than at the entry that caused it.
-    // The starter pins exactly, but projects grow ranges over time; one is
-    // enough to take the update path down.
-    //
-    // A range is not simply "older": if it already admits the framework's
-    // version there is nothing to do, and rewriting it to an exact pin would
-    // silently narrow what the project deliberately left open. Only a version
-    // ABOVE the whole range is an actual update.
-    if (!semver.valid(current)) {
-      if (!semver.validRange(current)) {
-        console.log(dep, pack, 'skipped — cannot compare "' + current + '" (not a version or range)');
-        continue;
-      }
-      if (semver.gtr(ver, current)) {
-        packageJson[dep][pack] = ver;
-        console.log(dep, pack, current + ' => ' + ver + ' (range no longer covers it)');
-        counter++;
-      }
-      continue;
-    }
-
-    if (semver.gt(ver, current)) {
-      packageJson[dep][pack] = ver;
-      console.log(dep, pack, current + ' => ' + ver);
-      counter++;
-    }
-  }
-  packageJson[dep] = Object.fromEntries(Object.entries(packageJson[dep]).sort((a, b) => a[0].localeCompare(b[0])));
+const alignment = alignPackageVersions(packageJson, meta['versions']?.[version], { addMissing });
+for (const { current, name, section } of alignment.skipped) {
+  console.log(section, name, 'skipped — cannot compare "' + current + '" (not a version or range)');
 }
+for (const { from, name, range, section, to } of alignment.raised) {
+  console.log(section, name, from + ' => ' + to + (range ? ' (range no longer covers it)' : ''));
+}
+for (const { name, section, version: addedVersion } of alignment.added) {
+  console.log(section, name, 'added ' + addedVersion);
+}
+for (const section of DEPENDENCY_SECTIONS) {
+  if (packageJson[section]) {
+    packageJson[section] = Object.fromEntries(
+      Object.entries(packageJson[section]).sort((a, b) => a[0].localeCompare(b[0])),
+    );
+  }
+}
+const counter = alignment.raised.length;
+const added = alignment.added.length;
 if (!counter && !added) {
   execSync('cd ' + __dirname + '/.. && pnpm install', { stdio: 'inherit' });
   console.log('Everything is up-to-date for ' + npmPackage + ' version ' + version);
