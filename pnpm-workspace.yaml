@@ -337,7 +337,12 @@ overrides:
   # existing entry instead of placing one beside it. Diagnosed upstream in nest-server.
   # Key opened to `<6.16.0` so every path lifts. Drop once express / @apollo/server request
   # >=6.16.0 themselves.
-  'qs@<6.16.0': 6.16.0
+  # 2026-10-17: raised 6.16.0 -> 6.16.1, key with it — mirrors nest-server 11.42.15
+  # (migration-guides/11.42.14-to-11.42.15.md §3). No new advisory: body-parser 2.3.0 (`^6.15.2`)
+  # and express 5.2.1 (`^6.14.0`) request caret ranges that intersected `<6.16.0`, so once 6.16.1
+  # (2026-10-14) cleared the release-age gate the old entry had become a DOWNGRADE LOCK holding every
+  # path on 6.16.0.
+  'qs@<6.16.1': 6.16.1
 
   # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
   # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Transitive via @nestjs/graphql>graphql-ws>ws
@@ -532,8 +537,8 @@ overrides:
   # same change as every framework bump: `pnpm run update` raises package.json only, it
   # never touches this file.
   #
-  # Current target 10.1.0 = what @lenne.tech/nest-server 11.42.11 declares (10.0.16 from 11.42.10,
-  # 10.0.15 from 11.42.7, 10.0.14 from 11.42.4, 10.0.13 from 11.41.5).
+  # Current target 10.1.2 = what @lenne.tech/nest-server 11.42.15 declares (10.1.0 from 11.42.11,
+  # 10.0.16 from 11.42.10, 10.0.15 from 11.42.7, 10.0.14 from 11.42.4, 10.0.13 from 11.41.5).
   # 2026-10-01: FIVE advisories published 2026-09-28..30 cover 9.1.1 — the last 9.x — and
   # are fixed ONLY on the 10.x line, which is why the framework took the major in 11.41.5:
   #   GHSA-v53p-9fqp-m79j  high      <=10.0.5          patched >=10.0.6
@@ -565,7 +570,11 @@ overrides:
   # 2026-10-11: raised 10.0.16 -> 10.1.0, key with it — nest-server 11.42.11 declares 10.1.0
   # (minor: hardened message streams, SMTP connection and pool handling, no API change, no
   # advisory; migration guide 11.42.10 -> 11.42.11 §6). Same reasoning as above.
-  'nodemailer@<10.1.0': 10.1.0
+  # 2026-10-17: raised 10.1.0 -> 10.1.2, key with it — nest-server 11.42.15 declares 10.1.2
+  # (fetch strips credentials on a cross-origin redirect, bounded per-message work; no API change;
+  # migration guide 11.42.14 -> 11.42.15 §3). Same reasoning as above: the framework's exact 10.1.2
+  # never intersected `<10.1.0`, so the tree already held a single 10.1.2 copy.
+  'nodemailer@<10.1.2': 10.1.2
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
@@ -587,7 +596,15 @@ overrides:
   # @compodoc/compodoc>cheerio>undici. 7.29.0 is the newest 7.x (8.x is a major).
   # 2026-09-26: raised 7.29.0 -> 7.30.0 (newest 7.x; a no-override resolve lands there),
   # key with it — mirrors nest-server 11.41.4.
-  'undici@>=7.0.0 <7.30.0': 7.30.0
+  # 2026-10-17: raised 7.30.0 -> 7.30.1, key with it — mirrors nest-server 11.42.15
+  # (migration-guides/11.42.14-to-11.42.15.md §3). 7.30.1 is a SECURITY release: four high
+  # (GHSA-qrxm-fqhp-jwvm, GHSA-2m5v-pch6-74hx, GHSA-4w7w-5xrc-9h26, GHSA-xjj6-f33q-929c) and four
+  # medium (GHSA-55wc-3pg8-jfw6, GHSA-f72v-6w45-q472, GHSA-4qv8-2p9j-2685, GHSA-9fm3-97px-rjf6).
+  # They were published as REPOSITORY advisories, so `pnpm audit` and `check:overrides` were both
+  # green on the vulnerable 7.30.0 — do not read a clean audit as "this entry can go". cheerio
+  # requests ^7.19.0, which intersected the old key, so the old entry PINNED that path to 7.30.0
+  # next to the framework's own runtime 7.30.1. Check: `pnpm why undici` lists only 7.30.1.
+  'undici@>=7.0.0 <7.30.1': 7.30.1
 
   # Security: ip-address — Address4 decodes leading-zero octets as decimal
   # (GHSA-mwp4-54f8-5fhr, high, patched >=10.3.1), plus two moderates (CIDR
