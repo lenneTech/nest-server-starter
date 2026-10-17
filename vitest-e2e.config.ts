@@ -80,7 +80,7 @@ export default defineConfig({
     //
     // So a console write from the LAST test of a file can lose a race against its own cleanup,
     // and the rejection surfaces as an unhandled error that fails the run. It is a race, not a
-    // late log — the specs await correctly. vitest 4.1.11 is the newest 4.x; there is no patch.
+    // late log — the specs await correctly. vitest 4.1.12 is the newest 4.x; there is no patch.
     //
     // With the flag `setupConsoleLogSpy()` is skipped, so the custom console is never installed.
     // Worker-side, `rpc.onUserConsoleLog` has exactly ONE caller — `sendLog()` inside that console

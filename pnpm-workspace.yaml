@@ -92,8 +92,9 @@ auditConfig:
     # braces <= 3.0.3, HIGH: stack exhaustion through deeply nested patterns. Dev tooling only:
     # nodemon > chokidar@3 > braces, and cpy-cli > cpy / globby > fast-glob > micromatch >
     # braces. Patterns come from this repository's own scripts, never from input. Verified
-    # 2026-10-03: newest release 3.0.3, no first patched version. Re-verified 2026-10-09 and
-    # 2026-10-11: unchanged.
+    # 2026-10-03: newest release 3.0.3, no first patched version. Re-verified 2026-10-09,
+    # 2026-10-11 and 2026-10-17: unchanged (advisory still `<= 3.0.3`, not withdrawn; stripping this
+    # entry makes `pnpm audit` report exactly this one finding via cpy-cli > ... > braces).
     - GHSA-vfj7-8cjw-p6xm
 
 # pnpm 11 configuration
@@ -233,8 +234,14 @@ overrides:
   # the ^12.0.0 that schema/merge request, so an older target would hold them back too.
   # 2026-10-13: raised 12.0.3 -> 12.0.4 (newest 12.x past the release-age gate), key with it,
   # mirroring nest-server 11.42.15. Same dependencies and engines as 12.0.3.
+  # 2026-10-17: raised 12.0.4 -> 12.1.0, key with it, mirroring nest-server 11.42.16
+  # (migration-guides/11.42.15-to-11.42.16.md §2). @graphql-tools/schema 10.1.5 / merge 9.2.8
+  # (via @apollo/server) request `^12.1.0`, outside the old key, so the tree carried TWO copies:
+  # 12.0.4 on @nestjs/graphql's exact-pin path and 12.1.0 on the @apollo/server path. With the
+  # target at 12.1.0 both paths share one copy. Same dependencies and engines as 12.0.4; no new
+  # advisory.
   # Remove once @nestjs/graphql pins >=12.0.1 in the major this project uses.
-  '@graphql-tools/utils@>=12.0.0 <12.0.4': 12.0.4
+  '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).

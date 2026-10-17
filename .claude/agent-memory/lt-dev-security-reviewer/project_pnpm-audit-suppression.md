@@ -41,6 +41,17 @@ Traps verified 2026-07-30 (re-verify, these move):
   it). Project formatter is `singleQuote: true` (`.oxfmtrc.jsonc`). Note `.claude/` is outside both
   paths, so agent-memory Markdown is NOT formatter-checked here.
 
+Verification traps seen 2026-10-17 (override/bump reviews):
+
+- **`node_modules/.pnpm` keeps orphaned directories from earlier installs.** Old vulnerable copies
+  (e.g. `@graphql-tools+utils@12.0.4`, `@vitest+mocker@4.1.11`) and the orphaned parents that
+  symlink to them stay on disk after a bump. Listing the virtual store or scanning its symlinks is
+  NOT evidence of a reachable copy; check `pnpm why <pkg>` and the lockfile, then confirm the
+  symlinks of the packages the lockfile actually lists.
+- **Brand-new repo advisories return 404 from `gh api /advisories/<GHSA>`** for the first days
+  (e.g. the vitest `@vitest/mocker` ones). Query
+  `gh api /repos/<owner>/<repo>/security-advisories/<GHSA>` to get the range and the patched version.
+
 Retiring an `ignoreGhsas` entry by commenting it out (`# - GHSA-…`) is safe, verified 2026-10-11:
 every parser skips `#` lines (pnpm's YAML, this repo's and lt-monorepo's `check-overrides.mjs`
 via `/^\s*#/`, nuxt-base-starter's `check-suppressions.mjs`, the scope spec's

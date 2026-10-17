@@ -22,6 +22,12 @@ Specifically flag:
   file and directory actually exists before accepting the prose.
 - **Anecdotes about other/customer projects** ("this is exactly how a customer project ended
   up with…"). Unverifiable downstream and meaningless in a cloned repo.
+- **Version-anchored "newest X" claims** (e.g. `vitest-e2e.config.ts`: "vitest 4.1.x is the newest
+  4.x; there is no patch" — raised to 4.1.12 by hand in the 11.42.16 bump after re-verifying the
+  cited code) go stale on every lock-step dev-dep bump. Judge the CONCLUSION, not the
+  number: grep the installed `node_modules/<pkg>/dist` for the cited code (there: `rejectPendingCalls`
+  in `execute()`). Unchanged code = the workaround still holds and the stale number misleads no one
+  into a wrong action (not a finding under a Critical/High bar); changed code = a real High.
 - **Language drift** — every non-i18n comment in this repo is English (the only German is
   legitimate `de:` translation data in `src/server/common/errors/project-errors.ts` and its test
   assertions). A German comment is a defect in a template shipped internationally.
