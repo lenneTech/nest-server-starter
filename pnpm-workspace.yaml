@@ -692,7 +692,27 @@ overrides:
   # lands there). Key unchanged — mirrors nest-server 11.41.4's entry exactly.
   # 2026-10-01: raised 4.29.1 -> 4.29.3 (newest 4.x; 4.29.1 had become a downgrade lock —
   # a no-override resolve lands on 4.29.3). Key unchanged — mirrors nest-server 11.41.5.
-  'browserslist@<4.28.7': 4.29.3
+  # 2026-10-20: raised 4.29.3 -> 4.29.4 (published 2026-10-19). Here the downgrade lock was
+  # not just a hold-back, it broke every fresh `lt fullstack init`: pnpm applies the
+  # override to the PEER range of update-browserslist-db too (`>= 4.21.0` intersects the
+  # key, so it became `4.29.3`), while the app's autoprefixer/cssnano resolved 4.29.4 —
+  # `pnpm peers check` then failed with "unmet peer browserslist" in the first
+  # `pnpm run check`. This repo's own lockfile hid it (it predates 4.29.4); only a fresh
+  # resolve shows it. Raise the target the day a newer 4.x ships.
+  'browserslist@<4.28.7': 4.29.4
+
+  # Peer conflict, build-time only: @nestjs/cli 11.0.24 (the newest 11.x) EXACT-pins
+  # webpack 5.106.2, while webpack's own terser-webpack-plugin resolves schema-utils
+  # 4.8.x, which declares `peerDependencies.webpack: ^5.112.0` (new in 4.8.0, published
+  # 2026-10-18). A fresh resolve therefore fails `pnpm peers check` ("unmet peer
+  # webpack") in every new project. A lockfile that still carries schema-utils 4.6.0
+  # hides it; the first refresh fails `pnpm peers check`. Parent-scoped on purpose: it
+  # lifts only the CLI's stale pin, so every other consumer keeps resolving the newest
+  # 5.x on its own and this entry can never hold the tree back. `pnpm run build` uses
+  # tsc, not webpack — the pin only feeds `nest build --webpack`. Target = newest 5.x
+  # (2026-10-15). Remove once @nestjs/cli requests webpack >=5.112 itself, or with the
+  # move to @nestjs/cli 12 (webpack is a peer there).
+  '@nestjs/cli>webpack': 5.112.0
 
   # Security: fflate <0.8.3 — `unzipSync` loops indefinitely on a crafted ZIP64 archive
   # (moderate). Dev/test only, and the path is NOT the one an audit report suggests:
