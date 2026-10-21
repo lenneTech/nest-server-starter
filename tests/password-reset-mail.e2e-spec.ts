@@ -139,11 +139,14 @@ describe('Password reset mail (e2e)', () => {
 
     // A 500 here is the failure this asserts against: it both crashes and re-opens the account
     // oracle that returning `null` from the framework was meant to close.
-    await testHelper.rest('/users/password/reset-request', {
+    const answer = await testHelper.rest('/users/password/reset-request', {
       method: 'POST',
       payload: { email: `nobody-${suffix}@test.com` },
       statusCode: 201,
     });
+    // The BODY must not differ either: `false` for an unknown and `true` for a known address is the
+    // same oracle as differing status codes, one field further in.
+    expect(answer).toBe(true);
 
     await new Promise((resolve) => setTimeout(resolve, 300));
 

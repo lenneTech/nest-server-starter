@@ -135,7 +135,8 @@ async function bootstrap() {
 
   // Run command after server init
   if (envConfig.execAfterInit) {
-    exec(envConfig.execAfterInit, (error, stdout, stderr) => {
+    // stdout is deliberately discarded: only a failure of the post-init command is worth a log line.
+    exec(envConfig.execAfterInit, (error, _stdout, stderr) => {
       if (error) {
         console.error(`error: ${error.message}`);
         return;
