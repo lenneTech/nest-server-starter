@@ -91,16 +91,6 @@
       "rules": {
         "no-unused-vars": "off"
       }
-    },
-    {
-      // Vendor mode only (`src/core/` exists there, not in npm mode). The vendored core of nest-server 11.43.3 has five
-      // un-awaited promises (core-ai-mcp.controller.ts, migration.helper.ts, core-hub-sources.service.ts); with the rule
-      // on, `pnpm run lint` fails in every freshly generated vendor-mode project. nest-server lints its own core with
-      // this rule from 12.0.0 on and fixed all five: remove this entry with the 12.0.0 bump.
-      "files": ["src/core/**"],
-      "rules": {
-        "typescript/no-floating-promises": "off"
-      }
     }
   ]
 }

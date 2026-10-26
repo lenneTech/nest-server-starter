@@ -1,13 +1,16 @@
 /**
- * Pins which migrate scripts may need ts-node.
+ * Pins which migrate scripts may need a TypeScript loader.
  *
  * WHY THIS EXISTS
- * `--compiler ts:…` loads `ts-node`, which is a devDependency. Any tree installed with
+ * `--compiler ts:…` loads nest-server's TypeScript loader, which needs `@swc/core` (ts-node up to
+ * nest-server 11) — a devDependency. Any tree installed with
  * `pnpm install --prod` therefore cannot run a script that carries that flag — and the documented
  * production start goes straight through one: README names `pnpm run dp:prod`, which runs
  * `migrate:prod:up` first. Measured in a generated project on 2026-09-16:
  *
  *     Error: ts-node is required to run migrations from TypeScript sources
+ *
+ * (nest-server 12: "Running TypeScript sources needs @swc/core, which this project does not have".)
  *
  * The deployed scripts therefore run the COMPILED migrations from `dist/`, exactly as
  * `docker-entrypoint.sh` has always done. The developer scripts keep the TypeScript sources,
@@ -25,7 +28,7 @@ const scripts: Record<string, string> = JSON.parse(readFileSync(join(process.cwd
 const DEPLOYED = ['migrate:develop:up', 'migrate:test:up', 'migrate:preview:up', 'migrate:prod:up'];
 const DEVELOPER = ['migrate:up', 'migrate:down', 'migrate:list'];
 
-describe('deployed migrate scripts run without ts-node', () => {
+describe('deployed migrate scripts run without a TypeScript loader', () => {
   it.each(DEPLOYED)('%s does not load the ts compiler', (name: string) => {
     expect(scripts[name]).toBeDefined();
     expect(scripts[name]).not.toContain('--compiler');
@@ -44,7 +47,7 @@ describe('deployed migrate scripts run without ts-node', () => {
 });
 
 describe('developer migrate scripts keep the TypeScript sources', () => {
-  it.each(DEVELOPER)('%s runs the sources through ts-node', (name: string) => {
+  it.each(DEVELOPER)('%s runs the sources through the TypeScript loader', (name: string) => {
     expect(scripts[name]).toBeDefined();
     expect(scripts[name]).toContain('--compiler ts:');
     expect(scripts[name]).toContain('--migrations-dir ./migrations');

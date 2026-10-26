@@ -1,6 +1,6 @@
 {
   "extends": "./tsconfig.json",
-  // Migrations are compiled, not copied: the production image prunes ts-node,
+  // Migrations are compiled, not copied: the production image prunes @swc/core (the TypeScript loader),
   // so the entrypoint's `migrate up` can only load plain .js migrations.
   "include": ["src/**/*", "migrations/**/*.ts", "migrations-utils/**/*.ts"],
   "compilerOptions": {

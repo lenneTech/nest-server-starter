@@ -11,7 +11,7 @@
  *   - `copy:scripts` (`cpy ./scripts ./dist/`) COPIES the directory verbatim into the image.
  *
  * So a `.mjs` or `.sh` under `scripts/` works in `dist/` because copying is enough, while a `.ts`
- * lands there as `.ts` and cannot run — the production image has no ts-node. Two different ways to
+ * lands there as `.ts` and cannot run — the production image has no TypeScript loader. Two different ways to
  * end up with a script that will not start:
  *
  *   - never compiled, never copied  ->  `dist/scripts/x.js` is simply absent

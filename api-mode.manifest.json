@@ -3,7 +3,7 @@
   "modes": {
     "graphql": {
       "regionMarker": "graphql",
-      "packages": ["graphql-subscriptions", "graphql-upload"],
+      "packages": ["graphql-subscriptions"],
       "devPackages": ["json-to-graphql-query"],
       "filePatterns": [
         "src/server/modules/*/*.resolver.ts",

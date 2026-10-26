@@ -2,7 +2,7 @@
  * Resolve the MongoDB URI for migration utilities.
  *
  * Resolution order:
- * 1. config.env.ts (local development via ts-node — full config automatisms:
+ * 1. config.env.ts (local development via nest-server's TypeScript loader — full config automatisms:
  *    environment selection, NSC__* merge, NEST_SERVER_CONFIG)
  * 2. NSC__MONGOOSE__URI environment variable (Docker production where the
  *    TypeScript source is not available at runtime)

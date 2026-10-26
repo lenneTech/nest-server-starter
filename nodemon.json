@@ -1,5 +1,5 @@
 {
-  "exec": "ts-node -r tsconfig-paths/register src/main.ts",
+  "exec": "node -r ./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js src/main.ts",
   "ext": "ts",
   "ignore": ["src/**/*.spec.ts"],
   "ignoreRoot": [".git"],

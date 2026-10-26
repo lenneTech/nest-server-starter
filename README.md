@@ -242,11 +242,11 @@ Example configuration for deploy.party (productive):
 `dp:prod` runs `migrate:prod:up` before it starts the server, and the deployed migrate scripts
 (`migrate:{develop,test,preview,prod}:up`) apply the **compiled** migrations from `dist/` — the same
 way `docker-entrypoint.sh` does. So they need the build above to have run, and they work in a tree
-installed with `pnpm install --prod`, where ts-node is absent. Called without a build they stop with
+installed with `pnpm install --prod`, where `@swc/core` (the TypeScript loader's compiler) is absent. Called without a build they stop with
 a message instead of reporting a migration run that never happened.
 
 On a developer machine use `pnpm run migrate:up` (and `migrate:down` / `migrate:list`) instead: those
-run the TypeScript sources through ts-node and need no build.
+run the TypeScript sources through nest-server's SWC loader and need no build.
 
 ## Documentation
 The API and developer documentation can automatically be generated.

@@ -385,8 +385,8 @@ function deployedConfig(
     file: PROJECT_FILE,
     filter: { maxLimit: null },
     // #region graphql
-    // Disable GraphQL playground in production for security; keep it in develop/test for tooling
-    graphQl: { driver: { introspection: true, playground: envName !== 'production' }, maxComplexity: 1000 },
+    // Disable the GraphQL IDE (GraphiQL) in production for security; keep it in develop/test for tooling
+    graphQl: { driver: { graphiql: envName !== 'production', introspection: true }, maxComplexity: 1000 },
     // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
     ignoreSelectionsForPopulate: true,
@@ -518,7 +518,7 @@ function localConfig(
     file: PROJECT_FILE,
     filter: { maxLimit: null },
     // #region graphql
-    graphQl: { driver: { introspection: true, playground: true }, maxComplexity: 1000 },
+    graphQl: { driver: { graphiql: true, introspection: true }, maxComplexity: 1000 },
     // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
     // hostname unset → framework default 0.0.0.0; override via BIND_ADDRESS for parallel projects on same port

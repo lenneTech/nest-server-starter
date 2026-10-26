@@ -5,9 +5,10 @@
  * WHY THIS EXISTS
  * `migrate:{develop,test,preview,prod}:up` run the COMPILED migrations out of `dist/`, the same
  * way `docker-entrypoint.sh` does in production. They used to run the TypeScript sources through
- * `--compiler ts:…`, which needs ts-node — a devDependency, and therefore absent from any tree
- * installed with `pnpm install --prod`. That is how the documented production start (README:
- * `pnpm run dp:prod`) died with "ts-node is required to run migrations from TypeScript sources".
+ * `--compiler ts:…`, which needs a TypeScript loader — ts-node up to nest-server 11, @swc/core since 12 —
+ * a devDependency, and therefore absent from any tree installed with `pnpm install --prod`. That is
+ * how the documented production start (README: `pnpm run dp:prod`) died with "ts-node is required
+ * to run migrations from TypeScript sources" (12.x: "Running TypeScript sources needs @swc/core").
  *
  * The switch to `dist/` costs one thing: these scripts now need a build first. Without this guard
  * that difference is SILENT — `migrate up` treats a missing migrations directory as "nothing to
@@ -20,8 +21,8 @@
  * `dist/migrations/` legitimately stays empty in a project that has no migrations yet.
  *
  * The developer scripts `migrate:up`, `migrate:down` and `migrate:list` are unaffected: they keep
- * running the TypeScript sources with ts-node out of a full installation, which is the right tool
- * on a developer machine.
+ * running the TypeScript sources through nest-server's SWC loader out of a full installation, which
+ * is the right tool on a developer machine.
  */
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
