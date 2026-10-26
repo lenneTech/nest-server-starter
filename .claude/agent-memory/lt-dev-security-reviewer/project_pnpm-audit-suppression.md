@@ -59,3 +59,15 @@ via `/^\s*#/`, nuxt-base-starter's `check-suppressions.mjs`, the scope spec's
 re-dumps via js-yaml and only carries comments sitting above FIRST-level keys of `auditConfig`,
 so no comment under `ignoreGhsas` items reaches a generated monorepo root. In a monorepo, a
 hoisted entry with no vulnerable version in the lockfile fails `pnpm run check` ("NOT IN TREE").
+
+State since 2026-10-24: `ignoreGhsas: []` (flow style, empty). The retired assessments now sit
+ABOVE that first-level key, so the CLI hoist does carry them into a monorepo root (harmless text).
+Trap for the NEXT suppression: if someone edits in place to `ignoreGhsas: [GHSA-…]`, the scope
+spec's block-style regex sees zero entries and passes, and `check-overrides.mjs` only WARNs
+("parsed 0 entries", it does not fail). Re-adding must use the indented `- GHSA-…` form; flag a
+flow-style non-empty list as an unguarded suppression.
+
+better-auth / @better-auth/core / passkey are PEER ranges of nest-server (`>=1.7.7 <1.8.0` on
+11.43.3), not exact deps, so a starter bump ahead of the framework yields ONE shared copy. Confirm
+via the `@lenne.tech/nest-server@…(better-auth@X…)` snapshot key in the lockfile, not `require()`
+(better-auth's `exports` blocks `better-auth/package.json`).

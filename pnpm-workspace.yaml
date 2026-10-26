@@ -70,7 +70,6 @@ strictPeerDependencies: false
 # pins below were raised to 1.1.18 / 2.1.4 / 5.0.9 to close it outright.
 
 auditConfig:
-  ignoreGhsas:
     # RETIRED 2026-10-11 (listed since 2026-10-03), kept here as the assessment to re-add it with.
     # GHSA-ch52-4w7c-c8xp, http-cache-semantics <= 4.2.0, HIGH: max-stale handling can serve one
     # user's cached response to another. Dev tooling only: @swc/cli (also via @nestjs/cli) >
@@ -89,13 +88,19 @@ auditConfig:
     # re-add the entry with this assessment and a matching case in
     # tests/unit/audit-suppression-scope.spec.ts.
     # - GHSA-ch52-4w7c-c8xp
-    # braces <= 3.0.3, HIGH: stack exhaustion through deeply nested patterns. Dev tooling only:
-    # nodemon > chokidar@3 > braces, and cpy-cli > cpy / globby > fast-glob > micromatch >
-    # braces. Patterns come from this repository's own scripts, never from input. Verified
-    # 2026-10-03: newest release 3.0.3, no first patched version. Re-verified 2026-10-09,
-    # 2026-10-11 and 2026-10-17: unchanged (advisory still `<= 3.0.3`, not withdrawn; stripping this
-    # entry makes `pnpm audit` report exactly this one finding via cpy-cli > ... > braces).
-    - GHSA-vfj7-8cjw-p6xm
+    # RETIRED 2026-10-24 (listed since 2026-10-03). GHSA-vfj7-8cjw-p6xm, braces <= 3.0.3, HIGH:
+    # stack exhaustion through deeply nested patterns. Dev tooling only: nodemon > chokidar@3 >
+    # braces, and cpy-cli > cpy / globby > fast-glob > micromatch > braces. Patterns come from this
+    # repository's own scripts, never from input; no patched release anywhere. GitHub WITHDREW the
+    # advisory on 2026-10-23 (`withdrawn_at` 2026-10-23T12:53Z, verified 2026-10-24 via the
+    # Advisory API), and `check:overrides` failed on the obsolete suppression ("FIX AVAILABLE — the
+    # advisory was WITHDRAWN"). Removed together with its guard in
+    # tests/unit/audit-suppression-scope.spec.ts, mirroring nest-server. Nothing in the tree moved:
+    # braces stays at 3.0.3, and `pnpm audit` no longer reports the withdrawn advisory. If it is
+    # ever re-published, `pnpm audit` turns red: re-argue the dev-only case then and restore
+    # entry and guard together.
+    # - GHSA-vfj7-8cjw-p6xm
+  ignoreGhsas: []
 
 # pnpm 11 configuration
 #
@@ -219,7 +224,13 @@ overrides:
   # (published 2026-10-04) is the newest 4.x past the release-age gate and is where a
   # no-override resolve lands, so 4.13.12 had become a downgrade lock (no new advisory; pure
   # hold-back).
-  'hono@>=4.0.0 <4.13.13': 4.13.13
+  # 2026-10-27: raised 4.13.13 -> 4.13.14, key with it. 4.13.14 (published 2026-10-25) is the
+  # newest 4.x past the release-age gate; @modelcontextprotocol/sdk's caret range intersected
+  # `<4.13.13`, so the old entry held the tree one release back (no new advisory; pure hold-back —
+  # the release hardens serve-static to GET/HEAD and fixes router/CSS-minifier edge cases).
+  # nest-server 12.0.0 dropped its own copy of this entry; this file keeps it as a floor (raise-only
+  # run) — re-check with a with/without fresh resolve in the 12.0.0 maintenance run.
+  'hono@>=4.0.0 <4.13.14': 4.13.14
   # Security: @graphql-tools/utils — prototype pollution in mergeDeep (GHSA-7mx3-vvmw-hjmv, high,
   #   patched >=12.0.1) (added 2026-10-06, mirrors nest-server 11.42.4)
   # RUNTIME: mergeDeep runs while the GraphQL schema is assembled. LOAD-BEARING: @nestjs/graphql
@@ -289,25 +300,18 @@ overrides:
   # the key would override that upstream pin for no advisory.
   'picomatch@>=4.0.0 <4.0.4': 4.0.7
 
-  # Security: Multiple CVEs in vite (arbitrary file read via WebSocket, fs.deny
-  # bypass, path traversal in .map handling, plus the fs.deny bypass on Windows
-  # alternate paths fixed in 8.0.16). Dev/test only (vitest, vite-plugin-node).
-  # 8.3.1 still satisfies the vite-plugin-node@8 peer (vite@^8) and pulls
-  # postcss@^8.5.x (see the postcss entry). Target raised 8.0.16 -> 8.2.2 and key
-  # bounded 2026-08-22; a no-override resolve lands on 8.2.2.
-  # 2026-09-26: 8.2.2 had become a downgrade lock (a no-override resolve now lands on
-  # 8.3.1, the newest 8.x and nest-server's own vite devDependency). Key and target raised.
-  # 2026-10-03: the same again — raised 8.3.1 -> 8.3.2, key with it. 8.3.2 is the newest 8.x
-  # past the release-age gate, where a no-override resolve lands, and nest-server 11.41.7's
-  # own vite devDependency (no new advisory; pure hold-back).
-  # 2026-10-07: 8.3.2 had become a downgrade lock again — raised 8.3.2 -> 8.3.3, key with it.
-  # 8.3.3 (dev-server `fs.serve` fixes, identical dependency manifest) is the newest 8.x past
-  # the release-age gate and nest-server 11.42.8's own vite devDependency (no new advisory).
-  # 2026-10-11: 8.3.3 had become a downgrade lock once more (fresh resolve WITHOUT the block
-  # lands on 8.3.4, WITH it on 8.3.3) — raised 8.3.3 -> 8.3.4, key with it. 8.3.4 is past the
-  # release-age gate and nest-server 11.42.11's own vite devDependency (requests postcss
-  # ^8.5.29 = the postcss entry's target, rolldown ~1.2.12; no new advisory).
-  'vite@<8.3.4': 8.3.4
+  # REMOVED 2026-10-24: 'vite@<8.3.4': 8.3.4 (a CVE floor since 2026-08-22, raised in lockstep
+  # with nest-server's own vite devDependency ever since). It became harmful OUTSIDE this repo:
+  # `lt fullstack init` hoists these overrides into the monorepo root, where pnpm rewrites every
+  # vite PEER range in the workspace to the target — the app resolves its nuxt-chosen 8.3.5 and
+  # `pnpm peers check` fails with "unmet peer vite — Installed: 8.3.5, Wanted: 8.3.4" in every
+  # new project (smoke run 2026-10-24). Here alone it never showed.
+  # vite is now a direct devDependency (`"vite": "8.3.4"`, mirrors nest-server): it only acts in
+  # this package, and vitest takes its vite PEER from it. Fresh resolve without
+  # this entry, with vitest 4.1.12 and with 5.0.5: one vite copy, 8.3.4, audit + peers clean.
+  # HOLD that pin at 8.3.4: vitest 5.0.5 + vite 8.3.5 crash the e2e run after green tests
+  # (vitest-dev/vitest#11682; guard: tests/unit/toolchain-compat.spec.ts). Raise it with a vitest
+  # release after 5.0.5. The CVEs this entry floored are all fixed below 8.3.4.
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf is
   # provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via @compodoc/compodoc.
@@ -359,7 +363,12 @@ overrides:
   # you one patch behind — it puts a SECOND, older ws copy in the tree next to the
   # declared one. Raised 8.21.0 -> 8.21.3 on 2026-08-22; the upper bound moves with it
   # so the declared 8.21.3 itself is never matched. Move both when the framework moves.
-  'ws@>=8.0.0 <8.21.3': 8.21.3
+  # 2026-10-24: raised to 8.22.0, key with it, ahead of nest-server 12.0.0 (which declares
+  # 8.22.0, the version @nestjs/graphql 14.0.3 pins). pnpm rewrites graphql-ws's `ws` peer
+  # range to the override target, so a target left on 8.21.3 makes `pnpm peers check` report
+  # `unmet peer ws` against 12.0.0. Until the framework bump, this also lifts 11.43.x's
+  # declared 8.21.3 — one 8.22.0 copy in both states.
+  'ws@>=8.0.0 <8.22.0': 8.22.0
   # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — patched
   # release, raised 7.5.11 -> 7.5.13 on 2026-08-22 (latest 7.x).
   'ws@>=7.0.0 <7.5.13': 7.5.13
@@ -396,13 +405,17 @@ overrides:
   # 2026-09-26: 3.1.6 had become a downgrade lock (a no-override resolve lands on 3.1.8, the
   # newest 3.x, now past the release-age gate). Key and target raised, mirroring nest-server
   # 11.41.4.
-  'fast-uri@<3.1.8': 3.1.8
+  # 2026-10-24: raised to 3.1.9, key with it — four advisories up to moderate, patched in 3.1.9;
+  # mirrors nest-server 12.0.0 (migration guide 11.43.x -> 12.0.x §1, "Security overrides").
+  'fast-uri@<3.1.9': 3.1.9
 
   # Security: body-parser DoS on malformed urlencoded input
   # (GHSA-v422-hmwv-36x6, low, patched >=2.3.0). Transitive via
   # @lenne.tech/nest-server>@as-integrations/express5 and express itself.
-  # 2.3.0 is the newest 2.x. Drop once express / @apollo/server request >=2.3.0.
-  'body-parser@>=2.0.0 <2.3.0': 2.3.0
+  # Drop once express / @apollo/server request the target themselves.
+  # 2026-10-24: raised 2.3.0 -> 2.4.0, key with it — GHSA-27r3-jxmh-p828 (high), patched in
+  # 2.4.0; a target left on 2.3.0 would pin the vulnerable version. Mirrors nest-server 12.0.0.
+  'body-parser@>=2.0.0 <2.4.0': 2.4.0
 
   # Security: Overlong UTF-8 decoding in @protobufjs/utf8 <=1.1.0. Transitive
   # via @lenne.tech/nest-server>@apollo/server>@apollo/usage-reporting-protobuf
@@ -479,21 +492,12 @@ overrides:
   # DOES call it as a callable and would throw.
   'minimatch@>=9.0.0 <10.2.6': 10.2.6
 
-  # Security: postcss <=8.5.17 (GHSA-r28c-9q8g-f849, high), patched >=8.5.18.
-  # Dev/test only: the dominant path is this project's own `vitest` devDependency
-  # (vitest > @vitest/mocker > vite > postcss). A secondary path runs through
-  # better-auth > vitest, but that peer is optional and pruned by `--prod`, so no
-  # postcss reaches the production image either way.
-  # Target raised 8.5.25 -> 8.5.26 on 2026-08-22 (newest 8.x).
-  # 2026-09-26: raised 8.5.26 -> 8.5.28 (newest 8.x; a no-override resolve lands there),
-  # key with it — mirrors nest-server 11.41.4.
-  # 2026-10-06: raised 8.5.28 -> 8.5.29, key with it — mirrors nest-server 11.42.7. 8.5.29
-  # (2026-10-05) is the newest 8.x past the release-age gate. vite 8.3.2 requests ^8.5.28, which
-  # the new key intersects, so the entry fires and pins the newest 8.x (no hold-back). 8.5.29 also
-  # requests source-map-js ^1.2.2 itself (the GHSA-68fv-2mgg-jv7q fix the lock already carries).
-  # 2026-10-13: raised 8.5.29 -> 8.5.30, key with it — mirrors nest-server 11.42.15. Newest 8.x
-  # past the release-age gate; it requests nanoid ^3.3.20.
-  'postcss@<8.5.30': 8.5.30
+  # REMOVED 2026-10-24: 'postcss@<8.5.30': 8.5.30 (GHSA-r28c-9q8g-f849 floor, dev/test only via
+  # vitest > vite > postcss; raised in lockstep with nest-server, which dropped it in 12.0.0).
+  # Hoisted into a monorepo root by `lt fullstack init`, it rewrote the postcss PEER ranges of
+  # api AND app to 8.5.30 while both resolve 8.5.31 — "unmet peer postcss" in every new project
+  # (smoke run 2026-10-24). A fresh resolve without it lands on 8.5.31, far above the advisory's
+  # 8.5.18 fix; audit clean (verified 2026-10-24 with vitest 4.1.12 and 5.0.5).
 
   # Security: CRLF injection via unescaped multipart field names/filenames in
   # form-data <4.0.6 (GHSA-hmw2-7cc7-3qxx). Transitive via
@@ -581,7 +585,12 @@ overrides:
   # (fetch strips credentials on a cross-origin redirect, bounded per-message work; no API change;
   # migration guide 11.42.14 -> 11.42.15 §3). Same reasoning as above: the framework's exact 10.1.2
   # never intersected `<10.1.0`, so the tree already held a single 10.1.2 copy.
-  'nodemailer@<10.1.2': 10.1.2
+  # 2026-10-24: raised 10.1.2 -> 10.2.1, key with it, AHEAD of the framework — three moderate
+  # addressparser advisories (GHSA-85x2-q946-cp5h and two siblings) cover 10.1.2, patched >=10.1.4,
+  # and turned `pnpm audit` red. 10.2.1 is what nest-server 12.0.0 declares, so the entry is back
+  # in lockstep with that bump; until then it lifts 11.43.x's declared 10.1.2 (a minor, no API
+  # change), the one deliberate exception to "never higher than the framework".
+  'nodemailer@<10.2.1': 10.2.1
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
@@ -595,7 +604,10 @@ overrides:
   # with nest-server 11.41.4, which declares 2.4.0. Inert today — nest-server 11.41.4
   # and @nestjs/platform-express 11.2.6 both request 2.4.0 themselves — and kept as
   # insurance against a dependency that falls back below the framework's version.
-  'multer@>=2.0.0 <2.4.0': 2.4.0
+  # 2026-10-24: raised to 2.5.0, key with it, and the direct dependency with them —
+  # GHSA-q7qp-rjg7-q26m (high), patched in 2.5.0. Load-bearing again with nest-server 12.0.0:
+  # @nestjs/platform-express 12.2.0 exact-pins the vulnerable 2.4.0. Mirrors nest-server 12.0.0.
+  'multer@>=2.0.0 <2.5.0': 2.5.0
 
   # Security: various undici CVEs <7.29.0 — response desynchronization,
   # cross-user information disclosure, CRLF injection via a blob-like body type,
@@ -629,7 +641,11 @@ overrides:
   # (published 2026-10-11) is the newest 10.x past the release-age gate; express-rate-limit
   # 8.7.1, the newest, still requests `^10.2.0`, which intersected `<10.7.3`, so the old entry
   # held the tree at 10.7.3. Remove once express-rate-limit requests >=10.3.1.
-  'ip-address@<10.7.4': 10.7.4
+  # 2026-10-27: raised 10.7.4 -> 10.7.5, key with it. 10.7.5 (published 2026-10-25) is the newest
+  # 10.x past the release-age gate (adds tests that every parser rejects fullwidth / non-ASCII
+  # digits; no advisory). Same reasoning as above: `^10.2.0` intersected `<10.7.4`, so the old entry
+  # had become a downgrade lock holding the tree at 10.7.4.
+  'ip-address@<10.7.5': 10.7.5
 
   # Security: TWO advisories on the 3.x line, and the target must be the LATER of
   # the two — a 3.3.17 target closes the first and leaves the second wide open.
@@ -712,7 +728,9 @@ overrides:
   # tsc, not webpack — the pin only feeds `nest build --webpack`. Target = newest 5.x
   # (2026-10-15). Remove once @nestjs/cli requests webpack >=5.112 itself, or with the
   # move to @nestjs/cli 12 (webpack is a peer there).
-  '@nestjs/cli>webpack': 5.112.0
+  # 2026-10-27: target raised 5.112.0 -> 5.112.2 (newest 5.x, published 2026-10-23; two bug-fix
+  # patches, no advisory), per "target = newest 5.x" above.
+  '@nestjs/cli>webpack': 5.112.2
 
   # Security: fflate <0.8.3 — `unzipSync` loops indefinitely on a crafted ZIP64 archive
   # (moderate). Dev/test only, and the path is NOT the one an audit report suggests:

@@ -6,19 +6,20 @@ Detail lives in two authoritative places — read them, don't duplicate here:
 
 This file = current state + timeless rules + one-line session log.
 
-## Current state (session 17, 2026-10-17 evening)
-- On top of `@lenne.tech/nest-server` **11.42.16** (orchestrator: lock-step bump, `pnpm run update` -> vitest + coverage 4.1.12, oxfmt 0.73.0; utils override raised `<12.1.0`/12.1.0 by hand). All 47 shared direct pins == framework manifest; starter-only cpy-cli 7.0.0 / semver 7.8.5 newest. better-auth trio 1.7.7 (1.7.10 out — lock-step, report only).
+## Current state (session 18, 2026-10-27 — 12.0.0 BRIDGE run)
+- Still on `@lenne.tech/nest-server` **11.43.3**; the uncommitted tree already prepares 12.0.0 (better-auth trio 1.7.12, multer 2.5.0, vite devDep 8.3.4, oxlint-tsgolint, raised ws/fast-uri/body-parser/multer/nodemailer overrides). The 12.0.0 lock-step run follows within hours and takes the majors.
+- This run: @swc/core 1.16.20, oxlint 1.89.0 (both = nest-server develop/12.0.0); overrides hono 4.13.14, ip-address 10.7.5, `@nestjs/cli>webpack` 5.112.2 (key+target). Fresh-resolve lock (49 names, all in-range ups, 0 downgrades; the old lock FAILED `dedupe --check`, the fresh one passes).
+- **Hand to the 12.0.0 run**: mongoose 9.11.4 is a HARDENING release (prototype-pollution paths, sanitizeFilter, mquery 6.0.1; no GHSA yet) — framework-pinned, comes with 12.0.0. browserslist 4.29.5 clears the gate 2026-10-27T18:51Z — raise the override (else fresh `lt fullstack init` fails `peers check`). better-auth 1.7.13/1.7.14 (no security; 1.7.14 gated until 2026-10-27T20:51Z) — one lock-step round. js-yaml 5.5.0 / oxfmt 0.74.0 / express 5.3.0 follow the framework. pnpm 11.28.8 = latest-11.
+- **jose: two copies in a fresh resolve** (nest-server 11.43.3 exact-pins 6.2.12, better-auth `^6.2.3` takes 6.2.13). Harmless (framework uses jose internally, only `instanceof Error`), not dedupe-able; gone with 12.0.0 (declares 6.2.13).
+- nest-server 12.0.0 cut its OWN override block to 2 entries (utils, multer) after a with/without fresh-resolve test. This starter's block (31) is hoisted into generated projects, so prune here only with the same with/without test — and not in a raise-only run.
 - **oxfmt follows the FRAMEWORK, never the siblings** (vendor-mode projects format the vendored core with the template's oxfmt).
-- packageManager pnpm 11.28.5 in all five sibling repos; newer 11.x out — moving the five pins is the orchestrator's call.
-- 32 overrides, every target the newest of its major except the deliberate holds (ws 8.21.3 lockstep — 8.22.0 is a feature release: `protocols` option, no advisory; js-yaml 5.4.3 mirrors framework, swagger exact pin is the only 5.x requester). **@graphql-tools/utils is ONE copy (12.1.0) again.** WITH/WITHOUT unchanged: utils 12.0.0 (+ @whatwg-node/promise-helpers 1.3.2) and js-yaml 5.3.0 return (WITHOUT audits 1 high + 1 moderate), uuid 14.0.1, ajv 8.18 / minimatch 9 / brace-expansion 2 (design). fflate = documented pre-emptive floor (check:overrides WARN, expected).
-- Lockfile = fresh resolve (drifted only asn1js 3.1.0 + set-cookie-parser 3.1.4 within hours of s16; 68-line diff, nothing else). dedupe --check exit 0. braces suppression re-verified + re-dated.
-- Validation: `pnpm run check` green first try (484 tests / 34 files, 1m15s), audit 0 (1 ignored). NOT committed.
+- Validation: `pnpm run check` green (492 tests / 37 files, ~1m), audit 0. NOT committed.
 
 ## Blocked (see blocked-updates.md)
 - **graphql-upload 15→17**: v16+ ships `.mjs`-only exports; breaks `require('graphql-upload/GraphQLUpload.js')` in file.resolver.ts.
-- **typescript 5.9→6/7**: strictPropertyInitialization (TS2564) + null-assignment (TS2322) errors across framework-extending models (user.model.ts, meta.model.ts, find-and-count-users-result.output.ts) + baseUrl TS5101. API-shaped model change to fix.
+- **typescript 5.9→6**: UNBLOCKED since the 12.0.0 prep — the TS2564/TS2322 model errors came from TS 6's strict default; tsconfig sets `"strict": false` explicitly and has no `baseUrl`. The bump to 6.x (not 7) comes with the nest-server 12.0.0 lock-step run.
 - (cpy-cli, vite-plugin-node, class-validator: RESOLVED — history in blocked-updates.md.)
-- Majors deliberately held (re-checked 2026-10-17 s17): NestJS 12 family (core 12.1.3, cli 12.0.8, schematics 12.0.7, graphql 14.0.3, mongoose 12, schedule 12, swagger 12), vitest/@vitest/coverage-v8 5.0.5, typescript 7.0.2, dotenv 18.0.8, graphql-upload 18.0.1, pnpm 12 (engines `^11.0.0`; never from a maintenance run). In-major but held, all because the framework holds them: better-auth trio 1.7.10 (wire-critical lock-step), js-yaml 5.5.0 (parser-strictness minor, no hold-back), override target ws 8.22.0 (lockstep with framework's 8.21.3), express 5.3.0 (@nestjs/platform-express 11.2.7 exact-pins 5.2.1).
+- Majors deliberately held (re-checked 2026-10-27 s18): NestJS 12 family (common/core/platform-express/testing 12.2.0, cli + schematics 12.0.10, graphql 14.0.3, mongoose 12.0.0, schedule 12.0.2, swagger 12.0.4), vitest/@vitest/coverage-v8 5.0.5, typescript 7.0.2 (framework 12.0.0 uses 6.0.3), dotenv 18.0.9, graphql-upload 18.0.1, oxfmt 0.74.0 (0.x minor), pnpm 12 (engines `^11.0.0`; never from a maintenance run). In-major but held, all because the framework holds them: better-auth trio (wire-critical lock-step), js-yaml 5.5.0, mongoose 9.11.4, express 5.3.0 (@nestjs/platform-express 11.2.7 exact-pins 5.2.1), vite 8.3.5 (vitest#11682 guard).
 
 ## Timeless rules
 - **Overrides location (pnpm 11)**: top-level `overrides:` in `pnpm-workspace.yaml`, NOT package.json `pnpm.overrides` (silently ignored → dead overrides → vulns reappear). Build approvals = `allowBuilds:` (pkg→true). Freshly-published-package gate exceptions = `minimumReleaseAgeExclude:` with the **bare name** (`'@lenne.tech/nest-server'`), never `name@version` (version-pinned excludes NOT honored on pnpm 11.1.3).
@@ -46,7 +47,11 @@ This file = current state + timeless rules + one-line session log.
 
 - **A green `pnpm audit` does not cover REPOSITORY advisories.** undici 7.30.1 (2026-10-15) fixed 4 high + 4 medium published only on the undici repo; audit and `check:overrides` stayed green on 7.30.0. Read the framework's migration guide and the release notes of every runtime override target; raise on the release, not on the audit.
 
+- **Measure exit codes without a pipe.** `pnpm dedupe --check | tail -3; echo $?` prints TAIL's status — s18 first read "exit 0" that way while the real status was 1. Use `pnpm dedupe --check >/dev/null 2>&1; echo $?` (or `${pipestatus[1]}` in zsh).
+- **Bridge runs (framework major announced, not yet on npm)**: take dev-only patches/minors that equal the upcoming framework's pins; leave framework-pinned runtime deps (mongoose, express, @nestjs/*) and the better-auth trio for the lock-step bump; overrides raise-only. Gate with `pnpm run check -- --no-fix` first, so a new oxlint cannot silently rewrite the user's uncommitted sources.
+
 ## Session log (one line each)
+- **s18 (2026-10-27)**: bridge run before nest-server 12.0.0 (framework stays 11.43.3) — @swc/core 1.16.20, oxlint 1.89.0, overrides hono/ip-address/webpack raised, fresh-resolve lock (49 in-range ups). 492 tests, 0 vulns.
 - **s17 (2026-10-17 evening)**: downstream of nest-server 11.42.16 — no direct/override changes needed beyond the orchestrator's; fresh-resolve lock (2 in-range ups), braces suppression re-dated. 484 tests, 0 vulns.
 - **s16 (2026-10-17)**: downstream of nest-server 11.42.15 — undici (security, invisible to audit), qs, nodemailer overrides raised key + target; fresh-resolve lock (41 ups, now two @graphql-tools/utils copies). 484 tests, 0 vulns.
 - **s15 (2026-10-11)**: downstream of nest-server 11.42.11 — vite + uuid overrides raised, fresh-resolve lock (11 in-range ups), suppressions re-dated; express kept as declared template dep (unused in npm mode, see Timeless rules). 472 tests, 0 vulns.

@@ -8,7 +8,8 @@
 ## graphql-upload 15 → 16/17
 **Status**: BLOCKED
 **Reason**: v16+ moved all exports from `.js` files to `.mjs` files only (applies from v16.0.0 onwards). The import in `src/server/modules/file/file.resolver.ts` uses `require('graphql-upload/GraphQLUpload.js')` which no longer exists.
-**Latest versions available**: 16.0.2 (also blocked) and 17.0.0.
+**Latest versions available**: 16.0.2 (also blocked), 17.0.0, 18.0.1 (re-checked 2026-10-27).
+**Planned exit (nest-server 12.0.0)**: import `GraphQLUpload` from `@lenne.tech/nest-server` and drop the direct `graphql-upload` dependency — that ends this blocker instead of migrating the import.
 **Fix needed**: Update import to use `import GraphQLUpload from 'graphql-upload/GraphQLUpload.mjs'` (ESM import) and ensure project ESM config supports it, OR wait for @lenne.tech/nest-server to handle this migration.
 
 ## class-validator 0.14 → 0.15
@@ -16,7 +17,11 @@
 **Notes**: Project was updated to 0.15.1. Peer dep warning from `@nestjs/mapped-types@2.1.0` (still declares `^0.13.0 || ^0.14.0`) exists but is suppressed by `strict-peer-dependencies=false`. Tests pass fine at 0.15.1.
 
 ## typescript 5.9.3 → 6.0.3
-**Status**: BLOCKED (re-validated 2026-05-24, session 9)
+**Status**: UNBLOCKED by the 12.0.0 prep (2026-10-24), the bump itself comes with the nest-server 12.0.0 lock-step run.
+**2026-10-27**: the errors below came from TS 6 turning `strict` on by default. tsconfig.json now sets `"strict": false`
+explicitly (migration guide 11.43.x -> 12.0.x §2; a no-op under 5.9) and has no `baseUrl` any more, so TS5101 is gone too.
+nest-server's consumer gate compiled this starter with TS 6 on that basis. Target 6.x (the framework's 6.0.3), not 7.
+**History**: BLOCKED (re-validated 2026-05-24, session 9)
 **2026-09-26 (nest-server 11.41.4)**: typescript 7.0.2 checked in a scratch copy — 23 errors under the build config, 53 under the tests config (models, config.env.ts, the upload resolver). Still blocked; the framework stays on 5.9.3.
 **Session 9 update**: Re-attempted with typescript@6.0.3. Error count dropped from 26 to 21 (same 5 files), so the framework type updates have partially helped. Two distinct issues remain:
 1. `baseUrl` now triggers a HARD error TS5101 ("deprecated, will stop functioning in TS7"). Adding `"ignoreDeprecations": "6.0"` to tsconfig.json silences it cleanly — but baseUrl is needed for tsconfig-paths/register at dev runtime, so it cannot simply be removed.

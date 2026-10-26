@@ -16,8 +16,11 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noImplicitOverride": true,
+    // TypeScript 6 turns `strict` on by default; the starter is written non-strict
+    // (nest-server migration guide 11.43.x -> 12.0.x §2). A no-op under TypeScript 5.9.
+    "strict": false,
     "useDefineForClassFields": true,
     "types": ["vitest/globals"]
   },
-  "exclude": ["node_modules", "dist", "vite.config.ts"]
+  "exclude": ["node_modules", "dist"]
 }

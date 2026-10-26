@@ -380,11 +380,8 @@ function deployedConfig(
     },
     env: envName,
     errorCode: PROJECT_ERROR_CODE,
-    // #region graphql
-    // docs:bootstrap generates the spectaql GraphQL schema docs — only
-    // meaningful when GraphQL is enabled.
-    execAfterInit: 'pnpm run docs:bootstrap',
-    // #endregion graphql
+    // No `execAfterInit` here: the spectaql docs (`pnpm run docs:bootstrap`, localConfig) need pnpm, scripts/ and
+    // a registry download, none of which the production image has — it logged "pnpm: not found" on every start.
     file: PROJECT_FILE,
     filter: { maxLimit: null },
     // #region graphql

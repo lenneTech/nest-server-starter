@@ -49,8 +49,9 @@ advisory if it later appears on a production path.
 
 So a suppression is not only a statement about today's tree — it is a standing hole in the
 detection. Whenever a suppressed advisory affects a package that also has a production
-path, record that explicitly and state what to re-check after a dependency bump. The current
-entry (`GHSA-vfj7-8cjw-p6xm`, since 2026-10-03) and the retired `GHSA-ch52-4w7c-c8xp` follow
+path, record that explicitly and state what to re-check after a dependency bump. The list is
+empty since 2026-10-24; the two retired assessments kept as comments there
+(`GHSA-vfj7-8cjw-p6xm`, withdrawn by GitHub on 2026-10-23, and `GHSA-ch52-4w7c-c8xp`) follow
 that shape — copy it.
 
 ### Before the third claim: can a patch make the fix usable?

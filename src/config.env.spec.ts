@@ -266,6 +266,17 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     await expect(load(env, COMPLETE)).resolves.toBeDefined();
   });
 
+  // The production image (Dockerfile stage 3) holds dist/ and production node_modules only: no pnpm, no
+  // scripts/, no spectaql. `execAfterInit: 'pnpm run docs:bootstrap'` therefore logged "pnpm: not found" as an
+  // error on every start of every deployed container, and where pnpm did exist it fetched spectaql from the
+  // registry at runtime (`pnpm dlx`). The docs are a local-development artefact; deployed envs run nothing.
+  it.each(['develop', 'test', 'production'])('%s runs no shell command after init', async (env) => {
+    // The default export is the resolved config of the active env; the named `config` is the map of all envs.
+    const { default: resolved } = await load(env, COMPLETE);
+    expect(resolved.env).toBe(env);
+    expect(resolved.execAfterInit).toBeUndefined();
+  });
+
   it('names exactly the one var that is missing', async () => {
     // Per var, so a requirement whose check reads the wrong config path cannot hide behind the others.
     for (const envVar of Object.keys(COMPLETE)) {

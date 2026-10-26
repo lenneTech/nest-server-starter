@@ -1,2 +1,3 @@
 - [vitest config is never type-checked](vitest-config-not-typechecked.md) — module commonjs collapses vitest's config type to `any`; the runtime spec is the guard; mkdtemp dirs are already 0700
 - [Proving ignoreGhsas changes](audit-suppression-review-proofs.md) — scratch-copy mutation run for the suppression spec; audit --json metadata counts muted entries
+- [vitest#11682 probe](vitest-vite-stack-crash-probe.md) — globalSetup `.stack` probe; only vitest 5.0.x + vite 8.3.5 crashes, 4.1.12 is safe

@@ -69,3 +69,39 @@ describe('vitest-e2e.config low-resource cap', () => {
     expect(test?.maxWorkers).toBeUndefined();
   });
 });
+
+/**
+ * The e2e config resolves extensionless files in Node's order (`.js` before `.mjs`), where the vendored core's GraphQL
+ * subscriptions run. tests/unit/vitest-node-resolution.spec.ts explains why and checks the unit config by behaviour;
+ * this checks the e2e config by its setting, with the same isolation as the cap tests above.
+ */
+describe('vitest-e2e.config resolution order', () => {
+  let dir: string;
+  let savedSlotDir: string | undefined;
+
+  beforeEach(() => {
+    savedSlotDir = process.env.LT_E2E_SLOT_DIR;
+    dir = mkdtempSync(join(os.tmpdir(), 'e2e-config-test-'));
+    process.env.LT_E2E_SLOT_DIR = dir;
+    vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    vi.resetModules();
+  });
+
+  afterEach(() => {
+    if (savedSlotDir === undefined) {
+      delete process.env.LT_E2E_SLOT_DIR;
+    } else {
+      process.env.LT_E2E_SLOT_DIR = savedSlotDir;
+    }
+    rmSync(dir, { force: true, recursive: true });
+    vi.restoreAllMocks();
+  });
+
+  it('probes `.js` before `.mjs`, as Node does', async () => {
+    const { default: config } = await import('../../vitest-e2e.config');
+    const extensions = config.resolve?.extensions ?? [];
+
+    expect(extensions, `resolve.extensions: ${JSON.stringify(extensions)}`).toContain('.js');
+    expect(extensions.indexOf('.js')).toBeLessThan(extensions.indexOf('.mjs'));
+  });
+});

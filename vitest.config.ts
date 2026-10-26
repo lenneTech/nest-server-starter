@@ -5,6 +5,13 @@ export default defineConfig({
   // Vite 8 switched the default TS/JS transformer from esbuild to Oxc. unplugin-swc
   // disables esbuild internally — without `oxc: false`, Oxc would still run in parallel.
   oxc: false,
+  // Probe extensionless files in NODE's order: `.js` before `.mjs`. Vite's default tries `.mjs` first, so a package
+  // whose `main` has no extension — graphql: `"main": "index"` next to `index.mjs`, no `exports` — loads its ESM build
+  // for an `import` while Node (and every `require`) loads `index.js`. Two graphql instances in one test process, and a
+  // schema built by @nestjs/graphql is refused by the other: "Cannot use GraphQLSchema from another module or realm".
+  // Hits vendor-mode projects (the vendored core imports graphql with `import` since nest-server 12.0.0) and any test
+  // that imports graphql. Pinned by tests/unit/vitest-node-resolution.spec.ts and tests/unit/vitest-e2e-config.spec.ts.
+  resolve: { extensions: ['.js', '.mjs', '.mts', '.ts', '.jsx', '.tsx', '.json'] },
   plugins: [swc.vite()],
   test: {
     // NOTE: `disableConsoleIntercept` is deliberately NOT set here, unlike in vitest-e2e.config.ts.

@@ -29,6 +29,12 @@ import { imports, ServerModule } from '../src/server/server.module';
  *      codes matched.
  *
  * Each is asserted separately below, because fixing any one of them leaves the others intact.
+ *
+ * This file asks through the REST route (`POST /users/password/reset-request`, user.controller.ts);
+ * password-reset-mail-graphql.e2e-spec.ts asks the same three questions through the
+ * `requestPasswordResetMail` mutation. The `-rest` / `-graphql` suffix is what api-mode.manifest.json
+ * keys on: until 2026-10-25 this file had neither, so `lt fullstack init --api-mode GraphQL` deleted
+ * the controller and kept the spec, and every GraphQL-only project started with three red tests (404).
  */
 function hashPassword(password: string): string {
   if (!envConfig.sha256) {
@@ -37,7 +43,7 @@ function hashPassword(password: string): string {
   return createHash('sha256').update(password).digest('hex');
 }
 
-describe('Password reset mail (e2e)', () => {
+describe('Password reset mail - REST (e2e)', () => {
   let app;
   let testHelper: TestHelper;
   let connection;
