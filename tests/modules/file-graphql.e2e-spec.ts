@@ -1,17 +1,17 @@
 import { ErrorCode, HttpExceptionLogFilter, RoleEnum, TestGraphQLType, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import fs = require('fs');
+import fs from 'fs';
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
 import { Db, MongoClient, ObjectId } from 'mongodb';
-import os = require('os');
-import path = require('path');
+import os from 'os';
+import path from 'path';
 
-import envConfig from '../../src/config.env';
-import { FileInfo } from '../../src/server/modules/file/file-info.model';
-import { User } from '../../src/server/modules/user/user.model';
-import { imports, ServerModule } from '../../src/server/server.module';
+import envConfig from '../../src/config.env.js';
+import { FileInfo } from '../../src/server/modules/file/file-info.model.js';
+import { User } from '../../src/server/modules/user/user.model.js';
+import { imports, ServerModule } from '../../src/server/server.module.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config

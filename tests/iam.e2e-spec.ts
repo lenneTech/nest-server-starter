@@ -5,8 +5,8 @@ import { createHash } from 'crypto';
 import { Server } from 'http';
 import { Db, MongoClient, ObjectId } from 'mongodb';
 
-import envConfig from '../src/config.env';
-import { imports, ServerModule } from '../src/server/server.module';
+import envConfig from '../src/config.env.js';
+import { imports, ServerModule } from '../src/server/server.module.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config

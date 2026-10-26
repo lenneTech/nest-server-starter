@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ServerModule } from '../src/server/server.module';
+import { ServerModule } from '../src/server/server.module.js';
 
 const run = async () => {
   const moduleFixture: TestingModule = await Test.createTestingModule({

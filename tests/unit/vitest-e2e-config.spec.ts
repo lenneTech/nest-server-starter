@@ -9,9 +9,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
  * It used to be `poolOptions.forks.maxForks`, which Vitest 4 removed: the cap was announced on
  * stderr and silently discarded, so overlapping e2e runs kept starving each other. This file is
  * the only guard against that coming back. The assertions read the RESOLVED value, so a dead or
- * renamed option fails here. Do not count on the type-check instead: under this repo's
- * `module: commonjs` vitest's config type collapses to `any` (see the comment at `maxWorkers` in
- * vitest-e2e.config.ts), so an unknown option type-checks clean.
+ * renamed option fails here. Since the switch to ES modules (`nodenext`) `typecheck:tests` also
+ * rejects an unknown option in that config (under `module: commonjs` its type collapsed to `any`,
+ * see the comment at `maxWorkers` in vitest-e2e.config.ts). A removed option that vitest still
+ * types as deprecated passes the type-check, so the resolved-value assertions stay the guard.
  *
  * The config is evaluated at import time from the environment, hence `vi.resetModules()` and a
  * fresh import per case. `LT_E2E_SLOT_DIR` points at an empty directory so that real e2e runs on
@@ -47,7 +48,7 @@ describe('vitest-e2e.config low-resource cap', () => {
   });
 
   async function loadTestConfig() {
-    const { default: config } = await import('../../vitest-e2e.config');
+    const { default: config } = await import('../../vitest-e2e.config.js');
     return config.test;
   }
 
@@ -98,7 +99,7 @@ describe('vitest-e2e.config resolution order', () => {
   });
 
   it('probes `.js` before `.mjs`, as Node does', async () => {
-    const { default: config } = await import('../../vitest-e2e.config');
+    const { default: config } = await import('../../vitest-e2e.config.js');
     const extensions = config.resolve?.extensions ?? [];
 
     expect(extensions, `resolve.extensions: ${JSON.stringify(extensions)}`).toContain('.js');

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { setup } from '../global-setup';
+import { setup } from '../global-setup.js';
 
 /**
  * The ONE drop site in tests/global-setup.ts: an externally pinned NSC__MONGOOSE__URI is dropped

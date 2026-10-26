@@ -4,9 +4,9 @@ import { createHash } from 'crypto';
 import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as tus from 'tus-js-client';
 
-import envConfig from '../../src/config.env';
-import { User } from '../../src/server/modules/user/user.model';
-import { imports, ServerModule } from '../../src/server/server.module';
+import envConfig from '../../src/config.env.js';
+import { User } from '../../src/server/modules/user/user.model.js';
+import { imports, ServerModule } from '../../src/server/server.module.js';
 
 // =====================================================================================================================
 // Helper Functions

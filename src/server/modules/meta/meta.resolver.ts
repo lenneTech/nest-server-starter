@@ -1,8 +1,8 @@
 import { RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Query, Resolver } from '@nestjs/graphql';
 
-import { Meta } from './meta.model';
-import { MetaService } from './meta.service';
+import { Meta } from './meta.model.js';
+import { MetaService } from './meta.service.js';
 
 /**
  * Resolver to process with metadata

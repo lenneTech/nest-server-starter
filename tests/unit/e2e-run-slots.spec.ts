@@ -14,7 +14,7 @@ import os from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { acquireRunSlot, activeRuns, countOtherActiveRuns, maxConcurrentE2eRuns, slotDir } from '../e2e-run-slots';
+import { acquireRunSlot, activeRuns, countOtherActiveRuns, maxConcurrentE2eRuns, slotDir } from '../e2e-run-slots.js';
 
 /**
  * Unit tests for the machine-wide e2e run governor (tests/e2e-run-slots.ts).

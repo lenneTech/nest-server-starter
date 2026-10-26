@@ -1,7 +1,7 @@
 import {
   ConfigService,
   CoreBetterAuthUserMapper,
-  CoreModelConstructor,
+  type CoreModelConstructor,
   CoreUserService,
   EmailService,
   ServiceOptions,
@@ -13,9 +13,9 @@ import { PubSub } from 'graphql-subscriptions';
 // #endregion graphql
 import { Model } from 'mongoose';
 
-import { UserCreateInput } from './inputs/user-create.input';
-import { UserInput } from './inputs/user.input';
-import { User, UserDocument } from './user.model';
+import { UserCreateInput } from './inputs/user-create.input.js';
+import { UserInput } from './inputs/user.input.js';
+import { User, UserDocument } from './user.model.js';
 
 /**
  * User service

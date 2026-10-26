@@ -38,8 +38,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// `process.cwd()` rather than an `import.meta.url` dance: tsconfig.json compiles to commonjs, and
-// pnpm-pin.spec.ts resolves the root the same way.
+// `process.cwd()`: vitest runs from the repository root, and pnpm-pin.spec.ts resolves the root
+// the same way.
 const ROOT = process.cwd();
 const scripts: Record<string, string> = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf-8')).scripts ?? {};
 

@@ -37,7 +37,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 // once rather than repeated on 28 cases.
 vi.setConfig({ testTimeout: 30_000 });
 
-const GUARD = join(__dirname, '..', '..', 'scripts', 'check-overrides.mjs');
+const GUARD = join(import.meta.dirname, '..', '..', 'scripts', 'check-overrides.mjs');
 
 const dirs: string[] = [];
 afterAll(() =>

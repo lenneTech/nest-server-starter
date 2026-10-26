@@ -3,13 +3,13 @@ import { Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 // #endregion rest
 
-import { FileController } from './file.controller';
+import { FileController } from './file.controller.js';
 // #region graphql
-import { FileResolver } from './file.resolver';
+import { FileResolver } from './file.resolver.js';
 // #endregion graphql
-import { FileService } from './file.service';
+import { FileService } from './file.service.js';
 // #region rest
-import { GridFsMulterConfigService } from './multer-config.service';
+import { GridFsMulterConfigService } from './multer-config.service.js';
 // #endregion rest
 
 /**

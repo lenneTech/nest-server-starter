@@ -1,6 +1,12 @@
 {
   "compilerOptions": {
-    "module": "commonjs",
+    // ES module project ("type": "module"), as `nest new` generates since NestJS 12 (nest-server migration
+    // guide 11.43.x -> 12.0.x §17): resolve and emit exactly like Node, `exports` maps included.
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // Each file must compile on its own (SWC loader, vitest). Flags a type in a decorated signature that
+    // needs `import type` (TS1272).
+    "isolatedModules": true,
     "declaration": true,
     "noImplicitAny": false,
     "removeComments": true,

@@ -1,8 +1,8 @@
 import { ConfigService, getCommit, UNKNOWN_COMMIT } from '@lenne.tech/nest-server';
 import { Injectable } from '@nestjs/common';
 
-import metaData = require('../../../meta.json');
-import { Meta } from './meta.model';
+import metaData from '../../../meta.json' with { type: 'json' };
+import { Meta } from './meta.model.js';
 
 /**
  * Meta service

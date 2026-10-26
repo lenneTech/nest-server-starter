@@ -3,9 +3,9 @@ import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
 
-import { ProjectErrors } from './server/common/errors/project-errors';
+import { ProjectErrors } from './server/common/errors/project-errors.js';
 
-import metaData = require('./meta.json');
+import metaData from './meta.json' with { type: 'json' };
 
 /**
  * Configuration for the different environments.
@@ -67,8 +67,8 @@ dotenv.config({ quiet: true });
 // =============================================================================
 // Project-wide constants (paths, errors, demo cron jobs)
 // =============================================================================
-const PROJECT_STATIC_ASSETS = { options: { prefix: '' }, path: join(__dirname, '..', 'public') };
-const PROJECT_TEMPLATES = { engine: 'ejs', path: join(__dirname, 'assets', 'templates') };
+const PROJECT_STATIC_ASSETS = { options: { prefix: '' }, path: join(import.meta.dirname, '..', 'public') };
+const PROJECT_TEMPLATES = { engine: 'ejs', path: join(import.meta.dirname, 'assets', 'templates') };
 const PROJECT_ERROR_CODE = { additionalErrorRegistry: ProjectErrors };
 const PROJECT_HEALTH_CHECK = { configs: { database: { enabled: true } }, enabled: true };
 

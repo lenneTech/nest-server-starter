@@ -149,7 +149,7 @@ describe('auditDegradedText — every cause reads distinctly', () => {
  * the real kill path without that guard, and reads CHECK_AUDIT_TIMEOUT at import like a real run.
  */
 describe('the audit hang cap', () => {
-  const CHECK_MJS = pathToFileURL(join(__dirname, '../../scripts/check.mjs')).href;
+  const CHECK_MJS = pathToFileURL(join(import.meta.dirname, '../../scripts/check.mjs')).href;
 
   /** Imports check.mjs in a fresh node process, awaits `call`, and returns its result plus the elapsed ms. */
   function inChild<T>(call: string, env: Record<string, string> = {}): T & { ms: number } {

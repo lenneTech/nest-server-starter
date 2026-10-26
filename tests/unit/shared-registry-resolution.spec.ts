@@ -28,7 +28,7 @@ import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const ROOT = join(__dirname, '..', '..');
+const ROOT = join(import.meta.dirname, '..', '..');
 const MARKER = /\/\/ >>> SHARED-WITH-CHECK-MJS[\s\S]*?\/\/ <<< SHARED-WITH-CHECK-MJS/;
 
 const blockOf = (relative: string): string => {

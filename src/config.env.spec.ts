@@ -47,21 +47,21 @@ describe('config.env.ts — cross-subdomain cookies', () => {
   });
 
   it('does NOT enable crossSubDomainCookies without BASE_URL (classic localhost dev)', async () => {
-    const { config } = await import('./config.env');
+    const { config } = await import('./config.env.js');
     const ba: any = config.local?.betterAuth;
     expect(ba?.crossSubDomainCookies).toBeUndefined();
   });
 
   it('enables crossSubDomainCookies when BASE_URL is set (lt dev mode)', async () => {
     process.env.BASE_URL = 'https://api.crm.localhost';
-    const { config } = await import('./config.env');
+    const { config } = await import('./config.env.js');
     const ba: any = config.local?.betterAuth;
     expect(ba?.crossSubDomainCookies).toBe(true);
   });
 
   it('does NOT enable crossSubDomainCookies when BASE_URL is the Vite asset path "/"', async () => {
     process.env.BASE_URL = '/';
-    const { config } = await import('./config.env');
+    const { config } = await import('./config.env.js');
     const ba: any = config.local?.betterAuth;
     expect(ba?.crossSubDomainCookies).toBeUndefined();
   });
@@ -101,7 +101,7 @@ describe('config.env.ts — SMTP transport security', () => {
     if (env.SMTP_SECURE !== undefined) process.env.SMTP_SECURE = env.SMTP_SECURE;
     if (env.SMTP_REQUIRE_TLS !== undefined) process.env.SMTP_REQUIRE_TLS = env.SMTP_REQUIRE_TLS;
     process.env.NODE_ENV = 'local';
-    const { config } = await import('./config.env');
+    const { config } = await import('./config.env.js');
     return (config.production as any)?.email?.smtp as
       | { port?: number; requireTLS?: boolean; secure?: boolean }
       | undefined;
@@ -212,7 +212,7 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     Object.assign(process.env, vars, { NODE_ENV: nodeEnv });
     process.chdir(emptyDir);
     try {
-      return await import('./config.env');
+      return await import('./config.env.js');
     } finally {
       process.chdir(ORIGINAL_CWD);
     }

@@ -3,9 +3,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import { MongoClient, ObjectId } from 'mongodb';
 
-import envConfig from '../src/config.env';
-import metaData = require('../src/meta.json');
-import { imports, ServerModule } from '../src/server/server.module';
+import envConfig from '../src/config.env.js';
+import metaData from '../src/meta.json' with { type: 'json' };
+import { imports, ServerModule } from '../src/server/server.module.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config

@@ -1,13 +1,13 @@
 import { HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import fs = require('fs');
+import fs from 'fs';
 import { MongoClient, ObjectId } from 'mongodb';
-import os = require('os');
-import path = require('path');
+import os from 'os';
+import path from 'path';
 
-import envConfig from '../../src/config.env';
-import { imports, ServerModule } from '../../src/server/server.module';
+import envConfig from '../../src/config.env.js';
+import { imports, ServerModule } from '../../src/server/server.module.js';
 
 /**
  * Avatar upload (e2e)

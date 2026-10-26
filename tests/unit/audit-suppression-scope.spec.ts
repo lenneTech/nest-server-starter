@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
  * Reads the lockfile via `pnpm why` — no network, no install.
  */
 
-const ROOT = join(__dirname, '../..');
+const ROOT = join(import.meta.dirname, '../..');
 
 /**
  * Packages whose advisories are currently suppressed, and must stay dev-only.

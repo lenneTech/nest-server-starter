@@ -10,7 +10,7 @@ import {
   RUN_DB_PATTERN,
   SAFE_TEST_DB_PATTERN,
   splitMongoUri,
-} from '../db-lifecycle.reporter';
+} from '../db-lifecycle.reporter.js';
 
 /**
  * `SAFE_TEST_DB_PATTERN` is the last thing standing between a test run and a

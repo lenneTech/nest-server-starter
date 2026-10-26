@@ -15,16 +15,16 @@ import {
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { exec } from 'child_process';
-import compression = require('compression');
-import cookieParser = require('cookie-parser');
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
 
-import packageJson = require('../package.json');
-import envConfig from './config.env';
+import packageJson from '../package.json' with { type: 'json' };
+import envConfig from './config.env.js';
 // #region rest
-import { PersistenceModel } from './server/common/models/persistence.model';
+import { PersistenceModel } from './server/common/models/persistence.model.js';
 // #endregion rest
-import { User } from './server/modules/user/user.model';
-import { ServerModule } from './server/server.module';
+import { User } from './server/modules/user/user.model.js';
+import { ServerModule } from './server/server.module.js';
 
 /**
  * Preparations for server start

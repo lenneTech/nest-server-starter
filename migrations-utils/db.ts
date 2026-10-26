@@ -9,7 +9,7 @@ import {
   uploadFileToGridFS,
 } from '@lenne.tech/nest-server';
 
-import { resolveMongoUri } from './mongo-uri';
+import { resolveMongoUri } from './mongo-uri.js';
 
 const MONGO_URL = resolveMongoUri();
 

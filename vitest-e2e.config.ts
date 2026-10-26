@@ -3,7 +3,7 @@ import os from 'node:os';
 import swc from 'unplugin-swc';
 import { defineConfig } from 'vitest/config';
 
-import { countOtherActiveRuns } from './tests/e2e-run-slots';
+import { countOtherActiveRuns } from './tests/e2e-run-slots.js';
 
 // Low-resource mode — caps parallel forks and raises timeouts so many e2e suites can share one
 // machine's CPU and mongod without starving each other (e.g. several parallel `lt dev` /
@@ -144,12 +144,13 @@ export default defineConfig({
     // instead of removing the contention that caused it, which is the opposite of what the block
     // above promises.
     //
-    // Worth knowing WHY nothing caught it, because the next removed option will hit the same gap:
-    // no type-check guards this file. Even where `typecheck:tests` loads it (the spec below imports
-    // it), this repo's `module: commonjs` cannot resolve vitest's ESM-only type imports (`vite`,
-    // `@vitest/utils/display`); `skipLibCheck` hides that, the config type collapses to `any`, and
-    // an unknown or removed option passes. The guard is tests/unit/vitest-e2e-config.spec.ts,
-    // which asserts the RESOLVED `maxWorkers`, so a dead option fails there.
+    // Worth knowing WHY nothing caught it: back then no type-check guarded this file. Under
+    // `module: commonjs` vitest's ESM-only type imports (`vite`, `@vitest/utils/display`) did not
+    // resolve, `skipLibCheck` hid that, the config type collapsed to `any`, and an unknown option
+    // passed. Since the switch to ES modules (`nodenext`, nest-server 12.0.0) `typecheck:tests`,
+    // which loads this file through the spec below, rejects an unknown option (TS2769). A removed
+    // option that vitest still types as deprecated would pass it, so the runtime guard stays:
+    // tests/unit/vitest-e2e-config.spec.ts asserts the RESOLVED `maxWorkers`.
     // `maxWorkers?: number | string`, so `undefined` is the correct "leave at the default".
     //
     // `minWorkers` is deliberately absent: it does not exist in 4.1.11 either.

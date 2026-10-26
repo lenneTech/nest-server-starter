@@ -1,13 +1,13 @@
-import { FilterArgs, GraphQLServiceOptions, RoleEnum, Roles, ServiceOptions } from '@lenne.tech/nest-server';
+import { FilterArgs, GraphQLServiceOptions, RoleEnum, Roles, type ServiceOptions } from '@lenne.tech/nest-server';
 import { Inject } from '@nestjs/common';
 import { Args, Mutation, Query, Resolver, Subscription } from '@nestjs/graphql';
 import { PubSub } from 'graphql-subscriptions';
 
-import { UserCreateInput } from './inputs/user-create.input';
-import { UserInput } from './inputs/user.input';
-import { FindAndCountUsersResult } from './outputs/find-and-count-users-result.output';
-import { User } from './user.model';
-import { UserService } from './user.service';
+import { UserCreateInput } from './inputs/user-create.input.js';
+import { UserInput } from './inputs/user.input.js';
+import { FindAndCountUsersResult } from './outputs/find-and-count-users-result.output.js';
+import { User } from './user.model.js';
+import { UserService } from './user.service.js';
 
 /**
  * Resolver to process with user data

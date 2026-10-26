@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
 
 // #region rest
-import { MetaController } from './meta.controller';
+import { MetaController } from './meta.controller.js';
 // #endregion rest
 // #region graphql
-import { MetaResolver } from './meta.resolver';
+import { MetaResolver } from './meta.resolver.js';
 // #endregion graphql
-import { MetaService } from './meta.service';
+import { MetaService } from './meta.service.js';
 
 /**
  * Meta module

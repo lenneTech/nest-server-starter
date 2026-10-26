@@ -12,7 +12,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { describe, expect, it } from 'vitest';
 
-import { guardInstalled, signalVerdict, takeViolations } from './signal-guard';
+import { guardInstalled, signalVerdict, takeViolations } from './signal-guard.js';
 
 const PROBE = 2 ** 30;
 

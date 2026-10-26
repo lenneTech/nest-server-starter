@@ -2,8 +2,8 @@ import { HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PubSub } from 'graphql-subscriptions';
 
-import envConfig from '../src/config.env';
-import { imports, ServerModule } from '../src/server/server.module';
+import envConfig from '../src/config.env.js';
+import { imports, ServerModule } from '../src/server/server.module.js';
 
 describe('Common GraphQL (e2e)', () => {
   // Test environment properties

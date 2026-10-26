@@ -19,7 +19,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
-import { FileService } from './file.service';
+import { FileService } from './file.service.js';
 
 /**
  * Controller to handle file REST API endpoints

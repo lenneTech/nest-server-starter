@@ -2,8 +2,8 @@ import { EmailService, HttpExceptionLogFilter, TestGraphQLType, TestHelper } fro
 import { Test, TestingModule } from '@nestjs/testing';
 import { MongoClient } from 'mongodb';
 
-import envConfig from '../src/config.env';
-import { imports, ServerModule } from '../src/server/server.module';
+import envConfig from '../src/config.env.js';
+import { imports, ServerModule } from '../src/server/server.module.js';
 
 /**
  * Story: the password-reset mail this starter sends is one a person can actually use — asked

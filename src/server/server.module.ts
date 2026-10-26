@@ -2,12 +2,12 @@ import { Any, CoreModule, DateScalar, JSON, TusModule } from '@lenne.tech/nest-s
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 
-import envConfig from '../config.env';
-import { CronJobs } from './common/services/cron-jobs.service';
-import { FileModule } from './modules/file/file.module';
-import { MetaModule } from './modules/meta/meta.module';
-import { UserModule } from './modules/user/user.module';
-import { ServerController } from './server.controller';
+import envConfig from '../config.env.js';
+import { CronJobs } from './common/services/cron-jobs.service.js';
+import { FileModule } from './modules/file/file.module.js';
+import { MetaModule } from './modules/meta/meta.module.js';
+import { UserModule } from './modules/user/user.module.js';
+import { ServerController } from './server.controller.js';
 
 // Export imports for reuse (e.g. in tests)
 export const imports = [

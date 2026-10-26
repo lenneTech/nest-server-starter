@@ -9,15 +9,15 @@ import { PubSub } from 'graphql-subscriptions';
 // #endregion graphql
 
 // #region rest
-import { FileModule } from '../file/file.module';
-import { AvatarController } from './avatar.controller';
-import { UserController } from './user.controller';
+import { FileModule } from '../file/file.module.js';
+import { AvatarController } from './avatar.controller.js';
+import { UserController } from './user.controller.js';
 // #endregion rest
-import { User, UserSchema } from './user.model';
+import { User, UserSchema } from './user.model.js';
 // #region graphql
-import { UserResolver } from './user.resolver';
+import { UserResolver } from './user.resolver.js';
 // #endregion graphql
-import { UserService } from './user.service';
+import { UserService } from './user.service.js';
 
 /**
  * User module

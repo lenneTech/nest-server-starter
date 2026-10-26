@@ -11,11 +11,11 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 
-import { UserCreateInput } from './inputs/user-create.input';
-import { UserInput } from './inputs/user.input';
-import { FindAndCountUsersResult } from './outputs/find-and-count-users-result.output';
-import { User } from './user.model';
-import { UserService } from './user.service';
+import { UserCreateInput } from './inputs/user-create.input.js';
+import { UserInput } from './inputs/user.input.js';
+import { FindAndCountUsersResult } from './outputs/find-and-count-users-result.output.js';
+import { User } from './user.model.js';
+import { UserService } from './user.service.js';
 
 /**
  * Controller to handle user REST API endpoints

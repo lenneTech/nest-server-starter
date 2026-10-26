@@ -1,6 +1,6 @@
-const { createMigrationStore } = require('@lenne.tech/nest-server');
+import { createMigrationStore } from '@lenne.tech/nest-server';
 
-const { resolveMongoUri } = require('./mongo-uri');
+import { resolveMongoUri } from './mongo-uri.js';
 
 // Since nest-server 11.33.0 the third argument (lock collection) defaults to
 // 'migrations_lock', and `migrate up` acquires that lock around the whole run.
@@ -12,7 +12,7 @@ const { resolveMongoUri } = require('./mongo-uri');
 //
 // With a single replica this costs one uncontended insert/delete per boot.
 // Pass '' as the third argument to opt out of locking entirely.
-module.exports = createMigrationStore(
+export default createMigrationStore(
   resolveMongoUri(),
   'migrations', // optional, default is 'migrations'
 );

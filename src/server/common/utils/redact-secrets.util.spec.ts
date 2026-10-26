@@ -1,4 +1,4 @@
-import { redactSecrets } from './redact-secrets.util';
+import { redactSecrets } from './redact-secrets.util.js';
 
 describe('redactSecrets', () => {
   it('blanks the secrets of a configuration and keeps the rest', () => {

@@ -10,9 +10,9 @@ import { Logger, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { Controller } from '@nestjs/common/decorators/core/controller.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 
-import { FileService } from '../file/file.service';
-import { User } from './user.model';
-import { UserService } from './user.service';
+import { FileService } from '../file/file.service.js';
+import { User } from './user.model.js';
+import { UserService } from './user.service.js';
 
 /**
  * Controller for avatar

@@ -138,6 +138,26 @@ docker run -e NSC__MONGOOSE__URI=mongodb://host:27017/mydb -p 3000:3000 api
 - **Tests:** vitest (`pnpm run test:e2e`)
 - **Build:** tsc (`pnpm run build`)
 
+## Module format: ES modules
+
+The project is an ES module (`"type": "module"`, tsconfig `module`/`moduleResolution: nodenext`), like the
+projects `nest new` generates since NestJS 12 (nest-server migration guide 11.43.x → 12.0.x §17). When writing code:
+
+- Relative imports name the emitted file: `./user.service.js`, `./dir/index.js`, also in a dynamic `import()`.
+- A type in a decorated signature that is not a class (`ServiceOptions`, `FileUpload`, mongoose's `Connection`)
+  goes in `import type`. `isolatedModules` reports it as `TS1272`. A class that drives dependency injection stays a
+  value import.
+- A named import from a CommonJS package that Node cannot detect fails only at start-up (`does not provide an
+  export named …`), not in the tests. Use `import type` for a type, otherwise the default import. `check` catches
+  it in its `server-start` step.
+- Two models that reference each other: type the decorated property as `WrapperType<X>` (from nest-server),
+  otherwise ESM throws `Cannot access 'X' before initialization` at start-up.
+- `import.meta.dirname` instead of `__dirname`; JSON through `import x from './x.json' with { type: 'json' }`.
+- The dev start, `docs:ci` and the `migrate:*` scripts run TypeScript through nest-server's SWC loader
+  (`node -r ./node_modules/@lenne.tech/nest-server/dist/core/modules/migrate/helpers/ts-compiler.js …`; vendor
+  mode: `./src/core/modules/migrate/helpers/ts-compiler.js`). Keep exactly these paths: the lt CLI rewrites one
+  into the other when it converts between the modes. There is no ts-node.
+
 ## Development
 
 ```bash

@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
 
 describe('vitest resolves packages like Node', () => {
   it('an `import` of graphql is the instance Node and `require` load', () => {
-    const nodeGraphql = createRequire(join(__dirname, '../../package.json'))('graphql');
+    const nodeGraphql = createRequire(join(import.meta.dirname, '../../package.json'))('graphql');
     expect(graphql.GraphQLSchema).toBe(nodeGraphql.GraphQLSchema);
     expect(graphql.execute).toBe(nodeGraphql.execute);
   });

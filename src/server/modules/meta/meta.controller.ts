@@ -2,8 +2,8 @@ import { ApiCommonErrorResponses, RoleEnum, Roles } from '@lenne.tech/nest-serve
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 
-import { Meta } from './meta.model';
-import { MetaService } from './meta.service';
+import { Meta } from './meta.model.js';
+import { MetaService } from './meta.service.js';
 
 /**
  * Controller to handle meta REST API endpoints

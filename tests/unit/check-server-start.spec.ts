@@ -31,7 +31,7 @@ import {
   parseArgs,
 } from '../../scripts/check-server-start.mjs';
 
-// `process.cwd()` rather than `import.meta`: tsconfig.json compiles to commonjs (see pnpm-pin.spec.ts).
+// `process.cwd()`: vitest runs from the repository root (pnpm-pin.spec.ts resolves it the same way).
 const ROOT = process.cwd();
 const fixtures = join(ROOT, 'tests', 'fixtures', 'server-start');
 const runner = join(ROOT, 'scripts', 'check-server-start.mjs');

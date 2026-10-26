@@ -1,9 +1,9 @@
 import { ConfigService, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Controller, Get, Render } from '@nestjs/common';
 
-import metaData = require('../meta.json');
-import { redactSecrets } from './common/utils/redact-secrets.util';
-import { MetaService } from './modules/meta/meta.service';
+import metaData from '../meta.json' with { type: 'json' };
+import { redactSecrets } from './common/utils/redact-secrets.util.js';
+import { MetaService } from './modules/meta/meta.service.js';
 
 /**
  * Server Controller

@@ -25,7 +25,7 @@ import { describe, expect, it } from 'vitest';
  * Delete this spec once vitest ships the fix (a release after 5.0.5), and raise `vite` with it.
  */
 
-const ROOT = join(__dirname, '../..');
+const ROOT = join(import.meta.dirname, '../..');
 const requireFromRoot = createRequire(join(ROOT, 'package.json'));
 
 function installedVersion(pkg: string, from: NodeJS.Require = requireFromRoot): string {

@@ -1,7 +1,7 @@
 import { PaginationInfo, Restricted, RoleEnum, UnifiedField } from '@lenne.tech/nest-server';
 import { ObjectType } from '@nestjs/graphql';
 
-import { User } from '../user.model';
+import { User } from '../user.model.js';
 
 @ObjectType({ description: 'Result of find and count' })
 @Restricted(RoleEnum.ADMIN)

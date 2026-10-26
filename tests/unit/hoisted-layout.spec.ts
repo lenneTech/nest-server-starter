@@ -21,7 +21,7 @@ import { afterEach, describe, expect, it } from 'vitest';
  * BODY that needs the file. Such a test needs its own skip, and the generated project's real run is
  * what catches a missing one.
  */
-const ROOT = join(__dirname, '../..');
+const ROOT = join(import.meta.dirname, '../..');
 const OWN_WORKSPACE = existsSync(join(ROOT, 'pnpm-workspace.yaml'));
 
 /** Top-level entries the copy leaves out: the file under test, and bulk the suite never reads. */

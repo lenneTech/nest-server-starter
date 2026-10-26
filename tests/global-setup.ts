@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 import { MongoClient } from 'mongodb';
 
-import envConfig from '../src/config.env';
+import envConfig from '../src/config.env.js';
 import {
   EXTERNALLY_DROPPABLE_DB_PATTERN,
   isExternallyDroppableTestDb,
@@ -11,8 +11,8 @@ import {
   NON_DISPOSABLE_DB_PATTERN,
   SAFE_TEST_DB_PATTERN,
   splitMongoUri,
-} from './db-lifecycle.reporter';
-import { acquireRunSlot } from './e2e-run-slots';
+} from './db-lifecycle.reporter.js';
+import { acquireRunSlot } from './e2e-run-slots.js';
 
 /**
  * Vitest global setup: give every test run its OWN database.

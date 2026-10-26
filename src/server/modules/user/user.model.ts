@@ -4,7 +4,7 @@ import { Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
 import { IsEmail } from 'class-validator';
 import { Document, Schema } from 'mongoose';
 
-import { PersistenceModel } from '../../common/models/persistence.model';
+import { PersistenceModel } from '../../common/models/persistence.model.js';
 
 export type UserDocument = Document & User;
 

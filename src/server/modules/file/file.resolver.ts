@@ -1,8 +1,8 @@
-import { CoreFileInfo, FileUpload, GraphQLUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
+import { CoreFileInfo, type FileUpload, GraphQLUpload, RoleEnum, Roles } from '@lenne.tech/nest-server';
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 
-import { FileInfo } from './file-info.model';
-import { FileService } from './file.service';
+import { FileInfo } from './file-info.model.js';
+import { FileService } from './file.service.js';
 
 /**
  * File resolver for GraphQL file operations

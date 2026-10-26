@@ -7,7 +7,7 @@
  */
 import { afterEach } from 'vitest';
 
-import { installSignalGuard, takeViolations } from './signal-guard';
+import { installSignalGuard, takeViolations } from './signal-guard.js';
 
 installSignalGuard();
 

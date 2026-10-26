@@ -11,9 +11,9 @@ import { createHash } from 'crypto';
 import { PubSub } from 'graphql-subscriptions';
 import { MongoClient, ObjectId } from 'mongodb';
 
-import envConfig from '../src/config.env';
-import { User } from '../src/server/modules/user/user.model';
-import { imports, ServerModule } from '../src/server/server.module';
+import envConfig from '../src/config.env.js';
+import { User } from '../src/server/modules/user/user.model.js';
+import { imports, ServerModule } from '../src/server/server.module.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config

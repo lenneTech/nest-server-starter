@@ -1,3 +1,9 @@
+import { createRequire } from 'node:module';
+
+// The migrate CLI needs the URI synchronously, and config.env.ts is loaded through the TypeScript
+// loader's require hook in development, so this stays a require() in an ES module.
+const require = createRequire(import.meta.url);
+
 /**
  * Resolve the MongoDB URI for migration utilities.
  *
@@ -34,4 +40,4 @@ function resolveMongoUri() {
   return uri;
 }
 
-module.exports = { resolveMongoUri };
+export { resolveMongoUri };

@@ -9,7 +9,7 @@ import {
 } from '@lenne.tech/nest-server';
 import { Injectable, Optional } from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
-import { Connection } from 'mongoose';
+import type { Connection } from 'mongoose';
 
 /**
  * File service
