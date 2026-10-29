@@ -16,3 +16,7 @@ export default createMigrationStore(
   resolveMongoUri(),
   'migrations', // optional, default is 'migrations'
 );
+
+// A project whose default source is PostgreSQL / MySQL / MariaDB (nest-server 12.1.0+) passes the
+// URL of the role that OWNS the tables instead; the state then lives in the table `lt_migrations`:
+// export default createMigrationStore(process.env.NSC__DATABASE__OWNER_URL);

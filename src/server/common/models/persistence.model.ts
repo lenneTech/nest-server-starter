@@ -1,8 +1,6 @@
-import { CorePersistenceModel, Restricted, RoleEnum } from '@lenne.tech/nest-server';
+import { CorePersistenceModel, objectIdType, Prop, Restricted, RoleEnum } from '@lenne.tech/nest-server';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { Prop } from '@nestjs/mongoose';
-import { Types } from 'mongoose';
-import mongoose from 'mongoose';
+import type { Types } from 'mongoose';
 
 import { User } from '../../modules/user/user.model.js';
 
@@ -30,7 +28,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'ID of the user who created the object',
     nullable: true,
   })
-  @Prop({ ref: 'User', type: mongoose.Schema.Types.ObjectId })
+  @Prop({ ref: 'User', type: objectIdType() })
   @Restricted(RoleEnum.ADMIN)
   createdBy?: string | Types.ObjectId;
 
@@ -43,7 +41,7 @@ export abstract class PersistenceModel extends CorePersistenceModel {
     description: 'ID of the user who updated the object',
     nullable: true,
   })
-  @Prop({ ref: 'User', type: mongoose.Schema.Types.ObjectId })
+  @Prop({ ref: 'User', type: objectIdType() })
   @Restricted(RoleEnum.ADMIN)
   updatedBy?: string | Types.ObjectId;
 

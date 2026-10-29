@@ -3,16 +3,20 @@
  *
  * WHY THE SECTION CASES ARE THE ONES THAT MATTER
  * Until 11.42.15 the rule only raised a pin the framework declared in the SAME section. nest-server
- * keeps `mongodb` in `dependencies`, this project in `devDependencies` — and Better-Auth's MongoDB
+ * kept `mongodb` in `dependencies`, this project in `devDependencies` — and Better-Auth's MongoDB
  * adapter resolves its `mongodb` peer from that pin. The release that moved mongoose to 9.11 (which
  * requires mongodb ~7.7) would have left every project on mongodb 7.6.0 next to the framework's 7.7.0:
  * two bson copies, a failing `instanceof ObjectId` in the adapter, and 401 on sign-in.
  *
  * The reverse direction stays closed: the framework's devDependencies (e.g. the better-auth trio it
  * tests against) never raise this project's runtime dependencies, because api and app must resolve
- * the same better-auth and the project owns that version.
+ * the same better-auth and the project owns that version. The one opening is an OPTIONAL framework
+ * peer: since nest-server 12.1.0 mongoose, @nestjs/mongoose and mongodb are pinned only as framework
+ * devDependencies, and a same-section rule never raised them again (the optional-peer case is red
+ * without `raiseSources()`).
  *
- * nest-server's consumer gate (`alignConsumerPins()`) applies the same rule; both must stay identical.
+ * nest-server's consumer gate (`alignConsumerPins()`) applies this rule; both must stay identical. The
+ * optional-peer case was added here first (2026-10-29); the gate in 12.1.0 does not have it yet.
  *
  * Observed red: a same-section lookup fails the first two cases below; letting `dependencies` take
  * its version from both framework sections in `RAISE_SOURCES` fails the third and the last.
@@ -54,6 +58,39 @@ describe('alignPackageVersions — the rule behind `pnpm run update`', () => {
     expect(project.devDependencies.mongodb).toBe('7.7.0');
     expect(project.dependencies).not.toHaveProperty('mongodb');
     expect(added.map((entry) => entry.name)).not.toContain('mongodb');
+  });
+
+  it('raises a runtime pin of an OPTIONAL framework peer to the version the framework tests it with', () => {
+    // nest-server 12.1.0 layout: MongoDB's libraries are optional peers, pinned only as devDependencies
+    const optionalPeers = {
+      devDependencies: { '@nestjs/mongoose': '12.1.0', 'better-auth': '1.7.14', mongodb: '7.8.0', mongoose: '9.12.0' },
+      peerDependencies: {
+        '@nestjs/mongoose': '>=12.1.0 <13',
+        'better-auth': '>=1.7.12 <1.8.0',
+        mongodb: '>=7.8.0 <8',
+        mongoose: '>=9.12.0 <10',
+      },
+      peerDependenciesMeta: {
+        '@nestjs/mongoose': { optional: true },
+        'better-auth': { optional: false },
+        mongodb: { optional: true },
+        mongoose: { optional: true },
+      },
+    };
+    const project = {
+      dependencies: { '@nestjs/mongoose': '12.0.0', 'better-auth': '1.7.12', mongodb: '7.7.0', mongoose: '9.11.4' },
+    };
+    const { raised } = alignPackageVersions(project, optionalPeers);
+
+    // All three together: raising mongoose alone would pull a second mongodb (two bson copies, 401 on sign-in).
+    // better-auth is a REQUIRED peer and stays the project's call.
+    expect(project.dependencies).toEqual({
+      '@nestjs/mongoose': '12.1.0',
+      'better-auth': '1.7.12',
+      mongodb: '7.8.0',
+      mongoose: '9.12.0',
+    });
+    expect(raised).toHaveLength(3);
   });
 
   it('never raises a runtime dependency from a framework devDependency', () => {

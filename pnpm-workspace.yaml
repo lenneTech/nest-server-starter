@@ -195,7 +195,13 @@ overrides:
   # target raised, so this can only ever lift a vulnerable version.
   # 2026-09-26: 1.19.0 had become a downgrade lock in turn (a no-override resolve lands on
   # 1.20.0, the newest 1.x). Key and target raised together, mirroring nest-server 11.41.4.
-  'axios@<1.20.0': 1.20.0
+  # 2026-10-29 (nest-server 12.1.0): raised 1.20.0 -> 1.21.0, key with it. No new advisory; a
+  # downgrade lock again: node-mailjet 6.0.11 requests `^1.12.0`, which intersected `<1.20.0`, so the
+  # entry held the tree at 1.20.0 after 1.21.0 (2026-10-27) had cleared the release-age gate.
+  # nest-server 12.1.0 carries no overrides, and its released lockfile resolves 1.21.0. 1.21.0 changes
+  # how header DEFAULTS are recognised; node-mailjet passes plain per-request headers, so it is not
+  # affected. A fresh resolve without this entry lands on 1.21.0 as well.
+  'axios@<1.21.0': 1.21.0
 
   # Security: 3x Hono, all moderate, all patched >=4.12.27 — GHSA-xgm2-5f3f-mvvc
   # (API-Gateway adapter), GHSA-hvrm-45r6-mjfj (jsx request-context bleed),
@@ -235,28 +241,11 @@ overrides:
   # nest-server 12.0.0 dropped its own copy of this entry; this file keeps it as a floor (raise-only
   # run) — re-check with a with/without fresh resolve in the 12.0.0 maintenance run.
   'hono@>=4.0.0 <4.13.14': 4.13.14
-  # Security: @graphql-tools/utils — prototype pollution in mergeDeep (GHSA-7mx3-vvmw-hjmv, high,
-  #   patched >=12.0.1) (added 2026-10-06, mirrors nest-server 11.42.4)
-  # RUNTIME: mergeDeep runs while the GraphQL schema is assembled. LOAD-BEARING: @nestjs/graphql
-  # 13.4.5 — the newest 13.x — EXACT-pins `12.0.0`, so no update reaches the fix; only 14.x moves it.
-  # Note it does NOT reach a utils 11.x from an older @graphql-tools/schema 10.0.x
-  # (see nest-server migration-guides/11.42.3-to-11.42.4.md §3).
-  # 2026-10-09: raised 12.0.1 -> 12.0.3, key with it, mirroring nest-server 11.42.10
-  # (migration-guides/11.42.9-to-11.42.10.md §2). 12.0.1 was chosen because 12.0.2+ pulls
-  # @whatwg-node/promise-helpers@2 (Node >=22.15); that floor was in every fresh tree anyway
-  # (@apollo/server 5.5.1 > @graphql-tools/schema 10.1.3 > merge 9.2.6 > utils ^12.0.3), and the
-  # framework now declares engines.node >=22.15, so the newest 12.x is the target. The key intersects
-  # the ^12.0.0 that schema/merge request, so an older target would hold them back too.
-  # 2026-10-13: raised 12.0.3 -> 12.0.4 (newest 12.x past the release-age gate), key with it,
-  # mirroring nest-server 11.42.15. Same dependencies and engines as 12.0.3.
-  # 2026-10-17: raised 12.0.4 -> 12.1.0, key with it, mirroring nest-server 11.42.16
-  # (migration-guides/11.42.15-to-11.42.16.md §2). @graphql-tools/schema 10.1.5 / merge 9.2.8
-  # (via @apollo/server) request `^12.1.0`, outside the old key, so the tree carried TWO copies:
-  # 12.0.4 on @nestjs/graphql's exact-pin path and 12.1.0 on the @apollo/server path. With the
-  # target at 12.1.0 both paths share one copy. Same dependencies and engines as 12.0.4; no new
-  # advisory.
-  # Remove once @nestjs/graphql pins >=12.0.1 in the major this project uses.
-  '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0
+
+  # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,
+  # added 2026-10-06). @nestjs/graphql 14.1.0 pins the patched 12.1.0 itself, so the entry changed
+  # nothing any more. Removed with nest-server 12.1.0 (migration-guides/12.0.x-to-12.1.x.md §8);
+  # bring it back only if @nestjs/graphql drops below 14.1.0.
 
   # REMOVED 2026-08-22: '@hono/node-server' (both the bare 1.19.14 entry and the
   # ranged '@hono/node-server@<2.0.10': 2.0.11).
@@ -357,7 +346,15 @@ overrides:
   # and express 5.2.1 (`^6.14.0`) request caret ranges that intersected `<6.16.0`, so once 6.16.1
   # (2026-10-14) cleared the release-age gate the old entry had become a DOWNGRADE LOCK holding every
   # path on 6.16.0.
-  'qs@<6.16.1': 6.16.1
+  # 2026-10-29 (nest-server 12.1.0): raised 6.16.1 -> 6.17.0, key with it. Same shape: body-parser
+  # 2.4.0 (`^6.16.1`) and express 5.3.0 (`^6.16.0`) intersected `<6.16.1`, so the entry held the tree
+  # on 6.16.1 after 6.17.0 (2026-10-27) had cleared the release-age gate, and a fresh resolve with the
+  # old entry carried BOTH copies (one body-parser snapshot escaped the pin). 6.17.0 hardens `parse`
+  # against prototype keys (an own `__proto__` key is copied as data) and is what nest-server 12.1.0's
+  # released lockfile resolves. GHSA-6pq8-jhm2-2vcw (<=6.16.0, published 2026-10-27) was already
+  # closed by 6.16.1. 6.17.1 (more prototype-key guards in `parse`) clears the release-age gate on
+  # 2026-10-29 23:41 UTC; take it in the next run.
+  'qs@<6.17.0': 6.17.0
 
   # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
   # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Transitive via @nestjs/graphql>graphql-ws>ws
@@ -602,22 +599,11 @@ overrides:
   # change), the one deliberate exception to "never higher than the framework".
   'nodemailer@<10.2.1': 10.2.1
 
-  # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
-  # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
-  # crafted / oversized input) and GHSA-qvfw-j98x-7q72 (low, size-limit bypass), all
-  # <2.3.0, plus GHSA-qfvm-cv95-jqjf (high), which names exactly 2.2.0.
-  # Transitive via @lenne.tech/nest-server and @nestjs/platform-express, and a direct
-  # dependency here — keep package.json on the same version. LOCKSTEP entry: key and
-  # target mirror the framework's own entry. Range-floored on purpose: a bare key also
-  # overrides the direct dependency, and during the 11.41.4 bump it pulled the raised
-  # 2.4.0 back down to the old target. Raised 2.2.0 -> 2.3.0 on 2026-09-14 and to 2.4.0
-  # with nest-server 11.41.4, which declares 2.4.0. Inert today — nest-server 11.41.4
-  # and @nestjs/platform-express 11.2.6 both request 2.4.0 themselves — and kept as
-  # insurance against a dependency that falls back below the framework's version.
-  # 2026-10-24: raised to 2.5.0, key with it, and the direct dependency with them —
-  # GHSA-q7qp-rjg7-q26m (high), patched in 2.5.0. Load-bearing again with nest-server 12.0.0:
-  # @nestjs/platform-express 12.2.0 exact-pins the vulnerable 2.4.0. Mirrors nest-server 12.0.0.
-  'multer@>=2.0.0 <2.5.0': 2.5.0
+  # REMOVED 2026-10-29: 'multer@>=2.0.0 <2.5.0': 2.5.0 (GHSA-q7qp-rjg7-q26m and the older
+  # multer advisories). It was a LOCKSTEP entry mirroring the framework's, and nest-server 12.1.0
+  # dropped its own: @nestjs/platform-express 12.3.2 pins the patched 2.5.0 itself
+  # (migration-guides/12.0.x-to-12.1.x.md §8). multer stays a direct dependency here — keep
+  # package.json on the version the framework declares.
 
   # Security: various undici CVEs <7.29.0 — response desynchronization,
   # cross-user information disclosure, CRLF injection via a blob-like body type,
@@ -833,9 +819,3 @@ peerDependencyRules:
     # `overrides: chokidar` would break nodemon (^3) and @angular-devkit (^4),
     # so scope-allow 4 here. Drop once @nestjs/cli ships chokidar 5.
     '@swc/cli>chokidar': '4'
-
-    # graphql-upload@15.0.2 peer-wants @types/express ^4, but this project runs
-    # express@5 (direct dep) with @types/express@5 to match. The peer range is
-    # stale and graphql-upload's express typing surface stays compatible.
-    # Type-only, dev-time mismatch. Drop once graphql-upload widens its peer.
-    'graphql-upload>@types/express': '5'

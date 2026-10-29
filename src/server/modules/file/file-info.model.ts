@@ -1,6 +1,5 @@
-import { CoreFileInfo, Restricted, RoleEnum } from '@lenne.tech/nest-server';
+import { CoreFileInfo, Schema as MongooseSchema, Restricted, RoleEnum, SchemaFactory } from '@lenne.tech/nest-server';
 import { ObjectType } from '@nestjs/graphql';
-import { Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
 
 /**
  * File info model

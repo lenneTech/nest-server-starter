@@ -1,9 +1,8 @@
-import { ConfigService } from '@lenne.tech/nest-server';
+import { ConfigService, CorePersistenceModule } from '@lenne.tech/nest-server';
 // #region graphql
 import { CoreRedisPubSub, CoreRedisService } from '@lenne.tech/nest-server';
 // #endregion graphql
 import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
 // #region graphql
 import { PubSub } from 'graphql-subscriptions';
 // #endregion graphql
@@ -20,6 +19,12 @@ import { UserResolver } from './user.resolver.js';
 import { UserService } from './user.service.js';
 
 /**
+ * The user model, registered database-neutrally: `@InjectModel()` keeps working, and `database` in the configuration
+ * decides whether users are stored in MongoDB or a SQL database (`CorePersistenceModule`)
+ */
+const UserPersistence = CorePersistenceModule.forFeature([{ model: User, name: User.name, schema: UserSchema }]);
+
+/**
  * User module
  */
 @Module({
@@ -27,7 +32,7 @@ import { UserService } from './user.service.js';
   controllers: [AvatarController, UserController],
   // #endregion rest
   exports: [
-    MongooseModule,
+    UserPersistence,
     // #region graphql
     UserResolver,
     // #endregion graphql
@@ -35,7 +40,7 @@ import { UserService } from './user.service.js';
     'USER_CLASS',
   ],
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    UserPersistence,
     // #region rest
     // AvatarController stores the avatar in the central file storage (nest-server
     // 11.33.0+) instead of on pod-local disk, so it needs FileService.

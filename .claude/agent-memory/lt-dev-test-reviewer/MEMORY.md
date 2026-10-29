@@ -1,3 +1,4 @@
 - [vitest config type-check](vitest-config-not-typechecked.md) — since the ESM switch (nodenext) unknown keys in vitest-e2e.config.ts fail typecheck:tests, vitest.config.ts stays unchecked; the runtime spec still guards removed options; mkdtemp dirs are already 0700
 - [Proving ignoreGhsas changes](audit-suppression-review-proofs.md) — scratch-copy mutation run for the suppression spec; audit --json metadata counts muted entries
 - [vitest#11682 probe](vitest-vite-stack-crash-probe.md) — globalSetup `.stack` probe; only vitest 5.0.x + vite 8.3.5 crashes, 4.1.12 is safe
+- [UserService e2e coverage map](user-service-e2e-coverage-map.md) — what pins setAvatar(); create()'s createdBy branch is unreachable by default; unit-spec mutation recipe

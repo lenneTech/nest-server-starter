@@ -1,8 +1,15 @@
-import { CoreUserModel, Restricted, RoleEnum, UnifiedField } from '@lenne.tech/nest-server';
+import {
+  CoreUserModel,
+  Schema as MongooseSchema,
+  objectIdType,
+  Restricted,
+  RoleEnum,
+  SchemaFactory,
+  UnifiedField,
+} from '@lenne.tech/nest-server';
 import { ObjectType } from '@nestjs/graphql';
-import { Schema as MongooseSchema, SchemaFactory } from '@nestjs/mongoose';
 import { IsEmail } from 'class-validator';
-import { Document, Schema } from 'mongoose';
+import type { Document } from 'mongoose';
 
 import { PersistenceModel } from '../../common/models/persistence.model.js';
 
@@ -38,7 +45,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   @UnifiedField({
     description: 'ID of the user who created the object',
     isOptional: true,
-    mongoose: { ref: 'User', type: Schema.Types.ObjectId },
+    mongoose: { ref: 'User', type: objectIdType() },
     roles: RoleEnum.S_EVERYONE,
     type: () => String,
   })
@@ -77,7 +84,7 @@ export class User extends CoreUserModel implements PersistenceModel {
   @UnifiedField({
     description: 'ID of the user who last updated the object',
     isOptional: true,
-    mongoose: { ref: 'User', type: Schema.Types.ObjectId },
+    mongoose: { ref: 'User', type: objectIdType() },
     roles: RoleEnum.S_USER,
     type: () => String,
   })

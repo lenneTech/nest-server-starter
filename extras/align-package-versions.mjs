@@ -6,19 +6,26 @@
  * in the section this project keeps it. Which framework section may supply that version depends on
  * the project's section (`RAISE_SOURCES`):
  *
- * - What the framework SHIPS (`dependencies`) follows into either section. nest-server needs
- *   `mongodb` at runtime, this project keeps it as a devDependency — and Better-Auth's MongoDB adapter
- *   resolves its `mongodb` peer from exactly that pin. Matching sections left it on an older driver
- *   than the framework's mongoose requires: two bson copies, the adapter's `instanceof ObjectId`
- *   failed and sign-in answered 401.
+ * - What the framework SHIPS (`dependencies`) follows into either section. Until 12.1.0 nest-server
+ *   shipped `mongodb` as a dependency while this project held it as a devDependency — and Better-Auth's
+ *   MongoDB adapter resolves its `mongodb` peer from exactly that pin. Matching sections left it on an
+ *   older driver than the framework's mongoose required: two bson copies, the adapter's
+ *   `instanceof ObjectId` failed and sign-in answered 401.
  * - What the framework only develops and tests with (`devDependencies`) raises only this project's
  *   devDependencies, never a runtime pin. The better-auth trio is the reason: the framework holds it as
  *   devDependencies (its test versions; the peer range is the contract), this project holds it as
  *   dependencies and owns that version, because api and app must resolve the same better-auth.
+ * - Except an OPTIONAL peer of the framework (`peerDependenciesMeta.<name>.optional`): a feature the
+ *   project switches on by declaring the package, and the framework's devDependency pin is the version
+ *   that feature is tested with. Since nest-server 12.1.0 that is how mongoose, @nestjs/mongoose and
+ *   mongodb arrive (migration guide 12.0.x → 12.1.x §2) — without this the three runtime pins would
+ *   never be raised again, and the first release to raise mongoose alone would bring back the two bson
+ *   copies above. better-auth is a required peer and stays the project's call.
  *
- * nest-server's consumer gate (scripts/check-consumer.mjs, `alignConsumerPins()`) applies the same
- * rule before every release. Keep the two identical: a gate that is more generous than this file
- * certifies an update path no project has.
+ * nest-server's consumer gate (scripts/check-consumer.mjs, `alignConsumerPins()`) applies this rule
+ * before every release. Keep the two identical: a gate that is more generous than this file certifies
+ * an update path no project has, and one that is narrower never tests the pins projects get. The
+ * optional-peer exception was added here first (2026-10-29); the gate in 12.1.0 does not have it yet.
  */
 import { createRequire } from 'node:module';
 
@@ -32,6 +39,22 @@ export const RAISE_SOURCES = {
   dependencies: ['dependencies'],
   devDependencies: ['dependencies', 'devDependencies'],
 };
+
+/**
+ * The framework sections that may raise `name` in `section` of this project: `RAISE_SOURCES`, widened to the
+ * framework's devDependencies for a runtime pin of an optional framework peer.
+ *
+ * @param {object} frameworkManifest - the framework's package.json (or its registry entry)
+ * @param {string} name - package name
+ * @param {string} section - this project's section
+ * @returns {string[]}
+ */
+function raiseSources(frameworkManifest, name, section) {
+  if (section === 'dependencies' && frameworkManifest?.peerDependenciesMeta?.[name]?.optional === true) {
+    return ['dependencies', 'devDependencies'];
+  }
+  return RAISE_SOURCES[section];
+}
 
 /**
  * The newest exact version the framework declares for `name` across `sections`, else undefined.
@@ -75,7 +98,7 @@ export function alignPackageVersions(packageJson, frameworkManifest, { addMissin
 
   for (const section of DEPENDENCY_SECTIONS) {
     for (const [name, current] of Object.entries(packageJson[section] ?? {})) {
-      const version = newestFrameworkVersion(frameworkManifest, name, RAISE_SOURCES[section]);
+      const version = newestFrameworkVersion(frameworkManifest, name, raiseSources(frameworkManifest, name, section));
       if (!version) {
         continue;
       }

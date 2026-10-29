@@ -5,10 +5,10 @@ import {
   CoreS3Service,
   FileInputCheckType,
   FileServiceOptions,
+  InjectConnection,
   RoleEnum,
 } from '@lenne.tech/nest-server';
 import { Injectable, Optional } from '@nestjs/common';
-import { InjectConnection } from '@nestjs/mongoose';
 import type { Connection } from 'mongoose';
 
 /**

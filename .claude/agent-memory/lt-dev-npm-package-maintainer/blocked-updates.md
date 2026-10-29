@@ -6,7 +6,7 @@
 **Historical reason (BLOCKED until session 10)**: v7 threw a fatal error when a source directory didn't exist; the old `copy:migrations` (`cpy ./migrations ./dist/`) failed on fresh builds. v6 silently skipped missing sources.
 
 ## graphql-upload 15 → 16/17
-**Status**: RESOLVED (2026-10-27, nest-server 12.0.0) — the direct dependency was removed; `file.resolver.ts` imports `GraphQLUpload` from `@lenne.tech/nest-server` (migration guide 12.0 §13). graphql-upload 15.0.2 stays in the tree only through nest-server, which moves to 17 in 12.1.0. Do not re-add it here.
+**Status**: RESOLVED (2026-10-27, nest-server 12.0.0) — the direct dependency was removed; `file.resolver.ts` imports `GraphQLUpload` from `@lenne.tech/nest-server` (migration guide 12.0 §13). Since nest-server 12.1.0 the tree carries graphql-upload 17.1.0 through the framework only, and the `graphql-upload>@types/express` peer rule is gone (graphql-upload 17 accepts @types/express 4 and 5). Do not re-add it here.
 **Historical status**: BLOCKED
 **Reason**: v16+ moved all exports from `.js` files to `.mjs` files only (applies from v16.0.0 onwards). The import in `src/server/modules/file/file.resolver.ts` uses `require('graphql-upload/GraphQLUpload.js')` which no longer exists.
 **Latest versions available**: 16.0.2 (also blocked), 17.0.0, 18.0.1 (re-checked 2026-10-27).
@@ -18,7 +18,7 @@
 **Notes**: Project was updated to 0.15.1. Peer dep warning from `@nestjs/mapped-types@2.1.0` (still declares `^0.13.0 || ^0.14.0`) exists but is suppressed by `strict-peer-dependencies=false`. Tests pass fine at 0.15.1.
 
 ## typescript 6 → 7
-**Status**: BLOCKED (2026-10-27, s19) — not by our code but by peers: @nestjs/graphql 14 and @nestjs/swagger 12 declare `typescript ^5.5.0 || ^6.0.0`, @nestjs/schematics 12 requires `>=6.0.0`. 6.0.x is the only line all accept (migration guide 12.0 §1). Latest 7.0.2. Re-check when the NestJS peer ranges widen; the framework moves first.
+**Status**: BLOCKED (2026-10-27, s19) — not by our code but by peers: @nestjs/graphql 14 and @nestjs/swagger 12 declare `typescript ^5.5.0 || ^6.0.0`, @nestjs/schematics 12 requires `>=6.0.0`. 6.0.x is the only line all accept (migration guide 12.0 §1). Latest 7.0.2. Re-check when the NestJS peer ranges widen; the framework moves first. Re-verified 2026-10-29 (s20) against @nestjs/graphql 14.1.0, @nestjs/swagger 12.0.5, @nestjs/schematics 12.0.12: unchanged.
 
 ## typescript 5.9.3 → 6.0.3
 **Status**: DONE (2026-10-27) with the nest-server 12.0.0 lock-step bump (`pnpm run update`), check green.

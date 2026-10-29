@@ -342,6 +342,20 @@ function deployedConfig(
     compression: true,
     // CORS propagated to GraphQL/REST/BetterAuth via shared buildCorsConfig
     cors: { allowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',').filter(Boolean) },
+    // PostgreSQL / MySQL / MariaDB instead of, or beside, MongoDB (nest-server 12.1.0+). Left out on purpose: then
+    // the `mongoose` configuration is the only data source, exactly as before. NSC__DATABASE__URL, __OWNER_URL and
+    // __SQL_ENGINE fill the same object from the environment (.env.example, "Database"). The URL's scheme picks the
+    // database; the application role only reads and writes rows, the owner role evolves the tables at boot:
+    //
+    // database: {
+    //   ownerUrl: 'postgres://owner_role@db/project', // mysql:// or mariadb:// for MySQL 8.4 / MariaDB 11.8
+    //   sqlEngine: 'typeorm', // or 'kysely' / 'drizzle'
+    //   url: 'postgres://app_role@db/project',
+    // },
+    //
+    // With `mongoose` still configured, MongoDB stays as the extra source `mongoose`. On SQL alone, also drop the
+    // NSC__MONGOOSE__URI entry from REQUIRED_DEPLOYED_ENV_VARS and hand the owner URL to migrations-utils/migrate.js.
+    // Per database: nest-server migration-guides/12.0.x-to-12.1.x.md §3 (PostgreSQL), §7 (MySQL / MariaDB).
     email: {
       // defaultSender.email comes from NSC__EMAIL__DEFAULT_SENDER__EMAIL
       defaultSender: { name: brand },
