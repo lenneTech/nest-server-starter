@@ -354,7 +354,13 @@ overrides:
   # released lockfile resolves. GHSA-6pq8-jhm2-2vcw (<=6.16.0, published 2026-10-27) was already
   # closed by 6.16.1. 6.17.1 (more prototype-key guards in `parse`) clears the release-age gate on
   # 2026-10-29 23:41 UTC; take it in the next run.
-  'qs@<6.17.0': 6.17.0
+  # 2026-10-30 (nest-server 12.1.1): raised 6.17.0 -> 6.17.1, key with it. No new advisory; the same
+  # downgrade lock as before: body-parser 2.4.0 (`^6.16.1`) and express 5.3.0 (`^6.16.0`) intersect
+  # `<6.17.0`, so once 6.17.1 (published 2026-10-28 23:41 UTC) cleared the release-age gate the old entry
+  # held every path on 6.17.0. 6.17.1 is a hardening release for `parse` (bracket-wrapped prototype keys
+  # at depth 0 are guarded, `plainObjects` is respected for `[]` with `parseArrays: false`, sparse arrays
+  # count their elements against `arrayLimit`), the newest 6.x.
+  'qs@<6.17.1': 6.17.1
 
   # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
   # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Transitive via @nestjs/graphql>graphql-ws>ws
@@ -597,7 +603,13 @@ overrides:
   # and turned `pnpm audit` red. 10.2.1 is what nest-server 12.0.0 declares, so the entry is back
   # in lockstep with that bump; until then it lifts 11.43.x's declared 10.1.2 (a minor, no API
   # change), the one deliberate exception to "never higher than the framework".
-  'nodemailer@<10.2.1': 10.2.1
+  # 2026-10-30: raised 10.2.1 -> 10.3.0, key with it — nest-server 12.1.1 declares 10.3.0 (new `otp`
+  # option for the OTP-Token header, Content-ID encoded as a message id; no API change, no advisory;
+  # migration guide 12.1.0 -> 12.1.1, "Dependencies"). Same reasoning as above: the framework's exact
+  # 10.3.0 never intersected `<10.2.1`, so the tree already held a single 10.3.0 copy; the raise keeps a
+  # `^10` requester from being pinned to a second, older 10.2.1. 10.3.1 (2026-10-29 12:31 UTC) is above
+  # the framework's version and still inside the release-age gate, so it is not the target.
+  'nodemailer@<10.3.0': 10.3.0
 
   # REMOVED 2026-10-29: 'multer@>=2.0.0 <2.5.0': 2.5.0 (GHSA-q7qp-rjg7-q26m and the older
   # multer advisories). It was a LOCKSTEP entry mirroring the framework's, and nest-server 12.1.0

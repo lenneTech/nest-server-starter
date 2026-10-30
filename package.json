@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "12.1.0",
+  "version": "12.1.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -107,7 +107,7 @@
   "dependencies": {
     "@better-auth/core": "1.7.12",
     "@better-auth/passkey": "1.7.12",
-    "@lenne.tech/nest-server": "12.1.0",
+    "@lenne.tech/nest-server": "12.1.1",
     "@nestjs/common": "12.3.2",
     "@nestjs/core": "12.3.2",
     "@nestjs/graphql": "14.1.0",
@@ -138,7 +138,7 @@
     "@types/cookie-parser": "1.4.10",
     "@types/express": "5.0.6",
     "@types/multer": "2.3.0",
-    "@types/node": "26.6.5",
+    "@types/node": "26.6.6",
     "@vitest/coverage-v8": "5.0.5",
     "cpy-cli": "7.0.0",
     "json-to-graphql-query": "2.3.0",
