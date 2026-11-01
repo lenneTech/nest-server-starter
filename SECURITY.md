@@ -49,10 +49,12 @@ advisory if it later appears on a production path.
 
 So a suppression is not only a statement about today's tree — it is a standing hole in the
 detection. Whenever a suppressed advisory affects a package that also has a production
-path, record that explicitly and state what to re-check after a dependency bump. The list is
-empty since 2026-10-24; the two retired assessments kept as comments there
-(`GHSA-vfj7-8cjw-p6xm`, withdrawn by GitHub on 2026-10-23, and `GHSA-ch52-4w7c-c8xp`) follow
-that shape — copy it.
+path, record that explicitly and state what to re-check after a dependency bump. The two
+retired assessments kept as comments there (`GHSA-vfj7-8cjw-p6xm`, withdrawn by GitHub on
+2026-10-23, and `GHSA-ch52-4w7c-c8xp`) follow that shape — copy it. The two active entries
+since 2026-11-01 (`GHSA-g3hv-75wg-m249`, minimatch, and `GHSA-3g3m-2fjr-6pw4`, glob) are
+third-claim residuals: minimatch reaches the production tree through `@ts-morph/common` only,
+and the scope spec fails as soon as any other production parent appears.
 
 ### Before the third claim: can a patch make the fix usable?
 
@@ -83,12 +85,15 @@ Two guards, one per way an entry goes wrong, and an entry needs both:
 | Question | Guard | Fails when |
 |----------|-------|------------|
 | Is it still TRUE? | `pnpm run check:overrides` (part of `check`) | the GitHub advisory gains a patched version or is withdrawn — the entry is obsolete, remove it. Under `CI` an unreachable API fails too, so the workflow passes `GITHUB_TOKEN` |
-| Is the THIRD claim still true? | the same guard, against `auditConfig.unusableFixConsumers` | the declared consumer moves or leaves the tree, the advisory gains a patched version nobody assessed (a BACKPORT into a line the consumer *can* use), or anything other than exactly `consumer@version` starts pulling the affected package — including a dependency this repository declares itself, which is a version bump nobody made rather than a dead end |
-| Is it still in SCOPE? | `tests/unit/audit-suppression-scope.spec.ts` | the package appears in the PRODUCTION tree, or an entry has no matching case there |
+| Is the THIRD claim still true? | the same guard, against `auditConfig.unusableFixConsumers` | the declared consumer moves or leaves the tree, the advisory gains a patched version nobody assessed (a BACKPORT into a line the consumer *can* use), anything other than the declared `consumer@version` entries starts pulling the affected package — including a dependency this repository declares itself, which is a version bump nobody made rather than a dead end —, or a declared consumer stops pulling it |
+| Is it still in SCOPE? | `tests/unit/audit-suppression-scope.spec.ts` | the package reaches the PRODUCTION tree beyond what its entry allows (none at all, or only under the parent its `prodVia` names), or an entry has no matching case there |
 
 A declaration for the third claim records the consumer, **the version it was assessed against**
 and the patched version it rejected — `'@nuxt/devtools@3.4.1 cannot use 4.0.1'` — because each of
-those can change without anybody revisiting the entry. That is what makes it expire by itself
+those can change without anybody revisiting the entry. Several consumers are joined with ` + `,
+each at its assessed version (`'@nestjs/cli@12.0.11 + nodemon@3.1.14 cannot use 11.0.1'`): one
+vulnerable package often sits under several dev tools at once, and each of them is held to the
+same checks. That is what makes it expire by itself
 instead of ageing into a permanent exception.
 
 A new entry therefore also needs a case in that spec. Both travel with the template into

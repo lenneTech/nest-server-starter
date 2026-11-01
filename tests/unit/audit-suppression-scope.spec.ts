@@ -14,8 +14,9 @@ import { describe, expect, it } from 'vitest';
  * comment cannot fail a build.
  *
  * This spec turns that justification into an assertion: the moment a suppressed
- * advisory's package reaches the production tree, the build fails and the entry
- * has to be re-argued or removed.
+ * advisory's package reaches the production tree beyond what its entry allows — at all,
+ * or through any parent other than the one its `prodVia` names — the build fails and the
+ * entry has to be re-argued or removed.
  *
  * Reads the lockfile via `pnpm why` — no network, no install.
  */
@@ -23,9 +24,19 @@ import { describe, expect, it } from 'vitest';
 const ROOT = join(import.meta.dirname, '../..');
 
 /**
- * Packages whose advisories are currently suppressed, and must stay dev-only.
+ * Packages whose advisories are currently suppressed, and the production reach each justification allows.
  *
- * EMPTY since 2026-10-24. GHSA-vfj7-8cjw-p6xm (braces, since 2026-10-03) had an entry here, an
+ * Since 2026-11-01 (owner decision, mirroring nest-server's DEV-3899 entries of 2026-10-31), two entries, both with a
+ * fix only in a new major that no consumer can take yet (`unusableFixConsumers` in `pnpm-workspace.yaml`, re-tested by
+ * `check:overrides`):
+ *
+ * - GHSA-3g3m-2fjr-6pw4 (glob, via rimraf): dev tooling only — any glob in the production tree voids it.
+ * - GHSA-g3hv-75wg-m249 (minimatch): reaches production through exactly ONE parent, `@ts-morph/common` (ts-morph, a
+ *   dependency of @lenne.tech/nest-server and @nestjs/graphql), which matches globs the developer writes. The argument
+ *   is "no request input reaches the matcher", and it holds only for that parent, so any other production parent
+ *   voids it (`prodVia`) — in this tree and in every project generated from it.
+ *
+ * Empty from 2026-10-24 until then. GHSA-vfj7-8cjw-p6xm (braces, since 2026-10-03) had an entry here, an
  * advisory with NO patched release at all, reached only through dev tooling. GitHub withdrew it
  * on 2026-10-23, `check:overrides` flagged the suppression as obsolete, and entry and guard left
  * together (see `pnpm-workspace.yaml`). A second, GHSA-ch52-4w7c-c8xp (http-cache-semantics),
@@ -74,7 +85,10 @@ const ROOT = join(import.meta.dirname, '../..');
  * An entry added below should still carry a date to re-verify by — the guard tells you
  * when upstream moves, not when your own reasoning stopped applying.
  */
-const DEV_ONLY_SUPPRESSIONS: { ghsa: string; pkg: string; vulnerableInProd: RegExp }[] = [];
+const DEV_ONLY_SUPPRESSIONS: { ghsa: string; pkg: string; prodVia?: string; vulnerableInProd: RegExp }[] = [
+  { ghsa: 'GHSA-3g3m-2fjr-6pw4', pkg: 'glob', vulnerableInProd: /glob@/ },
+  { ghsa: 'GHSA-g3hv-75wg-m249', pkg: 'minimatch', prodVia: '@ts-morph/common', vulnerableInProd: /minimatch@/ },
+];
 
 /**
  * In a generated MONOREPO this project has no `pnpm-workspace.yaml` of its own: the lt CLI hoists
@@ -99,11 +113,12 @@ describe.skipIf(!OWN_WORKSPACE)(
       expect(listed.sort()).toEqual(DEV_ONLY_SUPPRESSIONS.map((s) => s.ghsa).sort());
     });
 
-    for (const { ghsa, pkg, vulnerableInProd } of DEV_ONLY_SUPPRESSIONS) {
-      it(`keeps ${pkg} (${ghsa}) out of the production dependency tree`, () => {
+    for (const { ghsa, pkg, prodVia, vulnerableInProd } of DEV_ONLY_SUPPRESSIONS) {
+      it(`keeps ${pkg} (${ghsa}) ${prodVia ? `in production only under ${prodVia}` : 'out of the production dependency tree'}`, () => {
         // `--prod` walks `dependencies` only. If the vulnerable major shows up
-        // here, the "dev tooling only, no consumer and no runtime reaches it"
-        // argument behind the suppression no longer holds.
+        // here (for a `prodVia` entry: under any other parent), the argument behind
+        // the suppression — "dev tooling only", or "only this parent, with patterns
+        // the developer writes" — no longer holds.
         // One command STRING with `shell: true`: on Windows pnpm is a .cmd shim, which Node refuses to
         // spawn directly since 20.12 (spawnSync pnpm ENOENT) — the same pattern as
         // scripts/check-overrides.mjs. `pkg` is a literal from the list above, so nothing to escape.
@@ -114,7 +129,17 @@ describe.skipIf(!OWN_WORKSPACE)(
           stdio: ['ignore', 'pipe', 'pipe'],
         });
 
-        expect(out).not.toMatch(vulnerableInProd);
+        if (!prodVia) {
+          expect(out).not.toMatch(vulnerableInProd);
+          return;
+        }
+        // The direct parents are the first-level children under each `<pkg>@<version>` header.
+        const parents = Array.from(out.matchAll(/^[└├]─[┬─] (\S+)/gm)).map((m) => m[1]);
+        expect(parents.length, `expected a production path, got:\n${out}`).toBeGreaterThan(0);
+        expect(
+          parents.filter((parent) => !parent.startsWith(`${prodVia}@`)),
+          `a production parent other than ${prodVia} voids the suppression:\n${out}`,
+        ).toEqual([]);
       }, 60_000);
     }
   },

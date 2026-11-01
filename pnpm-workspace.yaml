@@ -28,15 +28,20 @@ strictPeerDependencies: false
 # code is the gate. Do not chase the number to zero by widening this list.
 # ----------------------------------------------------------------------------------
 # The suppressions live in the `auditConfig` block right below this comment (retired ones
-# stay there as comments, with their assessment). Every active entry is an advisory with NO
-# patched release anywhere that reaches this tree only through dev tooling. Each is guarded
-# on both axes, which is what makes it acceptable:
+# stay there as comments, with their assessment). Every active entry is either an advisory with
+# NO patched release anywhere, or one whose fix the declared consumers provably cannot use
+# (`unusableFixConsumers`), and it names its production reach. Each is guarded on both axes,
+# which is what makes it acceptable:
 #   - still TRUE?    `pnpm run check:overrides` (part of `check`) re-checks each GHSA
 #                    against the GitHub Advisory API and FAILS with "FIX AVAILABLE" the
-#                    moment a patched version exists. Then remove the entry.
+#                    moment a patched version exists — then remove the entry. An entry with
+#                    an `unusableFixConsumers` declaration is re-tested instead, and FAILS
+#                    with "RE-TEST" once a declared consumer moves, a second one appears or a
+#                    fix nobody assessed is published.
 #   - still in SCOPE? tests/unit/audit-suppression-scope.spec.ts fails as soon as a
-#                    suppressed package appears in the PRODUCTION tree — here, or in a
-#                    generated project, which inherits this block (see point 1 below).
+#                    suppressed package reaches the PRODUCTION tree beyond what its entry
+#                    allows — here, or in a generated project, which inherits this block
+#                    (see point 1 below).
 #
 # GHSA-mh99-v99m-4gvg (brace-expansion, HIGH) lived here until 2026-08-22 as a
 # documented false positive — GitHub's range was then a blanket `<= 5.0.7` that swept
@@ -100,7 +105,26 @@ auditConfig:
     # ever re-published, `pnpm audit` turns red: re-argue the dev-only case then and restore
     # entry and guard together.
     # - GHSA-vfj7-8cjw-p6xm
-  ignoreGhsas: []
+  # ACTIVE since 2026-11-01 (owner decision, mirroring nest-server's entries of 2026-10-31, DEV-3899).
+  # GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, moderate, DoS through globparts amplification) and
+  # GHSA-3g3m-2fjr-6pw4 (glob 9 – 14.0.1, moderate, AbortSignal cancellation bypass). Both fixes exist only
+  # in new majors (minimatch 11.0.1, glob 14.0.2, released 2026-10-27), and every consumer is on its newest
+  # release without them: @nestjs/cli 12.0.11 pins minimatch 10.2.6 exactly, @ts-morph/common 0.29.0 (via
+  # ts-morph, a dependency of @lenne.tech/nest-server and @nestjs/graphql) and nodemon 3.1.14 need ^10,
+  # @swc/cli 0.8.2 needs ^9, glob 13.0.6 (via rimraf 6.1.3, which needs glob ^13) needs ^10. An override
+  # across the major is ruled out by the fixed-target rule, and minimatch 11 removed `makeRe()` and
+  # `Minimatch#regexp`. Every path matches patterns the DEVELOPER writes (tsconfig and scanner globs, CLI
+  # file arguments, cleanup paths), never request input.
+  # Hoisted into every generated project (see point 1 above): there, too, check:overrides fails with
+  # RE-TEST once a consumer moves or a second one appears, and tests/unit/audit-suppression-scope.spec.ts
+  # fails once minimatch reaches production through any parent other than @ts-morph/common, or glob at all.
+  # Re-verify when any of these consumers releases a version on minimatch 11 / glob 14.
+  ignoreGhsas:
+    - GHSA-g3hv-75wg-m249
+    - GHSA-3g3m-2fjr-6pw4
+  unusableFixConsumers:
+    GHSA-g3hv-75wg-m249: '@nestjs/cli@12.0.11 + @swc/cli@0.8.2 + @ts-morph/common@0.29.0 + glob@13.0.6 + nodemon@3.1.14 cannot use 11.0.1'
+    GHSA-3g3m-2fjr-6pw4: 'rimraf@6.1.3 cannot use 14.0.2'
 
 # pnpm 11 configuration
 #
