@@ -108,3 +108,9 @@ globalConfig.json
 
 # Ignore txt files in tests directory
 tests/**/*.txt
+
+# Review agents' notes stay on the developer's machine (decided 2026-11-01 for the public lenne.Tech base
+# repositories): they record findings and internals that do not belong in a public repository. Projects
+# generated from this starter inherit the line; a project that wants to share the notes removes it.
+# No trailing slash: the path may be a symlink, and a directory-only pattern does not match one.
+**/.claude/agent-memory

@@ -1,1 +1,0 @@
-- [Image probe: throwaway Mongo](feedback_image_probe_use_throwaway_mongo.md) — prod-image smoke test uses a disposable mongo container; dropping a host DB is hook-blocked
