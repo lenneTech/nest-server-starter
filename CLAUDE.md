@@ -346,6 +346,25 @@ framework release, so a bump raises BOTH fields:
 leaving it behind also leaves the GraphQL docs advertising the old
 release.
 
+**The starter follows nest-server, release for release** (owner rule,
+Kai, 2026-11-03):
+
+1. **Same number.** `version` equals the `@lenne.tech/nest-server`
+   version, as above.
+2. **Every nest-server version gets its starter version.** Each version
+   published to npm is followed by the bump commit `Updated to
+   nest-server version <X.Y.Z>`, tagged `v<X.Y.Z>` by
+   `.github/workflows/tag.yml`, also when the bump is the only change.
+   That includes nest-server's maintenance line (`release/11.x`,
+   dist-tag `latest-11`), which the starter follows on a branch of the
+   same name. A downstream route that skips the starter leaves a gap
+   in the tag series; close it before the next release.
+3. **Nothing else changes the version.** Starter changes between two
+   nest-server releases are committed and pushed with a normal message
+   and leave `version` as it is: no patch bump, no starter-only
+   release, no tag (`tag.yml` finds the tag in place and does nothing).
+   They ship under the next nest-server version.
+
 **This rule does NOT apply to projects generated from this starter.**
 There the project carries its own version and upgrades the framework
 independently — the two fields are expected to differ. That is also
