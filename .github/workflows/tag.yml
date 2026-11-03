@@ -24,9 +24,17 @@ name: Tag version
 # would add a trigger that resolves refs from the default branch and fails in ways
 # that are tedious to debug, for no gain on a template repo that publishes nothing.
 
+# WHICH BRANCHES.
+#
+# main, and the maintenance lines `release/**`: the starter has a version for every published
+# nest-server version (CLAUDE.md, "The starter follows nest-server"), and a release from
+# nest-server's `release/11.x` is followed on the starter's `release/11.x`. GitHub reads the
+# trigger from the workflow file of the pushed commit, so each release branch carries this
+# line itself.
+
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/**']
     # Nothing else can change the version, so nothing else needs to wake this up.
     paths:
       - 'package.json'

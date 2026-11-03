@@ -70,7 +70,6 @@ strictPeerDependencies: false
 # pins below were raised to 1.1.18 / 2.1.4 / 5.0.9 to close it outright.
 
 auditConfig:
-  ignoreGhsas:
     # RETIRED 2026-10-11 (listed since 2026-10-03), kept here as the assessment to re-add it with.
     # GHSA-ch52-4w7c-c8xp, http-cache-semantics <= 4.2.0, HIGH: max-stale handling can serve one
     # user's cached response to another. Dev tooling only: @swc/cli (also via @nestjs/cli) >
@@ -89,13 +88,48 @@ auditConfig:
     # re-add the entry with this assessment and a matching case in
     # tests/unit/audit-suppression-scope.spec.ts.
     # - GHSA-ch52-4w7c-c8xp
-    # braces <= 3.0.3, HIGH: stack exhaustion through deeply nested patterns. Dev tooling only:
-    # nodemon > chokidar@3 > braces, and cpy-cli > cpy / globby > fast-glob > micromatch >
-    # braces. Patterns come from this repository's own scripts, never from input. Verified
-    # 2026-10-03: newest release 3.0.3, no first patched version. Re-verified 2026-10-09,
-    # 2026-10-11 and 2026-10-17: unchanged (advisory still `<= 3.0.3`, not withdrawn; stripping this
-    # entry makes `pnpm audit` report exactly this one finding via cpy-cli > ... > braces).
-    - GHSA-vfj7-8cjw-p6xm
+    # RETIRED 2026-10-24 (listed since 2026-10-03). GHSA-vfj7-8cjw-p6xm, braces <= 3.0.3, HIGH:
+    # stack exhaustion through deeply nested patterns. Dev tooling only: nodemon > chokidar@3 >
+    # braces, and cpy-cli > cpy / globby > fast-glob > micromatch > braces. Patterns come from this
+    # repository's own scripts, never from input; no patched release anywhere. GitHub WITHDREW the
+    # advisory on 2026-10-23 (`withdrawn_at` 2026-10-23T12:53Z, verified 2026-10-24 via the
+    # Advisory API), and `check:overrides` failed on the obsolete suppression ("FIX AVAILABLE — the
+    # advisory was WITHDRAWN"). Removed together with its guard in
+    # tests/unit/audit-suppression-scope.spec.ts, mirroring nest-server (on main since 12.0.0, on
+    # release/11.x with 11.43.4). Nothing in the tree moved: braces stays at 3.0.3, and `pnpm audit`
+    # no longer reports the withdrawn advisory. If it is ever re-published, `pnpm audit` turns red:
+    # re-argue the dev-only case then and restore entry and guard together.
+    # - GHSA-vfj7-8cjw-p6xm
+  # ACTIVE since 2026-11-03 on release/11.x (starter 11.43.4).
+  # GHSA-gcqx-w48m-w2h4, deepmerge >= 4.2.0, <= 4.3.1, LOW: mergeObject() allows prototype poisoning of
+  # returned objects. Mirrors nest-server 11.43.4. Dev tooling only: @nestjs/cli 11 >
+  # fork-ts-checker-webpack-plugin > deepmerge, which merges this repository's own build configuration,
+  # never input. No first patched version (newest release 4.3.1), and @nestjs/cli 11 has no release
+  # without fork-ts-checker; the path leaves with @nestjs/cli 12 (main carries no entry).
+  # check:overrides fails with FIX AVAILABLE once a patched version appears.
+  #
+  # GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, moderate, DoS through globparts amplification) and
+  # GHSA-3g3m-2fjr-6pw4 (glob 9 – 14.0.1, moderate, AbortSignal cancellation bypass): main's owner decision
+  # of 2026-11-01 (mirroring nest-server's entries of 2026-10-31, DEV-3899), applied to this line on
+  # 2026-11-03. Both fixes exist only in new majors (minimatch 11.0.1, glob 14.0.2, released 2026-10-27),
+  # and no consumer in this tree can take them: fork-ts-checker-webpack-plugin 9.1.0 (pinned by
+  # @nestjs/cli 11.0.24) needs minimatch ^3, @swc/cli 0.8.1 needs ^9 (as does 0.8.2, the newest),
+  # @ts-morph/common 0.29.0 (via ts-morph, a dependency of @lenne.tech/nest-server and @nestjs/graphql)
+  # and nodemon 3.1.14 need ^10, glob 13.0.6 needs ^10; @nestjs/cli 11.0.24 pins glob 13.0.6 exactly.
+  # rimraf's glob is lifted to 14.0.3 by the override `'rimraf>glob@<14.0.2': 14.0.3`, as on main. An
+  # override across the major is ruled out for the rest by the fixed-target rule, and minimatch 11
+  # removed `makeRe()` and `Minimatch#regexp`. Every path matches patterns the DEVELOPER writes (tsconfig
+  # and scanner globs, CLI file arguments), never request input.
+  # check:overrides fails with RE-TEST once a consumer moves or a second one appears, and
+  # tests/unit/audit-suppression-scope.spec.ts fails once minimatch reaches production through any parent
+  # other than @ts-morph/common, or glob or deepmerge at all.
+  ignoreGhsas:
+    - GHSA-gcqx-w48m-w2h4
+    - GHSA-g3hv-75wg-m249
+    - GHSA-3g3m-2fjr-6pw4
+  unusableFixConsumers:
+    GHSA-g3hv-75wg-m249: '@swc/cli@0.8.1 + @ts-morph/common@0.29.0 + fork-ts-checker-webpack-plugin@9.1.0 + glob@13.0.6 + nodemon@3.1.14 cannot use 11.0.1'
+    GHSA-3g3m-2fjr-6pw4: '@nestjs/cli@11.0.24 cannot use 14.0.2'
 
 # pnpm 11 configuration
 #
@@ -396,13 +430,19 @@ overrides:
   # 2026-09-26: 3.1.6 had become a downgrade lock (a no-override resolve lands on 3.1.8, the
   # newest 3.x, now past the release-age gate). Key and target raised, mirroring nest-server
   # 11.41.4.
-  'fast-uri@<3.1.8': 3.1.8
+  # 2026-10-29 (nest-server 11.43.4, migration guide 11.43.3 -> 11.43.4 §4): raised 3.1.8 -> 3.1.9,
+  # key with it, for GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr (moderate), GHSA-xhq7-xmqj-769h and
+  # GHSA-333x-w4r6-6crp (low), all patched >=3.1.9: the old target had become a lock.
+  'fast-uri@<3.1.9': 3.1.9
 
   # Security: body-parser DoS on malformed urlencoded input
   # (GHSA-v422-hmwv-36x6, low, patched >=2.3.0). Transitive via
   # @lenne.tech/nest-server>@as-integrations/express5 and express itself.
   # 2.3.0 is the newest 2.x. Drop once express / @apollo/server request >=2.3.0.
-  'body-parser@>=2.0.0 <2.3.0': 2.3.0
+  # 2026-10-29 (nest-server 11.43.4, migration guide 11.43.3 -> 11.43.4 §4): raised 2.3.0 -> 2.4.0,
+  # key with it, for GHSA-27r3-jxmh-p828 (high, patched 2.4.0): the old target held the vulnerable
+  # version in place.
+  'body-parser@>=2.0.0 <2.4.0': 2.4.0
 
   # Security: Overlong UTF-8 decoding in @protobufjs/utf8 <=1.1.0. Transitive
   # via @lenne.tech/nest-server>@apollo/server>@apollo/usage-reporting-protobuf
@@ -478,6 +518,15 @@ overrides:
   # minimatch@3 is deliberately NOT touched: its consumer (fork-ts-checker-webpack-plugin)
   # DOES call it as a callable and would throw.
   'minimatch@>=9.0.0 <10.2.6': 10.2.6
+
+  # Security, across the major (owner decision 2026-11-01 for main, applied to release/11.x on
+  # 2026-11-03): GHSA-3g3m-2fjr-6pw4 (glob >=9.0.0 <=14.0.1, moderate, AbortSignal cancellation bypass,
+  # first patched 14.0.2). rimraf 6.1.3, a devDependency on its newest release, still requests glob ^13.
+  # glob 14 still exports `glob`, `globSync` and `sync`, the only calls rimraf makes, and
+  # `rimraf --glob` (used here by `prune:migrations`) behaved identically on old and new major
+  # (measured 2026-11-01). Scoped to rimraf on purpose: @nestjs/cli 11.0.24 exact-pins glob 13.0.6 and
+  # stays under the suppression in `auditConfig`. Drop the entry once rimraf requests glob 14 itself.
+  'rimraf>glob@<14.0.2': 14.0.3
 
   # Security: postcss <=8.5.17 (GHSA-r28c-9q8g-f849, high), patched >=8.5.18.
   # Dev/test only: the dominant path is this project's own `vitest` devDependency
@@ -581,7 +630,10 @@ overrides:
   # (fetch strips credentials on a cross-origin redirect, bounded per-message work; no API change;
   # migration guide 11.42.14 -> 11.42.15 §3). Same reasoning as above: the framework's exact 10.1.2
   # never intersected `<10.1.0`, so the tree already held a single 10.1.2 copy.
-  'nodemailer@<10.1.2': 10.1.2
+  # 2026-10-29: raised 10.1.2 -> 10.1.4, key with it — nest-server 11.43.4 declares 10.1.4 (three
+  # address-parser advisories, GHSA-8c8m-p3m8-cjg8, GHSA-m943-m63m-w62w, GHSA-85x2-q946-cp5h, all
+  # moderate; migration guide 11.43.3 -> 11.43.4 §2). Same reasoning as above.
+  'nodemailer@<10.1.4': 10.1.4
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
@@ -595,7 +647,11 @@ overrides:
   # with nest-server 11.41.4, which declares 2.4.0. Inert today — nest-server 11.41.4
   # and @nestjs/platform-express 11.2.6 both request 2.4.0 themselves — and kept as
   # insurance against a dependency that falls back below the framework's version.
-  'multer@>=2.0.0 <2.4.0': 2.4.0
+  # 2026-10-29: LOAD-BEARING again with nest-server 11.43.4 (migration guide 11.43.3 -> 11.43.4 §3).
+  # GHSA-q7qp-rjg7-q26m (high, DoS via a pending async fileFilter after request teardown) covers
+  # 2.4.0, patched >=2.5.0, and every @nestjs/platform-express 11.x up to 11.2.8 exact-pins 2.4.0,
+  # which FileInterceptor uses. Key and target raised 2.4.0 -> 2.5.0 with the direct dependency.
+  'multer@>=2.0.0 <2.5.0': 2.5.0
 
   # Security: various undici CVEs <7.29.0 — response desynchronization,
   # cross-user information disclosure, CRLF injection via a blob-like body type,
