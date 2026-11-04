@@ -17,6 +17,8 @@
  * Re-synced 2026-11-04 with nest-server 12.3.1 (main 44321d7): UNUSED no longer asks for the target package
  * alone. It also reports an override whose scoped parent left the tree or stopped depending on the package,
  * and one with a plain-version target that no edge resolves to any more (`unusedReason()`).
+ * Re-synced 2026-11-04 with nest-server develop 07a07d4 (after 12.3.2, not in its release): `edgeValue()` reads the
+ * lockfile from a start index instead of a per-edge copy of its rest. Same result, no longer quadratic.
  * Apart from this header the two copies are identical.
  *
  * Carries `auditConfig.unusableFixConsumers` since this port: a suppression whose advisory HAS a
@@ -1156,7 +1158,7 @@ function edgesInto(name) {
       if (edge) {
         // An npm alias is keyed by the alias (`mm-cjs: minimatch@5.1.9`); the edge belongs to the package it
         // pulls. Matched by its key, such a parent was invisible, and a key naming the package can pull another.
-        const target = edgeTarget(edge[1].replace(/^'|'$/g, ''), edgeValue(half, line, lines.slice(index + 1)));
+        const target = edgeTarget(edge[1].replace(/^'|'$/g, ''), edgeValue(half, line, lines, index + 1));
         if (target.name !== name) {
           continue;
         }
@@ -1179,13 +1181,17 @@ function snapshotName(key) {
  * What an edge resolves to, as the lockfile spells it. A snapshot carries it on the edge line
  * (`minimatch: 11.0.3(peer@1.0.0)`, an alias as `mm-cjs: minimatch@5.1.9`); an importer on a `version:` line
  * underneath (`version: 11.0.3(peer@1.0.0)`, an alias as `version: minimatch@5.1.9`).
+ *
+ * `lines` is the lockfile from the half's header on, `start` the line after the edge. Passing `lines.slice(start)`
+ * instead copied the rest of the lockfile once per edge, which made a scan quadratic in the lockfile's size: 20 s
+ * instead of 1.3 s on a 2.5 MB lockfile once `unusedReason()` (12.3.1) ran the scan for every override.
  */
-function edgeValue(half, line, following) {
+function edgeValue(half, line, lines, start) {
   if (!half.workspace) {
     return line.slice(line.indexOf(':') + 1);
   }
-  for (const next of following) {
-    const deeper = next.match(new RegExp(`^ {${half.edge + 2}}([a-zA-Z]+):\\s*(.*)$`));
+  for (let at = start; at < lines.length; at++) {
+    const deeper = lines[at].match(new RegExp(`^ {${half.edge + 2}}([a-zA-Z]+):\\s*(.*)$`));
     if (!deeper) {
       return undefined;
     }

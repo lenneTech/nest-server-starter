@@ -359,6 +359,10 @@ function deployedConfig(
     email: {
       // defaultSender.email comes from NSC__EMAIL__DEFAULT_SENDER__EMAIL
       defaultSender: { name: brand },
+      // Optional since nest-server 12.3.2: a Reply-To header on every SMTP mail, auth mails included, so answers
+      // reach e.g. a support mailbox instead of noreply@. Unset means no header. Set it through
+      // NSC__EMAIL__DEFAULT_REPLY_TO; one sendMail() call overrides it with `replyTo` or drops it with `replyTo: false`.
+      // defaultReplyTo: 'support@example.com',
       // The page nuxt-base-starter ships (`app/pages/auth/reset-password.vue`) reads the token from
       // `?token=`, so the link must carry it that way. `{token}` is substituted, and the leading
       // slash resolves against `appUrl` — which keeps this one line correct in every environment
