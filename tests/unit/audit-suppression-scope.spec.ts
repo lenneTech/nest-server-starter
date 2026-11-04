@@ -26,11 +26,11 @@ const ROOT = join(import.meta.dirname, '../..');
 /**
  * Packages whose advisories are currently suppressed, and the production reach each justification allows.
  *
- * Since 2026-11-01 (owner decision, mirroring nest-server's DEV-3899 entries of 2026-10-31), two entries, both with a
- * fix only in a new major that no consumer can take yet (`unusableFixConsumers` in `pnpm-workspace.yaml`, re-tested by
- * `check:overrides`):
+ * Since 2026-11-01 (owner decision, mirroring nest-server's DEV-3899 entries of 2026-10-31), one entry with a fix only
+ * in a new major that no consumer can take yet (`unusableFixConsumers` in `pnpm-workspace.yaml`, re-tested by
+ * `check:overrides`). Its sibling GHSA-3g3m-2fjr-6pw4 (glob, via rimraf) left on 2026-11-02, when the override
+ * `'rimraf>glob@<14.0.2': 14.0.3` lifted the only vulnerable glob; its assessment stays commented out there.
  *
- * - GHSA-3g3m-2fjr-6pw4 (glob, via rimraf): dev tooling only — any glob in the production tree voids it.
  * - GHSA-g3hv-75wg-m249 (minimatch): reaches production through exactly ONE parent, `@ts-morph/common` (ts-morph, a
  *   dependency of @lenne.tech/nest-server and @nestjs/graphql), which matches globs the developer writes. The argument
  *   is "no request input reaches the matcher", and it holds only for that parent, so any other production parent
@@ -86,7 +86,6 @@ const ROOT = join(import.meta.dirname, '../..');
  * when upstream moves, not when your own reasoning stopped applying.
  */
 const DEV_ONLY_SUPPRESSIONS: { ghsa: string; pkg: string; prodVia?: string; vulnerableInProd: RegExp }[] = [
-  { ghsa: 'GHSA-3g3m-2fjr-6pw4', pkg: 'glob', vulnerableInProd: /glob@/ },
   { ghsa: 'GHSA-g3hv-75wg-m249', pkg: 'minimatch', prodVia: '@ts-morph/common', vulnerableInProd: /minimatch@/ },
 ];
 

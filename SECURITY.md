@@ -49,11 +49,12 @@ advisory if it later appears on a production path.
 
 So a suppression is not only a statement about today's tree — it is a standing hole in the
 detection. Whenever a suppressed advisory affects a package that also has a production
-path, record that explicitly and state what to re-check after a dependency bump. The two
-retired assessments kept as comments there (`GHSA-vfj7-8cjw-p6xm`, withdrawn by GitHub on
-2026-10-23, and `GHSA-ch52-4w7c-c8xp`) follow that shape — copy it. The two active entries
-since 2026-11-01 (`GHSA-g3hv-75wg-m249`, minimatch, and `GHSA-3g3m-2fjr-6pw4`, glob) are
-third-claim residuals: minimatch reaches the production tree through `@ts-morph/common` only,
+path, record that explicitly and state what to re-check after a dependency bump. The retired
+assessments kept as comments there follow that shape — copy it: `GHSA-vfj7-8cjw-p6xm`
+(withdrawn by GitHub on 2026-10-23), `GHSA-ch52-4w7c-c8xp`, and `GHSA-3g3m-2fjr-6pw4` (glob,
+retired 2026-11-02 once the override `'rimraf>glob@<14.0.2': 14.0.3` lifted rimraf's glob to
+the fixed major). The active entry since 2026-11-01, `GHSA-g3hv-75wg-m249` (minimatch), is a
+third-claim residual: minimatch reaches the production tree through `@ts-morph/common` only,
 and the scope spec fails as soon as any other production parent appears.
 
 ### Before the third claim: can a patch make the fix usable?
