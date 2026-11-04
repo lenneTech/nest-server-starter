@@ -878,6 +878,28 @@ allowBuilds:
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
   - '@lenne.tech/nest-server'
+  # 2026-11-04 (owner decision, same-day security fix with nest-server 12.3.1): better-auth 1.7.16 and
+  # better-call 1.4.5, published 2026-11-03 and inside the 24 h gate until 2026-11-04 21:24 UTC.
+  # better-auth 1.7.16 closes the twelve better-auth repository advisories of 2026-11-03 and pins
+  # better-call 1.4.5 (GHSA-23w8-wx9r-vm57: better-call < 1.4.5 hands one routerContext object to every
+  # request of a router). That one is not reachable here: in 1.7.12 as in 1.7.16, the `handler` that
+  # nest-server calls builds a new router around a per-request context copy for every request
+  # (better-auth dist/auth/base.mjs), so 1.4.5 adds a second layer. Every entry carries SLSA provenance
+  # from GitHub Actions. Exact versions on purpose, unlike the bare framework name above: they admit only these
+  # releases, and they turn into no-ops at 21:24 UTC. Remove them in the next maintenance run.
+  # Measured 2026-11-04 on pnpm 11.28.5: exact entries ARE honored by the lockfile verification (a
+  # fresh `pnpm install --frozen-lockfile` passes, and fails with ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION
+  # once the better-call entry is removed), so the 11.1.3 limitation in the note above no longer applies.
+  - '@better-auth/core@1.7.16'
+  - '@better-auth/drizzle-adapter@1.7.16'
+  - '@better-auth/kysely-adapter@1.7.16'
+  - '@better-auth/memory-adapter@1.7.16'
+  - '@better-auth/mongo-adapter@1.7.16'
+  - '@better-auth/passkey@1.7.16'
+  - '@better-auth/prisma-adapter@1.7.16'
+  - '@better-auth/telemetry@1.7.16'
+  - better-auth@1.7.16
+  - better-call@1.4.5
   # 2026-08-22: removed six machine-written entries left behind by `pnpm audit --fix`
   # during the 11.33.0 bump — '@nestjs/common@11.1.29', '@nestjs/core@11.1.29' and
   # '@nestjs/platform-express@11.1.29', each listed TWICE. The project now declares
