@@ -421,6 +421,8 @@ function deployedConfig(
     // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
     ignoreSelectionsForPopulate: true,
+    // Logs the stack of every HttpException at `debug`, so on deployed stages only with NEST_LOG_LEVEL=debug
+    // (resolveLogLevels() below). Errors that are no HttpException still reach the log at `error`, with stack.
     logExceptions: true,
     // mongoose.uri comes from NSC__MONGOOSE__URI (no fallback in deployed envs)
     permissions: true,
