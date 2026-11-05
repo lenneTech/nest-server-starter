@@ -12,12 +12,16 @@
   "rules": {
     "eqeqeq": "warn",
     "no-console": ["warn", { "allow": ["warn", "error", "info", "debug", "trace", "time", "timeEnd", "group", "groupEnd"] }],
+    // Covers nest-server's own allow list: in vendor mode this config also lints the framework core in src/core/,
+    // whose third-party internals (mongoose `$__`, pg's `_activeQuery`/`_queryQueue`/`_sentQueryQueue`) cannot be
+    // renamed. When nest-server adds a name to its .oxlintrc.json, add it here too.
     "no-underscore-dangle": ["warn", {
       "allow": [
         "$__",
         "__args",
         "__schema",
         "__typename",
+        "_activeQuery",
         "_authenticatedViaBetterAuth",
         "_bsontype",
         "_configSubject$",
@@ -28,6 +32,8 @@
         "_instance",
         "_model",
         "_objectAlreadyCheckedForRestrictions",
+        "_queryQueue",
+        "_sentQueryQueue",
         "_startMigration",
         "_translations",
         "_typeTestConfigs"
@@ -90,6 +96,15 @@
       "files": ["tests/**"],
       "rules": {
         "no-unused-vars": "off"
+      }
+    },
+    {
+      // The vendored framework core (vendor mode only) gets the exception nest-server's .oxlintrc.json has: the core
+      // reverses only fresh arrays, and `toReversed()` is not in the ES2022 lib. Scoped to src/core/ so project code
+      // keeps the rule.
+      "files": ["src/core/**"],
+      "rules": {
+        "unicorn/no-array-reverse": "off"
       }
     }
   ]
