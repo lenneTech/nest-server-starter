@@ -1,4 +1,12 @@
-import { getEnvironmentConfig, IServerOptions, merge, resolveSmtpSecure, RoleEnum } from '@lenne.tech/nest-server';
+import {
+  getEnvironmentConfig,
+  IServerOptions,
+  isLocalEnv,
+  merge,
+  resolveSmtpSecure,
+  RoleEnum,
+} from '@lenne.tech/nest-server';
+import type { LogLevel } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
@@ -30,6 +38,8 @@ import metaData from './meta.json' with { type: 'json' };
  * - **Required deployed env vars**
  *   → edit the `REQUIRED_DEPLOYED_ENV_VARS` table below. Single source of
  *   truth for both the fail-fast guard and the inline doc.
+ * - **Log levels** (`log` and above when deployed, every level locally)
+ *   → `resolveLogLevels()` below; per deployment NestJS's `NEST_LOG_LEVEL`.
  *
  * --------------------------------------------------------------------------
  * Secrets policy
@@ -638,6 +648,27 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // ---------------------------------------------------------------------------
   production: deployedConfig('production'),
 };
+
+/**
+ * Log levels of the Nest logger. main.ts passes them to `NestFactory.create(ServerModule, { logger })`.
+ *
+ * Every deployed env (develop, test, production, and any env that is not local) prints `log` and
+ * above: no `debug`, no `verbose`. Those lines are loud, they cost log storage, and they carry more
+ * request context than an operator needs. local, ci and e2e keep every level, as before.
+ *
+ * To change it for one deployment without a code change, set NestJS's own `NEST_LOG_LEVEL`: a level
+ * (`debug` means that level and above), a list (`warn,error`) or a threshold (`>=warn`). While it is
+ * set this returns `undefined`, and Nest's ConsoleLogger reads the variable itself. For an invalid
+ * value Nest warns once and prints every level.
+ */
+const DEPLOYED_LOG_LEVELS: LogLevel[] = ['log', 'warn', 'error', 'fatal'];
+
+export function resolveLogLevels(env: string | undefined): LogLevel[] | undefined {
+  if (process.env.NEST_LOG_LEVEL?.replaceAll(' ', '')) {
+    return undefined;
+  }
+  return isLocalEnv(env) ? undefined : [...DEPLOYED_LOG_LEVELS];
+}
 
 /**
  * Resolve and validate config.

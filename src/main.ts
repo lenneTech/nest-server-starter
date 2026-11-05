@@ -19,7 +19,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 
 import packageJson from '../package.json' with { type: 'json' };
-import envConfig from './config.env.js';
+import envConfig, { resolveLogLevels } from './config.env.js';
 // #region rest
 import { PersistenceModel } from './server/common/models/persistence.model.js';
 // #endregion rest
@@ -35,10 +35,13 @@ async function bootstrap() {
   // "app crashed" always has a reason. See process-diagnostics.ts for the rationale.
   installProcessDiagnostics();
 
-  // Create a new server based on express
+  // Create a new server based on express. `logger` sets the levels of the Nest logger: `log` and
+  // above in every deployed env, every level locally, NEST_LOG_LEVEL overrides both (resolveLogLevels()
+  // in config.env.ts).
   const server = await NestFactory.create<NestExpressApplication>(
     // Include server module, with all necessary modules for the project
     ServerModule,
+    { logger: resolveLogLevels(envConfig.env) },
   );
 
   // Log exceptions

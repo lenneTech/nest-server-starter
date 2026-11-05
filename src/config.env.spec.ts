@@ -16,6 +16,7 @@ import {
   redactSecrets,
   resolveSystemSetupHttpInit,
 } from '@lenne.tech/nest-server';
+import { ConsoleLogger, type LogLevel } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('config.env.ts — cross-subdomain cookies', () => {
@@ -394,6 +395,49 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       // Everything that is not a secret stays readable
       expect(body.env).toBe('production');
       expect(body.port).toBe(resolved.port);
+    });
+  });
+
+  // main.ts hands resolveLogLevels() to NestFactory.create({ logger }). These cases ask Nest's own
+  // ConsoleLogger which levels it then prints, so they hold exactly as far as Nest's filter does.
+  describe('log levels', () => {
+    const EVERY_LEVEL: LogLevel[] = ['verbose', 'debug', 'log', 'warn', 'error', 'fatal'];
+
+    /** The levels the default ConsoleLogger prints after NestFactory.create({ logger: levels }). */
+    function printed(levels: LogLevel[] | undefined): LogLevel[] {
+      const logger = new ConsoleLogger();
+      if (levels) {
+        logger.setLogLevels(levels);
+      }
+      return EVERY_LEVEL.filter((level) => logger.isLevelEnabled(level));
+    }
+
+    it.each(['local', 'e2e', 'ci'])('%s prints every level, debug and verbose included', async (env) => {
+      delete process.env.NEST_LOG_LEVEL;
+      const { default: resolved, resolveLogLevels } = await load(env);
+      expect(printed(resolveLogLevels(resolved.env))).toEqual(EVERY_LEVEL);
+    });
+
+    it.each(['develop', 'test', 'production'])('%s prints log and above, no debug and no verbose', async (env) => {
+      delete process.env.NEST_LOG_LEVEL;
+      const { default: resolved, resolveLogLevels } = await load(env, COMPLETE);
+      expect(printed(resolveLogLevels(resolved.env))).toEqual(['log', 'warn', 'error', 'fatal']);
+    });
+
+    it('an env that is not local gets the deployed levels, not every level', async () => {
+      delete process.env.NEST_LOG_LEVEL;
+      const { resolveLogLevels } = await load('local');
+      expect(printed(resolveLogLevels('staging'))).toEqual(['log', 'warn', 'error', 'fatal']);
+    });
+
+    it.each([
+      ['production', 'debug', ['debug', 'log', 'warn', 'error', 'fatal']],
+      ['production', '>=warn', ['warn', 'error', 'fatal']],
+      ['local', 'warn', ['warn', 'error', 'fatal']],
+    ] as const)('%s follows NEST_LOG_LEVEL=%s', async (env, value, expected) => {
+      const { default: resolved, resolveLogLevels } = await load(env, env === 'local' ? {} : COMPLETE);
+      process.env.NEST_LOG_LEVEL = value;
+      expect(printed(resolveLogLevels(resolved.env))).toEqual(expected);
     });
   });
 });
