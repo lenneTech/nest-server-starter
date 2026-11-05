@@ -16,7 +16,7 @@ import {
   redactSecrets,
   resolveSystemSetupHttpInit,
 } from '@lenne.tech/nest-server';
-import { ConsoleLogger, type LogLevel } from '@nestjs/common';
+import { ConsoleLogger, Logger, type LogLevel } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('config.env.ts — cross-subdomain cookies', () => {
@@ -398,12 +398,18 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     });
   });
 
-  // main.ts hands resolveLogLevels() to NestFactory.create({ logger }). These cases ask Nest's own
+  // config.env.ts applies resolveLogLevels() to Nest's logger while it loads. These cases ask Nest's own
   // ConsoleLogger which levels it then prints, so they hold exactly as far as Nest's filter does.
   describe('log levels', () => {
     const EVERY_LEVEL: LogLevel[] = ['verbose', 'debug', 'log', 'warn', 'error', 'fatal'];
 
-    /** The levels the default ConsoleLogger prints after NestFactory.create({ logger: levels }). */
+    /** Nest's static logger state, which loading config.env.ts sets. Reset after every case. */
+    const nestLogger = Logger as unknown as { logLevels?: LogLevel[] };
+    afterEach(() => {
+      nestLogger.logLevels = undefined;
+    });
+
+    /** The levels the default ConsoleLogger prints after Logger.overrideLogger(levels). */
     function printed(levels: LogLevel[] | undefined): LogLevel[] {
       const logger = new ConsoleLogger();
       if (levels) {
@@ -438,6 +444,23 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       const { default: resolved, resolveLogLevels } = await load(env, env === 'local' ? {} : COMPLETE);
       process.env.NEST_LOG_LEVEL = value;
       expect(printed(resolveLogLevels(resolved.env))).toEqual(expected);
+    });
+
+    // CoreModule.forRoot() logs while server.module.ts loads, which is before NestFactory.create runs. The
+    // levels have to be in place by then, so loading the config applies them.
+    it('production applies them to the Nest logger while the config loads, before any module exists', async () => {
+      delete process.env.NEST_LOG_LEVEL;
+      await load('production', COMPLETE);
+      expect(EVERY_LEVEL.filter((level) => Logger.isLevelEnabled(level))).toEqual(['log', 'warn', 'error', 'fatal']);
+    });
+
+    it.each([
+      ['local', {}],
+      ['production', { ...COMPLETE, NEST_LOG_LEVEL: 'debug' }],
+    ])('%s leaves the Nest logger at its own default while the config loads', async (env, vars) => {
+      delete process.env.NEST_LOG_LEVEL;
+      await load(env, vars);
+      expect(nestLogger.logLevels).toBeUndefined();
     });
   });
 });

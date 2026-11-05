@@ -6,7 +6,7 @@ import {
   resolveSmtpSecure,
   RoleEnum,
 } from '@lenne.tech/nest-server';
-import type { LogLevel } from '@nestjs/common';
+import { Logger, type LogLevel } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
@@ -652,7 +652,7 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
 };
 
 /**
- * Log levels of the Nest logger. main.ts passes them to `NestFactory.create(ServerModule, { logger })`.
+ * Log levels of the Nest logger, applied at the bottom of this file while it loads.
  *
  * Every deployed env (develop, test, production, and any env that is not local) prints `log` and
  * above: no `debug`, no `verbose`. Those lines are loud, they cost log storage, and they carry more
@@ -700,6 +700,15 @@ if (DEPLOYED_ENVS.has(resolved.env)) {
         'See .env.example for the full list.',
     );
   }
+}
+
+// Applied here, while the config loads, and not as the `logger` option of NestFactory.create in main.ts:
+// server.module.ts imports this file and then runs CoreModule.forRoot(), whose modules already log
+// (e.g. "RolesGuard registered globally"). That happens before main.ts creates the app, so an option
+// there comes too late for those lines.
+const logLevels = resolveLogLevels(resolved.env);
+if (logLevels) {
+  Logger.overrideLogger(logLevels);
 }
 
 export default resolved;
