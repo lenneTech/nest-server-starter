@@ -8,6 +8,8 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+import { type IServerOptions, resolveSystemSetupHttpInit } from '@lenne.tech/nest-server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('config.env.ts — cross-subdomain cookies', () => {
@@ -291,5 +293,53 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
 
   it.each(['local', 'e2e', 'ci'])('%s starts without any of them', async (env) => {
     await expect(load(env)).resolves.toBeDefined();
+  });
+
+  /*
+   * nest-server 12.4.0 closes the anonymous `POST /system-setup/init` outside `local`, `ci` and `e2e`
+   * unless `systemSetup.httpInit` opens it: on a fresh deployment, whoever called it first became the
+   * administrator. These cases pin which side of that line every env of the matrix lands on, and that the
+   * two documented ways in (.env.example) reach the configuration through the NSC__ reader. The 403 itself
+   * is nest-server's and tested there; tests/system-setup.e2e-spec.ts walks the local setup page.
+   */
+  describe('system setup (nest-server 12.4.0)', () => {
+    const httpInit = (resolved: Partial<IServerOptions>) =>
+      resolveSystemSetupHttpInit(resolved.systemSetup?.httpInit, resolved.env);
+
+    it.each(['local', 'e2e', 'ci'])('%s keeps the setup page: HTTP init open, no token', async (env) => {
+      const { default: resolved } = await load(env);
+      expect(resolved.systemSetup?.enabled).not.toBe(false);
+      expect(httpInit(resolved)).toMatchObject({ enabled: true, tokenRequired: false });
+    });
+
+    it.each(['develop', 'test', 'production'])('%s keeps the HTTP init closed without an opt-in', async (env) => {
+      const { default: resolved } = await load(env, COMPLETE);
+      expect(httpInit(resolved).enabled).toBe(false);
+    });
+
+    it('production creates its first admin from the NSC__SYSTEM_SETUP__INITIAL_ADMIN__* vars', async () => {
+      const { default: resolved } = await load('production', {
+        ...COMPLETE,
+        NSC__SYSTEM_SETUP__INITIAL_ADMIN__EMAIL: 'admin@example.test',
+        NSC__SYSTEM_SETUP__INITIAL_ADMIN__NAME: 'Contract Admin',
+        NSC__SYSTEM_SETUP__INITIAL_ADMIN__PASSWORD: 'contract-test-admin-password',
+      });
+      expect(resolved.systemSetup?.initialAdmin).toEqual({
+        email: 'admin@example.test',
+        name: 'Contract Admin',
+        password: 'contract-test-admin-password',
+      });
+      // The admin comes from the boot; the anonymous HTTP init stays closed all the same
+      expect(httpInit(resolved).enabled).toBe(false);
+    });
+
+    it('production opens the HTTP init only behind NSC__SYSTEM_SETUP__HTTP_INIT__TOKEN', async () => {
+      const token = 'contract-test-setup-token';
+      const { default: resolved } = await load('production', {
+        ...COMPLETE,
+        NSC__SYSTEM_SETUP__HTTP_INIT__TOKEN: token,
+      });
+      expect(httpInit(resolved)).toMatchObject({ enabled: true, token, tokenRequired: true });
+    });
   });
 });

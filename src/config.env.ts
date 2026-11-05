@@ -414,6 +414,12 @@ function deployedConfig(
     port: Number(process.env.PORT) || 3000,
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
+    // systemSetup: deliberately unset. Since nest-server 12.4.0 the setup page's anonymous
+    // `POST /system-setup/init` is CLOSED in every deployed env (403 LTNS_0053): on a fresh instance,
+    // whoever called it first became the administrator. local, ci and e2e keep it open. A deployed stage
+    // gets its first admin from NSC__SYSTEM_SETUP__INITIAL_ADMIN__EMAIL / __PASSWORD (created at boot
+    // while no user exists), or opens the page behind NSC__SYSTEM_SETUP__HTTP_INIT__TOKEN, which the
+    // frontend sends as X-System-Setup-Token. Both are documented in .env.example.
     templates: PROJECT_TEMPLATES,
     tus: PROJECT_TUS,
     // Express `trust proxy`, passed through by CoreModule (nest-server 11.33.0+).
