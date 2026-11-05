@@ -256,6 +256,11 @@ describe('Common (e2e)', () => {
   it('get config with admin rights', async () => {
     const res: any = await testHelper.rest('/config', { cookies: gAdminSessionToken });
     expect(res.env).toEqual(envConfig.env);
+    // Masked by nest-server's configEndpointResponse(), even for an administrator
+    const betterAuthSecret = (envConfig.betterAuth as { secret?: string }).secret;
+    expect(betterAuthSecret).toBeTruthy();
+    expect(res.betterAuth.secret).toBe('***');
+    expect(JSON.stringify(res)).not.toContain(betterAuthSecret);
   });
 
   // ===================================================================================================================

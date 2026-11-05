@@ -9,7 +9,13 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { type IServerOptions, resolveSystemSetupHttpInit } from '@lenne.tech/nest-server';
+import {
+  FRAMEWORK_SECRET_FIELDS,
+  type IServerOptions,
+  isConfigEndpointEnabled,
+  redactSecrets,
+  resolveSystemSetupHttpInit,
+} from '@lenne.tech/nest-server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('config.env.ts — cross-subdomain cookies', () => {
@@ -340,6 +346,54 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
         NSC__SYSTEM_SETUP__HTTP_INIT__TOKEN: token,
       });
       expect(httpInit(resolved)).toMatchObject({ enabled: true, token, tokenRequired: true });
+    });
+  });
+
+  /*
+   * nest-server 12.5.0: the starter's `GET /config` returns `configEndpointResponse()`, which answers only in
+   * `local`, `ci` and `e2e` unless `configEndpoint` opens it, and always masks secrets. These cases pin which
+   * side every env of the matrix lands on, that the documented opt-in (.env.example) arrives as a boolean (a
+   * string would not open it), and that the masking catches every secret this file puts into a deployed
+   * configuration. tests/common.e2e-spec.ts calls the route itself.
+   */
+  describe('GET /config (nest-server 12.5.0)', () => {
+    it.each(['local', 'e2e', 'ci'])('%s answers /config', async (env) => {
+      const { default: resolved } = await load(env);
+      expect(isConfigEndpointEnabled(resolved)).toBe(true);
+    });
+
+    it.each(['develop', 'test', 'production'])('%s answers 404 without an opt-in', async (env) => {
+      const { default: resolved } = await load(env, COMPLETE);
+      expect(isConfigEndpointEnabled(resolved)).toBe(false);
+    });
+
+    it('production opens it only with NSC__CONFIG_ENDPOINT=true, and the answer carries none of its secrets', async () => {
+      const secrets = {
+        BREVO_API_KEY: 'contract-test-brevo-api-key',
+        NSC__BETTER_AUTH__SECRET: COMPLETE.NSC__BETTER_AUTH__SECRET,
+        NSC__EMAIL__SMTP__AUTH__PASS: COMPLETE.NSC__EMAIL__SMTP__AUTH__PASS,
+        NSC__JWT__REFRESH__SECRET: 'contract-test-jwt-refresh-secret',
+        NSC__JWT__SECRET: 'contract-test-jwt-secret',
+        NSC__MONGOOSE__URI: 'mongodb://contract-user:contract-db-password@db.example.test/contract-test',
+      };
+      const { default: resolved } = await load('production', {
+        ...COMPLETE,
+        ...secrets,
+        NSC__CONFIG_ENDPOINT: 'true',
+      });
+      expect(isConfigEndpointEnabled(resolved)).toBe(true);
+
+      // What ConfigService.getRedactedConfig() applies: the framework's secret fields (this file sets no
+      // security.secretFields of its own)
+      const body = redactSecrets(resolved, FRAMEWORK_SECRET_FIELDS);
+      const serialized = JSON.stringify(body);
+      for (const [name, value] of Object.entries(secrets)) {
+        const secret = name === 'NSC__MONGOOSE__URI' ? 'contract-db-password' : value;
+        expect(serialized, name).not.toContain(secret);
+      }
+      // Everything that is not a secret stays readable
+      expect(body.env).toBe('production');
+      expect(body.port).toBe(resolved.port);
     });
   });
 });

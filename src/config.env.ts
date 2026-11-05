@@ -340,6 +340,9 @@ function deployedConfig(
         }
       : {}),
     compression: true,
+    // configEndpoint: deliberately unset. Since nest-server 12.5.0 the administrators' `GET /config`
+    // answers 404 in every deployed env (local, ci and e2e keep it), and where it answers it masks every
+    // secret. A stage that needs it sets NSC__CONFIG_ENDPOINT=true (.env.example); the answer stays masked.
     // CORS propagated to GraphQL/REST/BetterAuth via shared buildCorsConfig
     cors: { allowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',').filter(Boolean) },
     // PostgreSQL / MySQL / MariaDB instead of, or beside, MongoDB (nest-server 12.1.0+). Left out on purpose: then
