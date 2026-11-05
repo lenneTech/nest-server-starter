@@ -1,4 +1,12 @@
-import { getEnvironmentConfig, IServerOptions, merge, resolveSmtpSecure, RoleEnum } from '@lenne.tech/nest-server';
+import {
+  getEnvironmentConfig,
+  IServerOptions,
+  isLocalEnv,
+  merge,
+  resolveSmtpSecure,
+  RoleEnum,
+} from '@lenne.tech/nest-server';
+import { Logger, type LogLevel } from '@nestjs/common';
 import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
@@ -30,6 +38,8 @@ import metaData from './meta.json' with { type: 'json' };
  * - **Required deployed env vars**
  *   → edit the `REQUIRED_DEPLOYED_ENV_VARS` table below. Single source of
  *   truth for both the fail-fast guard and the inline doc.
+ * - **Log levels** (`log` and above when deployed, every level locally)
+ *   → `resolveLogLevels()` below; per deployment NestJS's `NEST_LOG_LEVEL`.
  *
  * --------------------------------------------------------------------------
  * Secrets policy
@@ -411,6 +421,8 @@ function deployedConfig(
     // #endregion graphql
     healthCheck: PROJECT_HEALTH_CHECK,
     ignoreSelectionsForPopulate: true,
+    // Logs the stack of every HttpException at `debug`, so on deployed stages only with NEST_LOG_LEVEL=debug
+    // (resolveLogLevels() below). Errors that are no HttpException still reach the log at `error`, with stack.
     logExceptions: true,
     // mongoose.uri comes from NSC__MONGOOSE__URI (no fallback in deployed envs)
     permissions: true,
@@ -640,6 +652,27 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
 };
 
 /**
+ * Log levels of the Nest logger, applied at the bottom of this file while it loads.
+ *
+ * Every deployed env (develop, test, production, and any env that is not local) prints `log` and
+ * above: no `debug`, no `verbose`. Those lines are loud, they cost log storage, and they carry more
+ * request context than an operator needs. local, ci and e2e keep every level, as before.
+ *
+ * To change it for one deployment without a code change, set NestJS's own `NEST_LOG_LEVEL`: a level
+ * (`debug` means that level and above), a list (`warn,error`) or a threshold (`>=warn`). While it is
+ * set this returns `undefined`, and Nest's ConsoleLogger reads the variable itself. For an invalid
+ * value Nest warns once and prints every level.
+ */
+const DEPLOYED_LOG_LEVELS: LogLevel[] = ['log', 'warn', 'error', 'fatal'];
+
+export function resolveLogLevels(env: string | undefined): LogLevel[] | undefined {
+  if (process.env.NEST_LOG_LEVEL?.replaceAll(' ', '')) {
+    return undefined;
+  }
+  return isLocalEnv(env) ? undefined : [...DEPLOYED_LOG_LEVELS];
+}
+
+/**
  * Resolve and validate config.
  *
  * `getEnvironmentConfig` produces the full merge:
@@ -667,6 +700,15 @@ if (DEPLOYED_ENVS.has(resolved.env)) {
         'See .env.example for the full list.',
     );
   }
+}
+
+// Applied here, while the config loads, and not as the `logger` option of NestFactory.create in main.ts:
+// server.module.ts imports this file and then runs CoreModule.forRoot(), whose modules already log
+// (e.g. "RolesGuard registered globally"). That happens before main.ts creates the app, so an option
+// there comes too late for those lines.
+const logLevels = resolveLogLevels(resolved.env);
+if (logLevels) {
+  Logger.overrideLogger(logLevels);
 }
 
 export default resolved;
