@@ -13,6 +13,7 @@ import {
   FRAMEWORK_SECRET_FIELDS,
   type IServerOptions,
   isConfigEndpointEnabled,
+  isSwaggerEnabled,
   redactSecrets,
   resolveSystemSetupHttpInit,
 } from '@lenne.tech/nest-server';
@@ -281,10 +282,11 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     await expect(load(env, COMPLETE)).resolves.toBeDefined();
   });
 
-  // getEnvironmentConfig() answers a NODE_ENV that has no block here with the LOCAL block: public dummy
-  // secrets, the anonymous setup page, GET /config. That block carries env: 'local', so the required-var
-  // check above never runs for it, and forced to run it would accept the local dummy secret in place of a
-  // missing one. Such a stage started with or without its NSC__* vars.
+  // Up to nest-server 12.6.x getEnvironmentConfig() answered a NODE_ENV that has no block here with the LOCAL
+  // block: public dummy secrets, the anonymous setup page, GET /config. That block carries env: 'local', so the
+  // required-var check above never ran for it, and forced to run it would accept the local dummy secret in place
+  // of a missing one. Such a stage started with or without its NSC__* vars. Since 12.7.0 nest-server refuses it
+  // too; config.env.ts refuses it first, with the messages these cases expect.
   describe('NODE_ENV without a block of its own', () => {
     it.each(['development', 'dev', 'staging'])('%s refuses to start, even with every deployed var set', async (env) => {
       const error = await load(env, COMPLETE).then(
@@ -313,8 +315,8 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       await expect(load('production', { ...COMPLETE, NSC__ENV: 'staging' })).resolves.toBeDefined();
     });
 
-    // getEnvironmentConfig() reads `NODE_ENV || 'local'`, so an empty value lands on the local block like an
-    // unknown one. Typical source: `NODE_ENV=${NODE_ENV}` in a compose file on a host without the variable.
+    // Up to nest-server 12.6.x getEnvironmentConfig() read `NODE_ENV || 'local'`, so an empty value landed on the
+    // local block like an unknown one. Typical source: `NODE_ENV=${NODE_ENV}` in a compose file on a host without the variable.
     it.each(['', '  '])('NODE_ENV=%j refuses to start as empty, even with every deployed var set', async (value) => {
       const error = await load(value, COMPLETE).then(
         () => undefined,
@@ -450,6 +452,37 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       // Everything that is not a secret stays readable
       expect(body.env).toBe('production');
       expect(body.port).toBe(resolved.port);
+    });
+  });
+
+  /*
+   * nest-server 12.7.0: setupSwagger() in main.ts asks isSwaggerEnabled() and mounts nothing (/swagger,
+   * /swagger-api-tokens, /api-docs-json, /api-docs-api-tokens-json) unless the env is local, ci or e2e or
+   * `swagger` is true. config.env.ts leaves `swagger` unset, so these cases pin which side every env of the
+   * matrix lands on, and that the documented opt-in (.env.example) arrives as a boolean.
+   */
+  describe('API documentation (nest-server 12.7.0)', () => {
+    it.each(['local', 'e2e', 'ci'])('%s serves it', async (env) => {
+      const { default: resolved } = await load(env);
+      expect(isSwaggerEnabled(resolved)).toBe(true);
+    });
+
+    it.each(DEPLOYED)('%s serves none without an opt-in', async (env) => {
+      const { default: resolved } = await load(env, COMPLETE);
+      expect(isSwaggerEnabled(resolved)).toBe(false);
+    });
+
+    it('production serves it with NSC__SWAGGER=true', async () => {
+      const { default: resolved } = await load('production', { ...COMPLETE, NSC__SWAGGER: 'true' });
+      expect(resolved.swagger).toBe(true);
+      expect(isSwaggerEnabled(resolved)).toBe(true);
+    });
+
+    it('NSC__SWAGGER=false switches it off locally, and a value that is no boolean opens nothing', async () => {
+      const { default: local } = await load('local', { NSC__SWAGGER: 'false' });
+      expect(isSwaggerEnabled(local)).toBe(false);
+      const { default: production } = await load('production', { ...COMPLETE, NSC__SWAGGER: 'yes' });
+      expect(isSwaggerEnabled(production)).toBe(false);
     });
   });
 

@@ -223,6 +223,7 @@ the "where to change what" guide. Quick map:
 | Required `NSC__*` env vars for deployed envs | `REQUIRED_DEPLOYED_ENV_VARS` table — single source for the runtime fail-fast guard AND the docs/error message |
 | Operator knobs (booleans/numbers/CSV) | direct `process.env.X` reads in the helper bodies (`LEGACY_AUTH_ENABLED`, `CORS_ALLOWED_ORIGINS`, `SMTP_PORT`, `SMTP_SECURE`, `TWO_FACTOR_APP_NAME`, `BREVO_API_KEY`) |
 | Log levels of the Nest logger (`log` and above when deployed, every level locally) | `resolveLogLevels()`, applied to the Nest logger while `config.env.ts` loads (before `CoreModule.forRoot()` runs); per deployment NestJS's own `NEST_LOG_LEVEL` |
+| API documentation (`/swagger`, `/api-docs-json`): off when deployed, on locally (nest-server 12.7.0) | `swagger` stays unset in `deployedConfig()`; per deployment `NSC__SWAGGER=true` |
 
 ### Secrets policy
 
@@ -249,10 +250,14 @@ the "where to change what" guide. Quick map:
 - **`preview` is a deployed block outside that pipeline**, on the same baseline. It exists for
   `migrate:preview:up`, which the lt CLI writes into every project.
 - **A `NODE_ENV` without a block in the matrix refuses to start**, and so does an empty one
-  (`NODE_ENV=` or only spaces, e.g. from `NODE_ENV=${NODE_ENV}` in a compose file). nest-server would
-  otherwise run it on the `local` block, dummy secrets included. Only an unset `NODE_ENV` means
-  `local`. A new stage (e.g. `staging`) gets its own
-  `deployedConfig(...)` entry; the required-var check covers every env that is not local.
+  (`NODE_ENV=` or only spaces, e.g. from `NODE_ENV=${NODE_ENV}` in a compose file). Up to nest-server
+  12.6.x it would have run on the `local` block, dummy secrets included; since 12.7.0 nest-server
+  refuses both itself, and the starter's check still runs first and names `src/config.env.ts`. Keep its
+  two messages unchanged: nest-server's migration guide (12.6.x → 12.7.x, §1) tells projects to search
+  for them. Only an unset `NODE_ENV` means `local`. A new stage (e.g. `staging`) gets its own
+  `deployedConfig(...)` entry; the required-var check covers every env that is not local. A refused
+  start exits before the API listens; whether the stage goes down depends on the platform (README,
+  "Deployment with deploy.party").
 
 ## Framework: @lenne.tech/nest-server
 

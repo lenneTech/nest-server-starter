@@ -81,8 +81,9 @@ async function bootstrap() {
 
   // CORS (unified across REST, GraphQL, and BetterAuth via buildCorsConfig).
   // - cors: false → fully disabled (no headers)
-  // - origins resolvable via appUrl/baseUrl/allowedOrigins → restricted credentialed CORS
-  // - cookies disabled and no origins → permissive enableCors() for backward compatibility
+  // - origins resolvable via appUrl/baseUrl/allowedOrigins → restricted credentialed CORS, in JWT mode
+  //   (cookies: false) too since nest-server 12.7.0
+  // - cookies disabled and no origin resolvable → permissive enableCors() without credentials
   if (!isCorsDisabled(envConfig.cors)) {
     const corsOptions = buildCorsConfig(envConfig);
     if (Object.keys(corsOptions).length > 0) {
@@ -96,7 +97,8 @@ async function bootstrap() {
   // Swagger documentation. setupSwagger() reads security, API-token scopes and the tenant header from
   // the same decorators the guards read, so "Authorize" applies to every route and the document cannot
   // drift from what the server enforces. `apiTokenView: true` adds a document with only the routes an
-  // API token may call (UI /swagger-api-tokens).
+  // API token may call (UI /swagger-api-tokens). Since nest-server 12.7.0 it mounts nothing outside local, ci and
+  // e2e unless `swagger: true` (NSC__SWAGGER=true): a deployed stage answers 404 on /swagger and /api-docs-json.
   setupSwagger(server, {
     description: 'API lenne.Tech Nest Server Starter',
     documentOptions: {

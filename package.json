@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "12.6.1",
+  "version": "12.7.0",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -80,7 +80,7 @@
     "preversion": "pnpm run lint",
     "reinit": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm install && pnpm run lint && pnpm run test:e2e && pnpm run build",
     "reinit:clean": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm install && pnpm run test:e2e && pnpm run build",
-    "start": "pnpm run migrate:up && pnpm run start:local",
+    "start": "cross-env NODE_ENV=local pnpm run migrate:up && pnpm run start:local",
     "start:debug": "nodemon --config nodemon-debug.json",
     "start:dev": "nodemon",
     "start:dev:swc": "nest start -b swc -w --type-check",
@@ -107,7 +107,7 @@
   "dependencies": {
     "@better-auth/core": "1.7.16",
     "@better-auth/passkey": "1.7.16",
-    "@lenne.tech/nest-server": "12.6.1",
+    "@lenne.tech/nest-server": "12.7.0",
     "@nestjs/common": "12.3.2",
     "@nestjs/core": "12.3.2",
     "@nestjs/graphql": "14.1.2",

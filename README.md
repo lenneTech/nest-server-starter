@@ -205,6 +205,16 @@ See `.env.example` for the complete catalog of required and optional env vars.
 `production` refuse to start while a required `NSC__*` var is missing and name every missing one;
 `local`, `e2e` and `ci` start without any of them.
 
+### API documentation (Swagger)
+
+Since nest-server 12.7.0, `setupSwagger()` in `src/main.ts` serves `/swagger` and `/api-docs-json`
+only in `local`, `e2e` and `ci`. On `develop`, `test`, `preview` and `production` both answer 404,
+because the document lists every route, the roles it requires and every input shape. To show it on
+one deployment, e.g. for a client generator that reads `/api-docs-json` there, set `NSC__SWAGGER=true`
+for that deployment. `src/config.env.ts` leaves `swagger` unset on purpose. The API-token view
+(`/swagger-api-tokens`) is not switched on in this starter; with `apiTokenView: true` in the same
+call it follows the same switch.
+
 ## Test & debug the NestServer package in this project
 Use `pnpm link` to include the local NestJS server in the project.
 
@@ -247,6 +257,16 @@ a message instead of reporting a migration run that never happened.
 
 On a developer machine use `pnpm run migrate:up` (and `migrate:down` / `migrate:list`) instead: those
 run the TypeScript sources through nest-server's SWC loader and need no build.
+
+**When the API refuses to start.** It does so when a required `NSC__*` variable is missing (see
+`.env.example`), and when `NODE_ENV` is empty or names an env without a block in `src/config.env.ts`.
+The `dp:*` scripts set `NODE_ENV` themselves (`develop`, `test`, `production`), so the variables are
+the usual cause. The process exits before it listens, and deploy.party still reports the build as
+successful, because it checks nothing after the deploy. With a healthcheck command, Docker Swarm keeps
+the previous version running (read from deploy.party's source, not verified live); without one, a
+refused start takes the stage down, and so does the first deploy of a new stage, which has no previous
+version. Check the stage's variables against `.env.example` before you deploy, and open the
+application afterwards.
 
 ## Documentation
 The API and developer documentation can automatically be generated.

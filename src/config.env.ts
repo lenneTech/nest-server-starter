@@ -429,6 +429,10 @@ function deployedConfig(
     port: Number(process.env.PORT) || 3000,
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
+    // swagger: deliberately unset. Since nest-server 12.7.0 setupSwagger() mounts nothing in a deployed env
+    // (/swagger and /api-docs-json answer 404): the document lists every route, the roles it needs and every input
+    // shape. local, ci and e2e keep it. A stage that needs it, e.g. for a client generator reading /api-docs-json
+    // there, sets NSC__SWAGGER=true (.env.example).
     // systemSetup: deliberately unset. Since nest-server 12.4.0 the setup page's anonymous
     // `POST /system-setup/init` is CLOSED in every deployed env (403 LTNS_0053): on a fresh instance,
     // whoever called it first became the administrator. local, ci and e2e keep it open. A deployed stage
@@ -694,15 +698,19 @@ export function resolveLogLevels(env: string | undefined): LogLevel[] | undefine
  * against the wrong database or with random per-restart session secrets —
  * the exact silent-fail mode we want to avoid.
  *
- * A NODE_ENV that has no block in `config` is refused before that. getEnvironmentConfig() would answer
- * it with the LOCAL block (`config[env] || config.local`): public dummy secrets, the anonymous setup
- * page, GET /config. The required-var check below cannot catch that: it keys on the resolved env, and
- * the local block carries `env: 'local'`. Forced to run, it would still accept the local dummy secret
- * and Mongo URI in place of missing ones. So a stage started with NODE_ENV=staging or =development
- * booted on the local block, whether its NSC__* vars were set or not. An EMPTY NODE_ENV (also only
- * spaces) is refused as well: getEnvironmentConfig() reads `NODE_ENV || 'local'`, so it would land on
- * the local block too. Typical source: `NODE_ENV=${NODE_ENV}` in a compose file on a host that does not
- * set the variable. Only an unset NODE_ENV still means `local`.
+ * A NODE_ENV that has no block in `config` is refused before that. Up to nest-server 12.6.x,
+ * getEnvironmentConfig() answered it with the LOCAL block (`config[env] || config.local`): public dummy
+ * secrets, the anonymous setup page, GET /config. The required-var check below cannot catch that: it keys
+ * on the resolved env, and the local block carries `env: 'local'`. Forced to run, it would still accept
+ * the local dummy secret and Mongo URI in place of missing ones. So a stage started with NODE_ENV=staging
+ * or =development booted on the local block, whether its NSC__* vars were set or not. An EMPTY NODE_ENV
+ * (also only spaces) is refused as well: getEnvironmentConfig() read `NODE_ENV || 'local'`, so it landed
+ * on the local block too. Typical source: `NODE_ENV=${NODE_ENV}` in a compose file on a host that does
+ * not set the variable. Only an unset NODE_ENV still means `local`.
+ *
+ * Since nest-server 12.7.0 getEnvironmentConfig() refuses both cases itself. This check stays: it runs
+ * first and names this file. Keep its two messages as they are: the nest-server migration guide
+ * (12.6.x → 12.7.x, §1) tells projects to search for exactly them to find out whether they have it.
  */
 const requestedEnv = process.env.NODE_ENV;
 const knownEnvs = Object.keys(config).join(', ');
