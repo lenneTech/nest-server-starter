@@ -276,8 +276,9 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
   });
 
   // getEnvironmentConfig() answers a NODE_ENV that has no block here with the LOCAL block: public dummy
-  // secrets, the anonymous setup page, GET /config. Those values satisfy every check above, so the guard
-  // alone would let such a stage start, with or without its NSC__* vars.
+  // secrets, the anonymous setup page, GET /config. That block carries env: 'local', so the required-var
+  // check above never runs for it, and forced to run it would accept the local dummy secret in place of a
+  // missing one. Such a stage started with or without its NSC__* vars.
   describe('NODE_ENV without a block of its own', () => {
     it.each(['development', 'dev', 'staging'])('%s refuses to start, even with every deployed var set', async (env) => {
       const error = await load(env, COMPLETE).then(

@@ -696,9 +696,11 @@ export function resolveLogLevels(env: string | undefined): LogLevel[] | undefine
  *
  * A NODE_ENV that has no block in `config` is refused before that. getEnvironmentConfig() would answer
  * it with the LOCAL block (`config[env] || config.local`): public dummy secrets, the anonymous setup
- * page, GET /config. Those values pass every check in the table, so a stage started with
- * NODE_ENV=staging or =development would boot on them, whether its NSC__* vars are set or not. An
- * unset NODE_ENV still means `local`.
+ * page, GET /config. The required-var check below cannot catch that: it keys on the resolved env, and
+ * the local block carries `env: 'local'`. Forced to run, it would still accept the local dummy secret
+ * and Mongo URI in place of missing ones. So a stage started with NODE_ENV=staging or =development
+ * booted on the local block, whether its NSC__* vars were set or not. An unset NODE_ENV still means
+ * `local`.
  */
 const requestedEnv = process.env.NODE_ENV;
 if (requestedEnv && !Object.hasOwn(config, requestedEnv)) {
