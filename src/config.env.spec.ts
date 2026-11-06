@@ -216,12 +216,18 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     NSC__MONGOOSE__URI: 'mongodb://127.0.0.1/contract-test',
   };
 
-  async function load(nodeEnv: string, vars: Record<string, string> = {}) {
+  /** `nodeEnv: undefined` leaves NODE_ENV unset, `''` sets it to the empty string. */
+  async function load(nodeEnv: string | undefined, vars: Record<string, string> = {}) {
     vi.resetModules();
     for (const key of Object.keys(process.env)) {
       if (key.startsWith('NSC__') || key === 'NEST_SERVER_CONFIG') delete process.env[key];
     }
-    Object.assign(process.env, vars, { NODE_ENV: nodeEnv });
+    Object.assign(process.env, vars);
+    if (nodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = nodeEnv;
+    }
     process.chdir(emptyDir);
     try {
       return await import('./config.env.js');
@@ -307,8 +313,19 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       await expect(load('production', { ...COMPLETE, NSC__ENV: 'staging' })).resolves.toBeDefined();
     });
 
+    // getEnvironmentConfig() reads `NODE_ENV || 'local'`, so an empty value lands on the local block like an
+    // unknown one. Typical source: `NODE_ENV=${NODE_ENV}` in a compose file on a host without the variable.
+    it.each(['', '  '])('NODE_ENV=%j refuses to start as empty, even with every deployed var set', async (value) => {
+      const error = await load(value, COMPLETE).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+      expect(error?.message).toContain(`NODE_ENV is set but empty (${JSON.stringify(value)})`);
+      expect(error?.message).toContain('local, e2e, ci, develop, test, production, preview');
+    });
+
     it('an unset NODE_ENV still starts on the local block, without any var', async () => {
-      const { default: resolved } = await load('');
+      const { default: resolved } = await load(undefined);
       expect(resolved.env).toBe('local');
     });
   });
