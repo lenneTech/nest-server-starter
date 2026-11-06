@@ -112,14 +112,16 @@ auditConfig:
   # GHSA-3g3m-2fjr-6pw4 (glob 9 – 14.0.1, moderate, AbortSignal cancellation bypass): main's owner decision
   # of 2026-11-01 (mirroring nest-server's entries of 2026-10-31, DEV-3899), applied to this line on
   # 2026-11-03. Both fixes exist only in new majors (minimatch 11.0.1, glob 14.0.2, released 2026-10-27),
-  # and no consumer in this tree can take them: fork-ts-checker-webpack-plugin 9.1.0 (pinned by
-  # @nestjs/cli 11.0.24) needs minimatch ^3, @swc/cli 0.8.1 needs ^9 (as does 0.8.2, the newest),
+  # and no consumer in this tree can take them: @swc/cli 0.8.1 needs ^9 (as does 0.8.2, the newest),
   # @ts-morph/common 0.29.0 (via ts-morph, a dependency of @lenne.tech/nest-server and @nestjs/graphql)
   # and nodemon 3.1.14 need ^10, glob 13.0.6 needs ^10; @nestjs/cli 11.0.24 pins glob 13.0.6 exactly.
   # rimraf's glob is lifted to 14.0.3 by the override `'rimraf>glob@<14.0.2': 14.0.3`, as on main. An
   # override across the major is ruled out for the rest by the fixed-target rule, and minimatch 11
   # removed `makeRe()` and `Minimatch#regexp`. Every path matches patterns the DEVELOPER writes (tsconfig
   # and scanner globs, CLI file arguments), never request input.
+  # 2026-11-06 (nest-server 11.43.7): GitHub narrowed the minimatch range to >= 7.0.0, so
+  # fork-ts-checker-webpack-plugin 9.1.0 (minimatch ^3, 3.1.5 resolved) no longer pulls an affected version
+  # and left the declaration.
   # check:overrides fails with RE-TEST once a consumer moves or a second one appears, and
   # tests/unit/audit-suppression-scope.spec.ts fails once minimatch reaches production through any parent
   # other than @ts-morph/common, or glob or deepmerge at all.
@@ -128,7 +130,7 @@ auditConfig:
     - GHSA-g3hv-75wg-m249
     - GHSA-3g3m-2fjr-6pw4
   unusableFixConsumers:
-    GHSA-g3hv-75wg-m249: '@swc/cli@0.8.1 + @ts-morph/common@0.29.0 + fork-ts-checker-webpack-plugin@9.1.0 + glob@13.0.6 + nodemon@3.1.14 cannot use 11.0.1'
+    GHSA-g3hv-75wg-m249: '@swc/cli@0.8.1 + @ts-morph/common@0.29.0 + glob@13.0.6 + nodemon@3.1.14 cannot use 11.0.1'
     GHSA-3g3m-2fjr-6pw4: '@nestjs/cli@11.0.24 cannot use 14.0.2'
 
 # pnpm 11 configuration
