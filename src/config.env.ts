@@ -630,8 +630,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   }),
 
   // ===========================================================================
-  // Deployed environments — pipeline: develop → test → production
-  // All three share the same baseline (deployedConfig) so misconfig surfaces
+  // Deployed environments — pipeline: develop → test → production, plus preview
+  // All of them share the same baseline (deployedConfig) so misconfig surfaces
   // in develop/test before reaching production.
   // ===========================================================================
 
@@ -649,6 +649,13 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Production — final deployed stage, no overrides
   // ---------------------------------------------------------------------------
   production: deployedConfig('production'),
+
+  // ---------------------------------------------------------------------------
+  // Preview — deployed stage outside the pipeline (e.g. a demo or review instance), same baseline.
+  // It is what `migrate:preview:up` migrates, a script the lt CLI writes into every project. Without
+  // this block, NODE_ENV=preview is refused at startup (see below), as every NODE_ENV without one.
+  // ---------------------------------------------------------------------------
+  preview: deployedConfig('preview', { brandSuffix: 'Preview' }),
 };
 
 /**
@@ -678,18 +685,35 @@ export function resolveLogLevels(env: string | undefined): LogLevel[] | undefine
  * `getEnvironmentConfig` produces the full merge:
  *   env-specific config → loadLocalConfig → NEST_SERVER_CONFIG → NSC__* env vars
  *
- * After that, for deployed envs (`develop`, `test`, `production`) we enforce
- * that every required secret/URL listed in `REQUIRED_DEPLOYED_ENV_VARS` is
- * present. Without this guard, the framework's own `merge` would silently
+ * After that, for deployed envs (`develop`, `test`, `production`, and every
+ * other env that is not local) we enforce that every required secret/URL
+ * listed in `REQUIRED_DEPLOYED_ENV_VARS` is present. Without this guard, the
+ * framework's own `merge` would silently
  * fill in defaults (e.g. `mongodb://localhost/nest-server-default` for
  * `mongoose.uri`), which would allow a misconfigured deployment to boot
  * against the wrong database or with random per-restart session secrets —
  * the exact silent-fail mode we want to avoid.
+ *
+ * A NODE_ENV that has no block in `config` is refused before that. getEnvironmentConfig() would answer
+ * it with the LOCAL block (`config[env] || config.local`): public dummy secrets, the anonymous setup
+ * page, GET /config. The required-var check below cannot catch that: it keys on the resolved env, and
+ * the local block carries `env: 'local'`. Forced to run, it would still accept the local dummy secret
+ * and Mongo URI in place of missing ones. So a stage started with NODE_ENV=staging or =development
+ * booted on the local block, whether its NSC__* vars were set or not. An unset NODE_ENV still means
+ * `local`.
  */
+const requestedEnv = process.env.NODE_ENV;
+if (requestedEnv && !Object.hasOwn(config, requestedEnv)) {
+  throw new Error(
+    `NODE_ENV='${requestedEnv}' has no block in src/config.env.ts (known: ${Object.keys(config).join(', ')}). ` +
+      'Use one of them, or add a block for this env to the matrix.',
+  );
+}
+
 const resolved = getEnvironmentConfig({ config });
 
-const DEPLOYED_ENVS = new Set(['develop', 'test', 'production']);
-if (DEPLOYED_ENVS.has(resolved.env)) {
+// Every env that is not local: develop, test, production, and a block a project adds (e.g. `staging`).
+if (!isLocalEnv(resolved.env)) {
   const missing = REQUIRED_DEPLOYED_ENV_VARS.filter(({ condition }) => !condition || condition(resolved))
     .filter(({ check }) => !check(resolved))
     .map(({ envVar }) => envVar);

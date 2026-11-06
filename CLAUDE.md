@@ -246,6 +246,11 @@ the "where to change what" guide. Quick map:
   (developer machine, `pnpm run test:e2e`, `pnpm run vitest:ci`).
 - **Deployed envs follow the pipeline `develop → test → production`** — they share the exact
   same baseline so any misconfig surfaces in `develop`/`test` before reaching production.
+- **`preview` is a deployed block outside that pipeline**, on the same baseline. It exists for
+  `migrate:preview:up`, which the lt CLI writes into every project.
+- **A `NODE_ENV` without a block in the matrix refuses to start.** nest-server would otherwise run it
+  on the `local` block, dummy secrets included. A new stage (e.g. `staging`) gets its own
+  `deployedConfig(...)` entry; the required-var check covers every env that is not local.
 
 ## Framework: @lenne.tech/nest-server
 

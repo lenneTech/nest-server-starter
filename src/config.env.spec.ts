@@ -202,6 +202,9 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
   const ORIGINAL_CWD = process.cwd();
   let emptyDir = '';
 
+  /** Every deployed block of the matrix. `preview` runs on the same baseline, outside the pipeline. */
+  const DEPLOYED = ['develop', 'test', 'preview', 'production'];
+
   /** A value for every unconditional requirement — public dummies, never real secrets. */
   const COMPLETE: Record<string, string> = {
     NSC__BASE_URL: 'https://api.example.test',
@@ -255,31 +258,66 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     expect(Object.keys(COMPLETE).sort()).toEqual((await unconditional()).sort());
   });
 
-  it.each(['develop', 'test', 'production'])(
-    '%s refuses to start without the vars, naming all of them',
-    async (env) => {
-      const required = await unconditional();
-      const error = await load(env).then(
+  it.each(DEPLOYED)('%s refuses to start without the vars, naming all of them', async (env) => {
+    const required = await unconditional();
+    const error = await load(env).then(
+      () => undefined,
+      (err: Error) => err,
+    );
+
+    expect(error?.message).toMatch(`Missing required environment variables for NODE_ENV='${env}'`);
+    for (const envVar of required) {
+      expect(error?.message, envVar).toContain(envVar);
+    }
+  });
+
+  it.each(DEPLOYED)('%s starts once every required var is set', async (env) => {
+    await expect(load(env, COMPLETE)).resolves.toBeDefined();
+  });
+
+  // getEnvironmentConfig() answers a NODE_ENV that has no block here with the LOCAL block: public dummy
+  // secrets, the anonymous setup page, GET /config. That block carries env: 'local', so the required-var
+  // check above never runs for it, and forced to run it would accept the local dummy secret in place of a
+  // missing one. Such a stage started with or without its NSC__* vars.
+  describe('NODE_ENV without a block of its own', () => {
+    it.each(['development', 'dev', 'staging'])('%s refuses to start, even with every deployed var set', async (env) => {
+      const error = await load(env, COMPLETE).then(
         () => undefined,
         (err: Error) => err,
       );
+      expect(error?.message).toContain(`NODE_ENV='${env}' has no block in src/config.env.ts`);
+    });
 
-      expect(error?.message).toMatch(`Missing required environment variables for NODE_ENV='${env}'`);
-      for (const envVar of required) {
-        expect(error?.message, envVar).toContain(envVar);
-      }
-    },
-  );
+    it('development refuses to start with a required secret missing', async () => {
+      const { NSC__BETTER_AUTH__SECRET: _left, ...rest } = COMPLETE;
+      const error = await load('development', rest).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+      expect(error?.message).toContain(`NODE_ENV='development' has no block in src/config.env.ts`);
+    });
 
-  it.each(['develop', 'test', 'production'])('%s starts once every required var is set', async (env) => {
-    await expect(load(env, COMPLETE)).resolves.toBeDefined();
+    // The error above says "add a block". The guard has to cover that new block, not a fixed list of three.
+    it('a block under another name is checked like develop, test and production', async () => {
+      const error = await load('production', { NSC__ENV: 'staging' }).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+      expect(error?.message).toMatch(`Missing required environment variables for NODE_ENV='staging'`);
+      await expect(load('production', { ...COMPLETE, NSC__ENV: 'staging' })).resolves.toBeDefined();
+    });
+
+    it('an unset NODE_ENV still starts on the local block, without any var', async () => {
+      const { default: resolved } = await load('');
+      expect(resolved.env).toBe('local');
+    });
   });
 
   // The production image (Dockerfile stage 3) holds dist/ and production node_modules only: no pnpm, no
   // scripts/, no spectaql. `execAfterInit: 'pnpm run docs:bootstrap'` therefore logged "pnpm: not found" as an
   // error on every start of every deployed container, and where pnpm did exist it fetched spectaql from the
   // registry at runtime (`pnpm dlx`). The docs are a local-development artefact; deployed envs run nothing.
-  it.each(['develop', 'test', 'production'])('%s runs no shell command after init', async (env) => {
+  it.each(DEPLOYED)('%s runs no shell command after init', async (env) => {
     // The default export is the resolved config of the active env; the named `config` is the map of all envs.
     const { default: resolved } = await load(env, COMPLETE);
     expect(resolved.env).toBe(env);
@@ -319,7 +357,7 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       expect(httpInit(resolved)).toMatchObject({ enabled: true, tokenRequired: false });
     });
 
-    it.each(['develop', 'test', 'production'])('%s keeps the HTTP init closed without an opt-in', async (env) => {
+    it.each(DEPLOYED)('%s keeps the HTTP init closed without an opt-in', async (env) => {
       const { default: resolved } = await load(env, COMPLETE);
       expect(httpInit(resolved).enabled).toBe(false);
     });
@@ -363,7 +401,7 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       expect(isConfigEndpointEnabled(resolved)).toBe(true);
     });
 
-    it.each(['develop', 'test', 'production'])('%s answers 404 without an opt-in', async (env) => {
+    it.each(DEPLOYED)('%s answers 404 without an opt-in', async (env) => {
       const { default: resolved } = await load(env, COMPLETE);
       expect(isConfigEndpointEnabled(resolved)).toBe(false);
     });
@@ -424,7 +462,7 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       expect(printed(resolveLogLevels(resolved.env))).toEqual(EVERY_LEVEL);
     });
 
-    it.each(['develop', 'test', 'production'])('%s prints log and above, no debug and no verbose', async (env) => {
+    it.each(DEPLOYED)('%s prints log and above, no debug and no verbose', async (env) => {
       delete process.env.NEST_LOG_LEVEL;
       const { default: resolved, resolveLogLevels } = await load(env, COMPLETE);
       expect(printed(resolveLogLevels(resolved.env))).toEqual(['log', 'warn', 'error', 'fatal']);
