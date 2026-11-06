@@ -699,13 +699,22 @@ export function resolveLogLevels(env: string | undefined): LogLevel[] | undefine
  * page, GET /config. The required-var check below cannot catch that: it keys on the resolved env, and
  * the local block carries `env: 'local'`. Forced to run, it would still accept the local dummy secret
  * and Mongo URI in place of missing ones. So a stage started with NODE_ENV=staging or =development
- * booted on the local block, whether its NSC__* vars were set or not. An unset NODE_ENV still means
- * `local`.
+ * booted on the local block, whether its NSC__* vars were set or not. An EMPTY NODE_ENV (also only
+ * spaces) is refused as well: getEnvironmentConfig() reads `NODE_ENV || 'local'`, so it would land on
+ * the local block too. Typical source: `NODE_ENV=${NODE_ENV}` in a compose file on a host that does not
+ * set the variable. Only an unset NODE_ENV still means `local`.
  */
 const requestedEnv = process.env.NODE_ENV;
+const knownEnvs = Object.keys(config).join(', ');
+if (requestedEnv !== undefined && !requestedEnv.trim()) {
+  throw new Error(
+    `NODE_ENV is set but empty (${JSON.stringify(requestedEnv)}). Set one of ${knownEnvs}, ` +
+      'or leave NODE_ENV unset to run locally.',
+  );
+}
 if (requestedEnv && !Object.hasOwn(config, requestedEnv)) {
   throw new Error(
-    `NODE_ENV='${requestedEnv}' has no block in src/config.env.ts (known: ${Object.keys(config).join(', ')}). ` +
+    `NODE_ENV='${requestedEnv}' has no block in src/config.env.ts (known: ${knownEnvs}). ` +
       'Use one of them, or add a block for this env to the matrix.',
   );
 }

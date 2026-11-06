@@ -248,8 +248,10 @@ the "where to change what" guide. Quick map:
   same baseline so any misconfig surfaces in `develop`/`test` before reaching production.
 - **`preview` is a deployed block outside that pipeline**, on the same baseline. It exists for
   `migrate:preview:up`, which the lt CLI writes into every project.
-- **A `NODE_ENV` without a block in the matrix refuses to start.** nest-server would otherwise run it
-  on the `local` block, dummy secrets included. A new stage (e.g. `staging`) gets its own
+- **A `NODE_ENV` without a block in the matrix refuses to start**, and so does an empty one
+  (`NODE_ENV=` or only spaces, e.g. from `NODE_ENV=${NODE_ENV}` in a compose file). nest-server would
+  otherwise run it on the `local` block, dummy secrets included. Only an unset `NODE_ENV` means
+  `local`. A new stage (e.g. `staging`) gets its own
   `deployedConfig(...)` entry; the required-var check covers every env that is not local.
 
 ## Framework: @lenne.tech/nest-server
