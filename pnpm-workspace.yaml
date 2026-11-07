@@ -105,24 +105,11 @@ auditConfig:
     # ever re-published, `pnpm audit` turns red: re-argue the dev-only case then and restore
     # entry and guard together.
     # - GHSA-vfj7-8cjw-p6xm
-  # ACTIVE since 2026-11-01 (owner decision, mirroring nest-server's entries of 2026-10-31, DEV-3899).
-  # GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, moderate, DoS through globparts amplification). The fix exists
-  # only in the new major (minimatch 11.0.1, released 2026-10-27), and every consumer is on its newest
-  # release without it: @nestjs/cli 12.0.11 pins minimatch 10.2.6 exactly, @ts-morph/common 0.29.0 (via
-  # ts-morph, a dependency of @lenne.tech/nest-server and @nestjs/graphql) and nodemon 3.1.14 need ^10,
-  # @swc/cli 0.8.2 needs ^9. An override across the major is ruled out by the fixed-target rule, and
-  # minimatch 11 removed `makeRe()` and `Minimatch#regexp`. Every path matches patterns the DEVELOPER
-  # writes (tsconfig and scanner globs, CLI file arguments), never request input.
-  # Hoisted into every generated project (see point 1 above): there, too, check:overrides fails with
-  # RE-TEST once a consumer moves or a second one appears, and tests/unit/audit-suppression-scope.spec.ts
-  # fails once minimatch reaches production through any parent other than @ts-morph/common.
-  # Re-verify when any of these consumers releases a version on minimatch 11.
-  #
   # RETIRED 2026-11-02: GHSA-3g3m-2fjr-6pw4 (glob 9 – 14.0.1, moderate, AbortSignal cancellation bypass,
   # first patched 14.0.2). Its only path was rimraf 6.1.3 (glob ^13). The override
   # `'rimraf>glob@<14.0.2': 14.0.3` (see `overrides`) now lifts that glob to the fixed major, and glob 14
   # resolves minimatch 11.0.3, so this tree holds no vulnerable glob, and glob 13.0.6 left the minimatch
-  # entry above with it. Done in step with nuxt-base-template, which carries the same override: hoisted
+  # entry below with it. Done in step with nuxt-base-template, which carries the same override: hoisted
   # into a generated monorepo root it lifts this rimraf's glob too, and the suppression would have had
   # nothing left to hide there (both guards: NOT IN TREE). If the override ever has to go, restore the
   # entry, its `unusableFixConsumers` line and its guard in tests/unit/audit-suppression-scope.spec.ts
@@ -130,6 +117,19 @@ auditConfig:
   #   - GHSA-3g3m-2fjr-6pw4
   #   GHSA-3g3m-2fjr-6pw4: 'rimraf@6.1.3 cannot use 14.0.2'
   ignoreGhsas:
+    # ACTIVE since 2026-11-01 (owner decision, mirroring nest-server's entries of 2026-10-31, DEV-3899).
+    # GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, moderate, DoS through globparts amplification). The fix exists
+    # only in the new major (minimatch 11.0.1, released 2026-10-27), and every consumer is on its newest
+    # release without it: @nestjs/cli 12.0.11 pins minimatch 10.2.6 exactly, @ts-morph/common 0.29.0 (via
+    # ts-morph, a dependency of @lenne.tech/nest-server and @nestjs/graphql) and nodemon 3.1.14 need ^10,
+    # @swc/cli 0.8.2 needs ^9. An override across the major is ruled out by the fixed-target rule, and
+    # minimatch 11 removed `makeRe()` and `Minimatch#regexp`. Every path matches patterns the DEVELOPER
+    # writes (tsconfig and scanner globs, CLI file arguments), never request input.
+    # Hoisted into every generated project (point 1 at the top of the starter's pnpm-workspace.yaml):
+    # there, too, check:overrides fails with RE-TEST once a consumer moves or a second one appears, and
+    # tests/unit/audit-suppression-scope.spec.ts fails once minimatch reaches production through any
+    # parent other than @ts-morph/common.
+    # Re-verify when any of these consumers releases a version on minimatch 11.
     - GHSA-g3hv-75wg-m249
   unusableFixConsumers:
     GHSA-g3hv-75wg-m249: '@nestjs/cli@12.0.11 + @swc/cli@0.8.2 + @ts-morph/common@0.29.0 + nodemon@3.1.14 cannot use 11.0.1'
