@@ -442,6 +442,15 @@ service cascades, use lean queries for WebSocket data.
 **NEVER** bypass Mongoose entirely via `collection.*` — see above. Details:
 `node_modules/@lenne.tech/nest-server/docs/process-performance-optimization.md`
 
+### Session tokens in IAM answers
+
+Since nest-server 12.7.0, `GET /iam/list-sessions` names each session by `id` and carries no `token`, in every
+mode (12.6.1 already took the session token out of the other IAM answers the framework forwards). A "signed-in
+devices" screen revokes a session with `POST /iam/revoke-session` and `{ sessionId: session.id }`; `{ token }` still
+works for a client that holds one. Better-Auth's `authClient.revokeSession({ token })` types only the token, so send
+that request yourself. Tests read the session token from the Set-Cookie header (`TestHelper.extractSessionToken`),
+never from a response body.
+
 ### Rules
 
 1. **ALWAYS read actual source code** from `node_modules/@lenne.tech/nest-server/` before guessing framework behavior
