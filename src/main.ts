@@ -10,6 +10,7 @@ import {
   installProcessDiagnostics,
   isCookiesEnabled,
   isCorsDisabled,
+  serverDisplayUrl,
   setupSwagger,
 } from '@lenne.tech/nest-server';
 import { NestFactory } from '@nestjs/core';
@@ -133,7 +134,7 @@ async function bootstrap() {
 
   // Start server on configured port
   await server.listen(envConfig.port, envConfig.hostname);
-  console.debug(`Server started at ${await server.getUrl()}`);
+  console.debug(`Server started at ${await serverDisplayUrl(server)}`);
 
   // Run command after server init
   if (envConfig.execAfterInit) {
