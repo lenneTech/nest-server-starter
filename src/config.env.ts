@@ -278,6 +278,23 @@ function deployedConfig(
       //
       // emailAndPassword: { passwordReset: false },   // answers RESET_PASSWORD_DISABLED again
       //
+      // Public self-registration is OPEN by default: `POST /iam/sign-up/email` creates an account for
+      // anyone, and `GET /iam/features` reports `signUpEnabled: true`. A project WITHOUT a public
+      // registration (invitation-only, accounts created by an admin) must close it here. A missing
+      // registration page closes nothing: the route answers whether or not the frontend links to it.
+      // Since nest-server 11.44.1 the switch also refuses first sign-ins through social providers, while
+      // existing users keep signing in. Plugins the project adds itself (`plugins` in this block) are NOT
+      // covered: one that can create a user needs its own sign-up option, e.g.
+      // `magicLink({ disableSignUp: true, … })`, or it registers anyone who asks for a link.
+      //
+      // emailAndPassword: { disableSignUp: true },   // same object as `passwordReset` above
+      //
+      // The project's own invitation and admin flows then create their users IN-PROCESS, the way
+      // `CoreSystemSetupService.createInitialAdmin()` does through Better-Auth's internal adapter, and
+      // never through the public route, neither over HTTP nor via `api.signUpEmail()`. That route is
+      // exactly what the switch closes: a flow built on it stops working once the switch is set, and
+      // keeping such a flow alive is how sign-up stays open for everybody.
+      //
       // Route-level limiter for all /iam/* endpoints. Presence of the object enables it — an
       // explicit `enabled: false` pre-configures without switching it on. Set `trustProxy` (below)
       // whenever you turn this on behind a reverse proxy, or every client shares one bucket.
