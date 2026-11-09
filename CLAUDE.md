@@ -202,6 +202,7 @@ the "where to change what" guide. Quick map:
 | Per-env override (e.g. `local` disables roles, `e2e` drops cron jobs) | `options.config` argument when invoking the helper in the env matrix at the bottom |
 | Required `NSC__*` env vars for deployed envs | `REQUIRED_DEPLOYED_ENV_VARS` table — single source for the runtime fail-fast guard AND the docs/error message |
 | Operator knobs (booleans/numbers/CSV) | direct `process.env.X` reads in the helper bodies (`LEGACY_AUTH_ENABLED`, `CORS_ALLOWED_ORIGINS`, `SMTP_PORT`, `SMTP_SECURE`, `TWO_FACTOR_APP_NAME`, `BREVO_API_KEY`) |
+| API documentation (`/swagger`, `/api-docs-json`): off when deployed, on locally (nest-server 11.45.0) | `swagger` stays unset in `deployedConfig()`; per deployment `NSC__SWAGGER=true` |
 
 ### Secrets policy
 

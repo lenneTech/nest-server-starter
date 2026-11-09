@@ -205,6 +205,21 @@ See `.env.example` for the complete catalog of required and optional env vars.
 `production` refuse to start while a required `NSC__*` var is missing and name every missing one;
 `local`, `e2e` and `ci` start without any of them.
 
+### API documentation (Swagger)
+
+Since nest-server 11.45.0, `setupSwagger()` in `src/main.ts` serves `/swagger` and `/api-docs-json`
+only in `local`, `e2e` and `ci`. On `develop`, `test` and `production` both answer 404, because
+the document lists every route, the roles it requires and every input shape. To show it on one
+deployment, e.g. for a client generator that reads `/api-docs-json` there, set `NSC__SWAGGER=true`
+for that deployment. `src/config.env.ts` leaves `swagger` unset on purpose. The API-token view
+(`/swagger-api-tokens`) is not switched on in this starter; with `apiTokenView: true` in the same
+call it follows the same switch.
+
+On the 11.x line a `NODE_ENV` without a block in `src/config.env.ts` still runs on the `local` block,
+and the `local` block serves the documentation. That includes `preview`: `migrate:preview:up` exists,
+the block does not. The boot log shows it as `Configured for: local (requested: preview)`. Give such a
+stage its own `deployedConfig(...)` entry.
+
 ## Test & debug the NestServer package in this project
 Use `pnpm link` to include the local NestJS server in the project.
 

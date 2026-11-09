@@ -5,6 +5,7 @@
  * `https://<slug>.localhost`. Without this, sessions created by API
  * sign-in are not seen by the App in the same browser.
  */
+import { isSwaggerEnabled } from '@lenne.tech/nest-server';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -280,5 +281,36 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
 
   it.each(['local', 'e2e', 'ci'])('%s starts without any of them', async (env) => {
     await expect(load(env)).resolves.toBeDefined();
+  });
+
+  /*
+   * nest-server 11.45.0: setupSwagger() in main.ts asks isSwaggerEnabled() and mounts nothing (/swagger,
+   * /swagger-api-tokens, /api-docs-json, /api-docs-api-tokens-json) unless the env is local, ci or e2e or
+   * `swagger` is true. config.env.ts leaves `swagger` unset, so these cases pin which side every env of the
+   * matrix lands on, and that the documented opt-in (.env.example) arrives as a boolean.
+   */
+  describe('API documentation (nest-server 11.45.0)', () => {
+    it.each(['local', 'e2e', 'ci'])('%s serves it', async (env) => {
+      const { default: resolved } = await load(env);
+      expect(isSwaggerEnabled(resolved)).toBe(true);
+    });
+
+    it.each(['develop', 'test', 'production'])('%s serves none without an opt-in', async (env) => {
+      const { default: resolved } = await load(env, COMPLETE);
+      expect(isSwaggerEnabled(resolved)).toBe(false);
+    });
+
+    it('production serves it with NSC__SWAGGER=true', async () => {
+      const { default: resolved } = await load('production', { ...COMPLETE, NSC__SWAGGER: 'true' });
+      expect(resolved.swagger).toBe(true);
+      expect(isSwaggerEnabled(resolved)).toBe(true);
+    });
+
+    it('NSC__SWAGGER=false switches it off locally, and a value that is no boolean opens nothing', async () => {
+      const { default: local } = await load('local', { NSC__SWAGGER: 'false' });
+      expect(isSwaggerEnabled(local)).toBe(false);
+      const { default: production } = await load('production', { ...COMPLETE, NSC__SWAGGER: 'yes' });
+      expect(isSwaggerEnabled(production)).toBe(false);
+    });
   });
 });

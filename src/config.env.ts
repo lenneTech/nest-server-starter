@@ -420,6 +420,11 @@ function deployedConfig(
     port: Number(process.env.PORT) || 3000,
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
+    // swagger: deliberately unset. Since nest-server 11.45.0 setupSwagger() mounts nothing in a deployed env
+    // (/swagger and /api-docs-json answer 404): the document lists every route, the roles it needs and every input
+    // shape. local, ci and e2e keep it. A stage that needs it, e.g. for a client generator reading /api-docs-json
+    // there, sets NSC__SWAGGER=true (.env.example). A NODE_ENV without a block in `config` below runs on the local
+    // block on the 11.x line and keeps serving it: give such a stage its own deployedConfig(...) entry.
     templates: PROJECT_TEMPLATES,
     tus: PROJECT_TUS,
     // Express `trust proxy`, passed through by CoreModule (nest-server 11.33.0+).
