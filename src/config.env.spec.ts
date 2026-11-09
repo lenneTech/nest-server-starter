@@ -5,7 +5,12 @@
  * `https://<slug>.localhost`. Without this, sessions created by API
  * sign-in are not seen by the App in the same browser.
  */
-import { isSwaggerEnabled } from '@lenne.tech/nest-server';
+import {
+  type IServerOptions,
+  isSwaggerEnabled,
+  resolveSystemSetupEnv,
+  resolveSystemSetupHttpInit,
+} from '@lenne.tech/nest-server';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -376,6 +381,65 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
    * `swagger` is true. config.env.ts leaves `swagger` unset, so these cases pin which side every env of the
    * matrix lands on, and that the documented opt-in (.env.example) arrives as a boolean.
    */
+  /*
+   * nest-server 11.46.0 closes the anonymous `POST /system-setup/init` outside `local`, `ci` and `e2e`
+   * unless `systemSetup.httpInit` opens it: on a fresh deployment, whoever called it first became the
+   * administrator. These cases pin which side of that line every env of the matrix lands on, and that the
+   * two documented ways in (.env.example) reach the configuration through the NSC__ reader. The env is
+   * resolved the way the setup service resolves it at runtime (resolveSystemSetupEnv). The 403 itself is
+   * nest-server's and tested there; tests/system-setup.e2e-spec.ts walks the local setup page.
+   */
+  describe('system setup (nest-server 11.46.0)', () => {
+    const httpInit = (resolved: Partial<IServerOptions>) =>
+      resolveSystemSetupHttpInit(resolved.systemSetup?.httpInit, resolveSystemSetupEnv(resolved.env));
+
+    it.each(['local', 'e2e', 'ci'])('%s keeps the setup page: HTTP init open, no token', async (env) => {
+      const { default: resolved } = await load(env);
+      expect(resolved.systemSetup?.enabled).not.toBe(false);
+      expect(httpInit(resolved)).toMatchObject({ enabled: true, tokenRequired: false });
+    });
+
+    it.each(DEPLOYED)('%s keeps the HTTP init closed without an opt-in', async (env) => {
+      const { default: resolved } = await load(env, COMPLETE);
+      expect(httpInit(resolved).enabled).toBe(false);
+    });
+
+    it('a NODE_ENV without a block keeps it closed too', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      try {
+        const { default: resolved } = await load('staging', COMPLETE);
+        expect(httpInit(resolved).enabled).toBe(false);
+      } finally {
+        vi.mocked(console.warn).mockRestore();
+      }
+    });
+
+    it('production creates its first admin from the NSC__SYSTEM_SETUP__INITIAL_ADMIN__* vars', async () => {
+      const { default: resolved } = await load('production', {
+        ...COMPLETE,
+        NSC__SYSTEM_SETUP__INITIAL_ADMIN__EMAIL: 'admin@example.test',
+        NSC__SYSTEM_SETUP__INITIAL_ADMIN__NAME: 'Contract Admin',
+        NSC__SYSTEM_SETUP__INITIAL_ADMIN__PASSWORD: 'contract-test-admin-password',
+      });
+      expect(resolved.systemSetup?.initialAdmin).toEqual({
+        email: 'admin@example.test',
+        name: 'Contract Admin',
+        password: 'contract-test-admin-password',
+      });
+      // The admin comes from the boot; the anonymous HTTP init stays closed all the same
+      expect(httpInit(resolved).enabled).toBe(false);
+    });
+
+    it('production opens the HTTP init only behind NSC__SYSTEM_SETUP__HTTP_INIT__TOKEN', async () => {
+      const token = 'contract-test-setup-token';
+      const { default: resolved } = await load('production', {
+        ...COMPLETE,
+        NSC__SYSTEM_SETUP__HTTP_INIT__TOKEN: token,
+      });
+      expect(httpInit(resolved)).toMatchObject({ enabled: true, token, tokenRequired: true });
+    });
+  });
+
   describe('API documentation (nest-server 11.45.0)', () => {
     it.each(['local', 'e2e', 'ci'])('%s serves it', async (env) => {
       const { default: resolved } = await load(env);

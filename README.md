@@ -181,7 +181,8 @@ is the env `migrate:preview:up` migrates.
 **A `NODE_ENV` without a block** in `src/config.env.ts` (e.g. `staging`, or a typo such as `prod`)
 runs on the deployed baseline under its own name, and the log says so:
 `NODE_ENV='staging' has no block in src/config.env.ts …`. It needs the same `NSC__*` vars as
-`production` and gets the same defaults: no Swagger, no auth links in the log, no local-only shortcuts.
+`production` and gets the same defaults: no Swagger, no anonymous setup page, no auth links in the log,
+no local-only shortcuts.
 nest-server 11.x itself would run such an env on the `local` block, with its public dummy secrets in
 place of every var the stage did not set; the check at the bottom of `src/config.env.ts` prevents that.
 A local name in another spelling (`LOCAL`, ` ci `) is refused, because nest-server would treat it as
@@ -233,6 +234,22 @@ one deployment, e.g. for a client generator that reads `/api-docs-json` there, s
 for that deployment. `src/config.env.ts` leaves `swagger` unset on purpose. The API-token view
 (`/swagger-api-tokens`) is not switched on in this starter; with `apiTokenView: true` in the same
 call it follows the same switch.
+
+### First admin on a deployed stage
+
+Since nest-server 11.46.0 the frontend's setup page (`POST /system-setup/init`) works only in `local`,
+`e2e` and `ci`. On `develop`, `test`, `preview` and `production` it answers 403 `LTNS_0053`, because on
+a fresh instance whoever called it first became the administrator. A new deployed stage gets its first
+admin in one of two ways, both in `.env.example` under "First admin":
+
+1. `NSC__SYSTEM_SETUP__INITIAL_ADMIN__EMAIL` / `__PASSWORD` (`__NAME` optional): the admin is created at
+   startup while no user exists. Remove the values once the admin exists.
+2. `NSC__SYSTEM_SETUP__HTTP_INIT__TOKEN`: opens the setup page behind a token of at least 16 characters
+   with letters, which the page sends as `X-System-Setup-Token`. Remove it after the setup.
+
+`src/config.env.ts` leaves `systemSetup` unset on purpose. A stage whose database already has users is
+not affected. After verifying their e-mail address, users sign in once with their password: since
+11.46.0 the verification link no longer signs them in (`autoSignInAfterVerification` is `false`).
 
 ## Test & debug the NestServer package in this project
 Use `pnpm link` to include the local NestJS server in the project.
