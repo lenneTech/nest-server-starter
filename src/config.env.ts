@@ -328,6 +328,12 @@ function deployedConfig(
       // confirm their address instead.
       // emailVerification: { passwordResetBrevoTemplateId: 42 },
       //
+      // The application name in the verification and reset mails (subject, templates, Brevo parameters;
+      // nest-server 12.8.3+). Unset, the mails use the package.json name, "Api" in a monorepo. Same object as
+      // above; with verification switched off it reads { enabled: false, appName }, because `false` keeps no
+      // settings. Also NSC__BETTER_AUTH__EMAIL_VERIFICATION__APP_NAME (.env.example).
+      // emailVerification: { appName: 'My App' },
+      //
       // NOT wired here on purpose: `options.user.validateUserInfo`. It is better-auth's hook for
       // narrowing self-registration (domain allowlist, invite code), and reaching for it is the
       // obvious move — but from better-auth 1.7 it also BREAKS INITIAL-ADMIN SETUP. better-auth
