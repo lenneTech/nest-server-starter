@@ -226,6 +226,17 @@ the "where to change what" guide. Quick map:
   (developer machine, `pnpm run test:e2e`, `pnpm run vitest:ci`).
 - **Deployed envs follow the pipeline `develop → test → production`** — they share the exact
   same baseline so any misconfig surfaces in `develop`/`test` before reaching production.
+- **`preview` is a deployed block outside that pipeline**, on the same baseline. It exists for
+  `migrate:preview:up`, which the lt CLI writes into every project.
+- **A `NODE_ENV` without a block in the matrix runs on the deployed baseline under its own name**,
+  with a warning that names `src/config.env.ts`. nest-server 11.x would answer it with the `local`
+  block, dummy secrets included; the check at the bottom of `config.env.ts` builds a
+  `deployedConfig(<name>)` for it instead, so the required-var check applies and a stage with its
+  vars set keeps starting. An empty `NODE_ENV` (`NODE_ENV=` or only spaces) is refused, and so is a
+  local name in another spelling (`LOCAL`, ` ci `), which nest-server would treat as local. Only an unset
+  `NODE_ENV` means `local`. A stage that stays gets its own `deployedConfig(...)` entry; the
+  required-var check covers every env that is not local. The 12.x line refuses a `NODE_ENV` without a
+  block instead; on 11.x, existing stages keep starting.
 
 ## Framework: @lenne.tech/nest-server
 

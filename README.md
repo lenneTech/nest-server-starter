@@ -170,11 +170,27 @@ sit in the file's JSDoc header. Read that first when you're not sure where a val
 | `develop` | deployed (first stage) | **must** come from `NSC__*` env vars | no — fails fast |
 | `test` | deployed (staging stage) | **must** come from `NSC__*` env vars | no — fails fast |
 | `production` | deployed (final stage) | **must** come from `NSC__*` env vars | no — fails fast |
+| `preview` | deployed (outside the pipeline, e.g. a demo or review instance) | **must** come from `NSC__*` env vars | no — fails fast |
 
 Local-only envs are independent stages, not a pipeline — each is configured for a specific scenario
 (developer machine, test runs, CI runs). Deployed envs share the exact same baseline (`deployedConfig`)
 and follow the pipeline `develop → test → production`, so any misconfiguration surfaces in `develop`
-or `test` long before it reaches production.
+or `test` long before it reaches production. `preview` shares that baseline outside the pipeline; it
+is the env `migrate:preview:up` migrates.
+
+**A `NODE_ENV` without a block** in `src/config.env.ts` (e.g. `staging`, or a typo such as `prod`)
+runs on the deployed baseline under its own name, and the log says so:
+`NODE_ENV='staging' has no block in src/config.env.ts …`. It needs the same `NSC__*` vars as
+`production` and gets the same defaults: no Swagger, no auth links in the log, no local-only shortcuts.
+nest-server 11.x itself would run such an env on the `local` block, with its public dummy secrets in
+place of every var the stage did not set; the check at the bottom of `src/config.env.ts` prevents that.
+A local name in another spelling (`LOCAL`, ` ci `) is refused, because nest-server would treat it as
+local while no block of that exact name exists.
+A stage whose vars are set keeps starting, one whose vars are missing is refused and told which. Give a
+stage you keep its own `deployedConfig(...)` entry. An **empty** `NODE_ENV` (`NODE_ENV=` or only
+spaces, e.g. from `NODE_ENV=${NODE_ENV}` in a compose file) is refused, because there is no stage name
+to run it under. Only an unset `NODE_ENV` means `local`. The 12.x line refuses every `NODE_ENV`
+without a block (nest-server 12.7.0).
 
 ### Environment variables
 
@@ -201,24 +217,22 @@ See `.env.example` for the complete catalog of required and optional env vars.
 
 ### Verifying configurations
 
-`src/config.env.spec.ts` checks the contract on every `pnpm test`: `develop`, `test` and
-`production` refuse to start while a required `NSC__*` var is missing and name every missing one;
-`local`, `e2e` and `ci` start without any of them.
+`src/config.env.spec.ts` checks the contract on every `pnpm test`: `develop`, `test`,
+`production` and `preview` refuse to start while a required `NSC__*` var is missing and name every
+missing one; `local`, `e2e` and `ci` start without any of them. It also pins the cases above: a
+`NODE_ENV` without a block runs on the deployed baseline, an empty one is refused, an unset one is
+`local`.
 
 ### API documentation (Swagger)
 
 Since nest-server 11.45.0, `setupSwagger()` in `src/main.ts` serves `/swagger` and `/api-docs-json`
-only in `local`, `e2e` and `ci`. On `develop`, `test` and `production` both answer 404, because
-the document lists every route, the roles it requires and every input shape. To show it on one
-deployment, e.g. for a client generator that reads `/api-docs-json` there, set `NSC__SWAGGER=true`
+only in `local`, `e2e` and `ci`. On `develop`, `test`, `preview` and `production` both answer
+404, because the document lists every route, the roles it requires and every input shape, and so does
+a `NODE_ENV` without a block, which runs on the deployed baseline (see "Environments"). To show it on
+one deployment, e.g. for a client generator that reads `/api-docs-json` there, set `NSC__SWAGGER=true`
 for that deployment. `src/config.env.ts` leaves `swagger` unset on purpose. The API-token view
 (`/swagger-api-tokens`) is not switched on in this starter; with `apiTokenView: true` in the same
 call it follows the same switch.
-
-On the 11.x line a `NODE_ENV` without a block in `src/config.env.ts` still runs on the `local` block,
-and the `local` block serves the documentation. That includes `preview`: `migrate:preview:up` exists,
-the block does not. The boot log shows it as `Configured for: local (requested: preview)`. Give such a
-stage its own `deployedConfig(...)` entry.
 
 ## Test & debug the NestServer package in this project
 Use `pnpm link` to include the local NestJS server in the project.

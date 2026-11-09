@@ -80,7 +80,7 @@
     "preversion": "pnpm run lint",
     "reinit": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm install && pnpm run lint && pnpm run test:e2e && pnpm run build",
     "reinit:clean": "rimraf pnpm-lock.yaml && rimraf node_modules && pnpm install && pnpm run test:e2e && pnpm run build",
-    "start": "pnpm run migrate:up && pnpm run start:local",
+    "start": "cross-env NODE_ENV=local pnpm run migrate:up && pnpm run start:local",
     "start:debug": "nodemon --config nodemon-debug.json",
     "start:dev": "nodemon",
     "start:dev:swc": "nest start -b swc -w --type-check",

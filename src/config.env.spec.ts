@@ -9,7 +9,7 @@ import { isSwaggerEnabled } from '@lenne.tech/nest-server';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 describe('config.env.ts — cross-subdomain cookies', () => {
   const ORIG_BASE_URL = process.env.BASE_URL;
@@ -205,12 +205,21 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     NSC__MONGOOSE__URI: 'mongodb://127.0.0.1/contract-test',
   };
 
-  async function load(nodeEnv: string, vars: Record<string, string> = {}) {
+  /** Every deployed block of the matrix. `preview` is the one `migrate:preview:up` migrates. */
+  const DEPLOYED = ['develop', 'test', 'production', 'preview'];
+
+  /** `undefined` leaves NODE_ENV unset, the way a developer machine starts. */
+  async function load(nodeEnv: string | undefined, vars: Record<string, string> = {}) {
     vi.resetModules();
     for (const key of Object.keys(process.env)) {
       if (key.startsWith('NSC__') || key === 'NEST_SERVER_CONFIG') delete process.env[key];
     }
-    Object.assign(process.env, vars, { NODE_ENV: nodeEnv });
+    Object.assign(process.env, vars);
+    if (nodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = nodeEnv;
+    }
     process.chdir(emptyDir);
     try {
       return await import('./config.env');
@@ -247,23 +256,20 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     expect(Object.keys(COMPLETE).sort()).toEqual((await unconditional()).sort());
   });
 
-  it.each(['develop', 'test', 'production'])(
-    '%s refuses to start without the vars, naming all of them',
-    async (env) => {
-      const required = await unconditional();
-      const error = await load(env).then(
-        () => undefined,
-        (err: Error) => err,
-      );
+  it.each(DEPLOYED)('%s refuses to start without the vars, naming all of them', async (env) => {
+    const required = await unconditional();
+    const error = await load(env).then(
+      () => undefined,
+      (err: Error) => err,
+    );
 
-      expect(error?.message).toMatch(`Missing required environment variables for NODE_ENV='${env}'`);
-      for (const envVar of required) {
-        expect(error?.message, envVar).toContain(envVar);
-      }
-    },
-  );
+    expect(error?.message).toMatch(`Missing required environment variables for NODE_ENV='${env}'`);
+    for (const envVar of required) {
+      expect(error?.message, envVar).toContain(envVar);
+    }
+  });
 
-  it.each(['develop', 'test', 'production'])('%s starts once every required var is set', async (env) => {
+  it.each(DEPLOYED)('%s starts once every required var is set', async (env) => {
     await expect(load(env, COMPLETE)).resolves.toBeDefined();
   });
 
@@ -284,6 +290,87 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
   });
 
   /*
+   * nest-server 11.x answers a NODE_ENV without a block in `config` with the LOCAL block
+   * (`config[env] || config.local`): public dummy secrets, Swagger, auth links in the log.
+   * That block carries env: 'local', so the required-var check never ran for it, and a stage started with
+   * NODE_ENV=staging booted on it whether its NSC__* vars were set or not. config.env.ts runs such an env on
+   * the deployed baseline under its own name instead: a stage whose vars are set keeps starting, one whose
+   * vars are missing is refused and told which. (The 12.x line refuses such a NODE_ENV outright.)
+   */
+  describe('NODE_ENV without a block of its own', () => {
+    // The fallback warns; muted here like console.info above, and restored so no other case inherits its calls.
+    let warn: MockInstance;
+    beforeEach(() => {
+      warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+      warn.mockRestore();
+    });
+
+    it.each(['staging', 'development', 'prod'])('%s runs on the deployed baseline under its own name', async (env) => {
+      const { default: resolved } = await load(env, COMPLETE);
+      expect(resolved.env).toBe(env);
+      expect(isSwaggerEnabled(resolved)).toBe(false);
+    });
+
+    it.each(['staging', 'development'])('%s refuses to start without the vars, naming all of them', async (env) => {
+      const required = await unconditional();
+      const error = await load(env).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+
+      expect(error?.message).toMatch(`Missing required environment variables for NODE_ENV='${env}'`);
+      for (const envVar of required) {
+        expect(error?.message, envVar).toContain(envVar);
+      }
+    });
+
+    it('says so in the log, naming the file to add the block to', async () => {
+      await load('staging', COMPLETE);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("NODE_ENV='staging' has no block in src/config.env.ts"),
+      );
+    });
+
+    it('preview has a block of its own and starts without that warning', async () => {
+      const { config } = await load('preview', COMPLETE);
+      expect(Object.hasOwn(config, 'preview')).toBe(true);
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining('has no block'));
+    });
+
+    // getEnvironmentConfig() reads `NODE_ENV || 'local'`, so an empty value would land on the local block.
+    // Typical source: `NODE_ENV=${NODE_ENV}` in a compose file on a host without the variable.
+    it.each(['', '  '])('NODE_ENV=%j refuses to start as empty, even with every deployed var set', async (value) => {
+      const error = await load(value, COMPLETE).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+      expect(error?.message).toMatch('NODE_ENV is set but empty');
+    });
+
+    // nest-server's isLocalEnv() trims and lowercases, so these would count as local everywhere it decides, while no
+    // block of that exact name exists: the deployed baseline would run with the required-var check skipped, Swagger
+    // open and auth links in the log.
+    it.each(['LOCAL', ' local ', 'E2E', 'ci '])(
+      '%j, a local name in another spelling, is refused even with every var set',
+      async (value) => {
+        const error = await load(value, COMPLETE).then(
+          () => undefined,
+          (err: Error) => err,
+        );
+        expect(error?.message).toMatch(`NODE_ENV='${value}' has no block in src/config.env.ts`);
+        expect(error?.message).toContain('would treat it as local');
+      },
+    );
+
+    it('an unset NODE_ENV still means local', async () => {
+      const { default: resolved } = await load(undefined);
+      expect(resolved.env).toBe('local');
+    });
+  });
+
+  /*
    * nest-server 11.45.0: setupSwagger() in main.ts asks isSwaggerEnabled() and mounts nothing (/swagger,
    * /swagger-api-tokens, /api-docs-json, /api-docs-api-tokens-json) unless the env is local, ci or e2e or
    * `swagger` is true. config.env.ts leaves `swagger` unset, so these cases pin which side every env of the
@@ -295,7 +382,7 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
       expect(isSwaggerEnabled(resolved)).toBe(true);
     });
 
-    it.each(['develop', 'test', 'production'])('%s serves none without an opt-in', async (env) => {
+    it.each(DEPLOYED)('%s serves none without an opt-in', async (env) => {
       const { default: resolved } = await load(env, COMPLETE);
       expect(isSwaggerEnabled(resolved)).toBe(false);
     });

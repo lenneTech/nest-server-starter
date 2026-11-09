@@ -1,4 +1,11 @@
-import { getEnvironmentConfig, IServerOptions, merge, resolveSmtpSecure, RoleEnum } from '@lenne.tech/nest-server';
+import {
+  getEnvironmentConfig,
+  IServerOptions,
+  isLocalEnv,
+  merge,
+  resolveSmtpSecure,
+  RoleEnum,
+} from '@lenne.tech/nest-server';
 import { CronExpression } from '@nestjs/schedule';
 import * as dotenv from 'dotenv';
 import { join } from 'path';
@@ -423,8 +430,8 @@ function deployedConfig(
     // swagger: deliberately unset. Since nest-server 11.45.0 setupSwagger() mounts nothing in a deployed env
     // (/swagger and /api-docs-json answer 404): the document lists every route, the roles it needs and every input
     // shape. local, ci and e2e keep it. A stage that needs it, e.g. for a client generator reading /api-docs-json
-    // there, sets NSC__SWAGGER=true (.env.example). A NODE_ENV without a block in `config` below runs on the local
-    // block on the 11.x line and keeps serving it: give such a stage its own deployedConfig(...) entry.
+    // there, sets NSC__SWAGGER=true (.env.example). A NODE_ENV without a block in `config` below runs on this
+    // baseline too (see the bottom of this file), so it serves no documentation either.
     templates: PROJECT_TEMPLATES,
     tus: PROJECT_TUS,
     // Express `trust proxy`, passed through by CoreModule (nest-server 11.33.0+).
@@ -620,8 +627,8 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   }),
 
   // ===========================================================================
-  // Deployed environments — pipeline: develop → test → production
-  // All three share the same baseline (deployedConfig) so misconfig surfaces
+  // Deployed environments — pipeline: develop → test → production, plus preview
+  // All of them share the same baseline (deployedConfig) so misconfig surfaces
   // in develop/test before reaching production.
   // ===========================================================================
 
@@ -639,6 +646,13 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
   // Production — final deployed stage, no overrides
   // ---------------------------------------------------------------------------
   production: deployedConfig('production'),
+
+  // ---------------------------------------------------------------------------
+  // Preview — deployed stage outside the pipeline (e.g. a demo or review instance), same baseline.
+  // It is what `migrate:preview:up` migrates, a script the lt CLI writes into every project. Without
+  // this block, NODE_ENV=preview runs on the deployed baseline anyway (see below), with a warning.
+  // ---------------------------------------------------------------------------
+  preview: deployedConfig('preview', { brandSuffix: 'Preview' }),
 };
 
 /**
@@ -647,18 +661,61 @@ export const config: { [env: string]: Partial<IServerOptions> } = {
  * `getEnvironmentConfig` produces the full merge:
  *   env-specific config → loadLocalConfig → NEST_SERVER_CONFIG → NSC__* env vars
  *
- * After that, for deployed envs (`develop`, `test`, `production`) we enforce
- * that every required secret/URL listed in `REQUIRED_DEPLOYED_ENV_VARS` is
- * present. Without this guard, the framework's own `merge` would silently
+ * After that, for deployed envs (`develop`, `test`, `production`, `preview`, and
+ * every other env that is not local) we enforce that every required secret/URL
+ * listed in `REQUIRED_DEPLOYED_ENV_VARS` is present. Without this guard, the
+ * framework's own `merge` would silently
  * fill in defaults (e.g. `mongodb://localhost/nest-server-default` for
  * `mongoose.uri`), which would allow a misconfigured deployment to boot
  * against the wrong database or with random per-restart session secrets —
  * the exact silent-fail mode we want to avoid.
+ *
+ * A NODE_ENV that has no block in `config` (e.g. `staging`, or a typo such as `prod`) runs on the
+ * DEPLOYED baseline under its own name, with a warning. nest-server 11.x answers it with the LOCAL block
+ * (`config[env] || config.local`): public dummy secrets, Swagger, auth links in the log and the other
+ * local-only defaults. The required-var check never ran for it, because the local block carries
+ * `env: 'local'`, so such a
+ * stage booted on the local block whether its NSC__* vars were set or not. On the deployed baseline a
+ * stage whose vars are set keeps starting, now with the deployed defaults; one whose vars are missing
+ * is refused and told which. The 12.x line refuses such a NODE_ENV outright (nest-server 12.7.0); the
+ * 11.x line keeps existing stages up instead.
+ *
+ * A local name in another spelling (`LOCAL`, ` ci `) is refused as well: no block of that exact name
+ * exists, but nest-server's isLocalEnv() trims and lowercases, so the deployed baseline would run as
+ * local, with the required-var check skipped, Swagger open and auth links in the log.
+ *
+ * An EMPTY NODE_ENV (also only spaces) is refused: there is no stage name to run it under, and
+ * getEnvironmentConfig() reads `NODE_ENV || 'local'`, so it would land on the local block. Typical
+ * source: `NODE_ENV=${NODE_ENV}` in a compose file on a host that does not set the variable. Only an
+ * unset NODE_ENV means `local`.
  */
-const resolved = getEnvironmentConfig({ config });
+const requestedEnv = process.env.NODE_ENV;
+const knownEnvs = Object.keys(config).join(', ');
+if (requestedEnv !== undefined && !requestedEnv.trim()) {
+  throw new Error(
+    `NODE_ENV is set but empty (${JSON.stringify(requestedEnv)}). Set one of ${knownEnvs}, ` +
+      'or leave NODE_ENV unset to run locally.',
+  );
+}
+if (requestedEnv && !Object.hasOwn(config, requestedEnv) && isLocalEnv(requestedEnv)) {
+  throw new Error(
+    `NODE_ENV='${requestedEnv}' has no block in src/config.env.ts (known: ${knownEnvs}), and nest-server ` +
+      `would treat it as local. Use '${requestedEnv.trim().toLowerCase()}' to run locally, or the name of a deployed block.`,
+  );
+}
+const matrix: typeof config = { ...config };
+if (requestedEnv && !Object.hasOwn(config, requestedEnv)) {
+  console.warn(
+    `NODE_ENV='${requestedEnv}' has no block in src/config.env.ts (known: ${knownEnvs}). ` +
+      'It runs on the deployed baseline under its own name; add a block for this env to the matrix.',
+  );
+  matrix[requestedEnv] = deployedConfig(requestedEnv, { brandSuffix: requestedEnv });
+}
 
-const DEPLOYED_ENVS = new Set(['develop', 'test', 'production']);
-if (DEPLOYED_ENVS.has(resolved.env)) {
+const resolved = getEnvironmentConfig({ config: matrix });
+
+// Every env that is not local: develop, test, production, preview, and any env without a block above.
+if (!isLocalEnv(resolved.env)) {
   const missing = REQUIRED_DEPLOYED_ENV_VARS.filter(({ condition }) => !condition || condition(resolved))
     .filter(({ check }) => !check(resolved))
     .map(({ envVar }) => envVar);
