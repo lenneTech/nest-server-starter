@@ -71,10 +71,18 @@ export function isRenderedStatus(status) {
  * or re-raises after its own handler ran (NestJS's enableShutdownHooks() does), is swallowed
  * instead of killing the process. The process then ends only when the app closes everything
  * that keeps the event loop alive. Passed as a `data:` module so nothing is written to disk.
+ *
+ * A server that ignores both signals must not outlive the runner: a Ctrl-C reaches the whole
+ * process group, and a watchdog SIGTERMs and then SIGKILLs the tree, so the runner can end before
+ * its `finally` stops the server, which then kept listening for hours, re-parented to init. The
+ * preload therefore also checks the parent every 250 ms and SIGKILLs the server once it has a new
+ * one. The timer is unref'd and keeps nothing alive, so the shutdown measurement is unchanged.
+ * Same preload as nuxt-base-starter and ng-base-starter.
  */
 export const PID1_SIGNAL_PRELOAD = Object.freeze([
   '--import',
-  'data:text/javascript,process.on("SIGTERM",()=>{});process.on("SIGINT",()=>{});',
+  'data:text/javascript,process.on("SIGTERM",()=>{});process.on("SIGINT",()=>{});' +
+    'const parent=process.ppid;setInterval(()=>{if(process.ppid!==parent)process.kill(process.pid,"SIGKILL")},250).unref();',
 ]);
 
 /** Pure: whether the way a process ended counts as a clean shutdown — exit code 0, no signal. */

@@ -122,3 +122,15 @@ describe('dev runner heap configuration (nodemon.json)', () => {
     expect(nodemon.env?.NODE_OPTIONS ?? '').not.toContain('--max-old-space-size');
   });
 });
+
+describe('compression (src/main.ts)', () => {
+  const mainSource = readSourceWithoutComments('src/main.ts');
+
+  it('compresses only compressible content types, not every response', () => {
+    // `filter: () => true` gzipped JPEG, PNG, PDF and ZIP downloads, which are compressed already:
+    // CPU per download for nothing, and it adds up under many parallel downloads. The package's own
+    // filter compresses JSON, GraphQL, text, SSE and SVG as before.
+    expect(mainSource).toContain('filter: compression.filter');
+    expect(mainSource).not.toMatch(/filter:\s*\(\)\s*=>/);
+  });
+});

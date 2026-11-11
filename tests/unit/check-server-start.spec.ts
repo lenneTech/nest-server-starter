@@ -135,6 +135,8 @@ describe('check-server-start helpers', () => {
     expect(PID1_SIGNAL_PRELOAD[1]).toMatch(/^data:text\/javascript,/);
     expect(PID1_SIGNAL_PRELOAD[1]).toContain('process.on("SIGTERM",()=>{})');
     expect(PID1_SIGNAL_PRELOAD[1]).toContain('process.on("SIGINT",()=>{})');
+    // The parent watch, see `does not leave the server behind` below.
+    expect(PID1_SIGNAL_PRELOAD[1]).toContain('process.ppid');
   });
 });
 
@@ -293,5 +295,69 @@ describe('check-server-start CLI', () => {
 
     expect(code, output).toBe(0);
     expect(await portAcceptsConnections(port)).toBe(false);
+  });
+});
+
+/**
+ * Starts the CLI in its own process group, against a server without a shutdown handler, and
+ * resolves once it waits for that server to shut down. The PID 1 preload makes the server ignore
+ * SIGTERM and SIGINT, so it must not depend on the runner's `finally` to end: a Ctrl-C reaches the
+ * whole group, and a watchdog SIGTERMs the tree and then SIGKILLs it. Before the fix such a server
+ * kept listening for hours, re-parented to init (found by ng-base-starter, same preload).
+ */
+function startWaitingRunner(): Promise<{ port: number; runner: ReturnType<typeof spawn> }> {
+  const child = spawn(
+    process.execPath,
+    [
+      runner,
+      '--entry=nest-no-shutdown.mjs',
+      '--port-env=NSC__PORT',
+      '--ready=Server started at',
+      '--graceful-shutdown=10',
+    ],
+    { cwd: fixtures, detached: true },
+  );
+  return new Promise((resolve, reject) => {
+    let output = '';
+    const onData = (chunk: Buffer) => {
+      output += chunk;
+      const port = Number(/Using free port: (\d+)/.exec(output)?.[1]);
+      // Logged right before the SIGTERM that starts the wait.
+      if (port && /Server started and rendered/.test(output)) resolve({ port, runner: child });
+    };
+    child.stdout?.on('data', onData);
+    child.stderr?.on('data', onData);
+    child.once('exit', () => reject(new Error(`the runner ended before the shutdown wait:\n${output}`)));
+  });
+}
+
+/** Polls until nothing accepts connections on the port, or the time is up; resolves whether it closed. */
+async function portClosesWithin(port: number, ms: number): Promise<boolean> {
+  for (const end = Date.now() + ms; Date.now() < end;) {
+    if (!(await portAcceptsConnections(port))) return true;
+    await new Promise((settle) => setTimeout(settle, 100));
+  }
+  return !(await portAcceptsConnections(port));
+}
+
+describe.skipIf(process.platform === 'win32')('check-server-start does not leave the server behind', () => {
+  it('when Ctrl-C interrupts the shutdown wait (SIGINT to the process group)', async () => {
+    const { port, runner: child } = await startWaitingRunner();
+    const ended = new Promise((settle) => child.once('exit', settle));
+
+    process.kill(-(child.pid as number), 'SIGINT');
+    await ended;
+
+    expect(await portClosesWithin(port, 3000), `the server on port ${port} outlived the runner`).toBe(true);
+  });
+
+  it('when the runner is killed outright (SIGKILL, as a watchdog escalates)', async () => {
+    const { port, runner: child } = await startWaitingRunner();
+    const ended = new Promise((settle) => child.once('exit', settle));
+
+    process.kill(child.pid as number, 'SIGKILL');
+    await ended;
+
+    expect(await portClosesWithin(port, 3000), `the server on port ${port} outlived the runner`).toBe(true);
   });
 });

@@ -26,7 +26,10 @@ export interface ServerStartOptions {
 export type KillTreePlan = { args: string[]; command: 'taskkill' } | { signal: NodeJS.Signals };
 
 export const NUXT_DEFAULTS: Readonly<Required<Omit<ServerStartOptions, 'cwd' | 'shutdownTimeoutMs'>>>;
-/** Node arguments that register no-op SIGTERM / SIGINT listeners before the entry loads (PID 1 semantics). */
+/**
+ * Node arguments that register no-op SIGTERM / SIGINT listeners before the entry loads (PID 1 semantics),
+ * and SIGKILL the server once its parent (the runner) is gone, so it cannot outlive an interrupted check.
+ */
 export const PID1_SIGNAL_PRELOAD: readonly string[];
 /** Exit code 0 and no signal. */
 export function isCleanShutdown(code: null | number | undefined, signal: NodeJS.Signals | null | undefined): boolean;
