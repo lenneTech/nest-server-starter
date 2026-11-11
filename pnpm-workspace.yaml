@@ -643,7 +643,10 @@ overrides:
   # 2026-10-29: raised 10.1.2 -> 10.1.4, key with it — nest-server 11.43.4 declares 10.1.4 (three
   # address-parser advisories, GHSA-8c8m-p3m8-cjg8, GHSA-m943-m63m-w62w, GHSA-85x2-q946-cp5h, all
   # moderate; migration guide 11.43.3 -> 11.43.4 §2). Same reasoning as above.
-  'nodemailer@<10.1.4': 10.1.4
+  # 2026-11-11: raised 10.1.4 -> 10.4.1, key with it — nest-server 11.46.2 declares 10.4.1 (closes
+  # GHSA-3q53-mvfw-q9v8 and GHSA-2g53-87p2-4qq8, medium; migration guide 11.46.1 -> 11.46.2 §1). 10.4.1 cleared
+  # the release-age gate at 08:17 UTC today, so no minimumReleaseAgeExclude entry.
+  'nodemailer@<10.4.1': 10.4.1
 
   # Security: Unhandled multipart errors / DoS in multer <2.2.0 (high), and newer
   # advisories on 2.2.0: GHSA-wc9g-mqfw-jrwm and GHSA-535w-7cp7-47q4 (high, DoS via
@@ -676,8 +679,11 @@ overrides:
   # They were published as REPOSITORY advisories, so `pnpm audit` and `check:overrides` were both
   # green on the vulnerable 7.30.0 — do not read a clean audit as "this entry can go". cheerio
   # requests ^7.19.0, which intersected the old key, so the old entry PINNED that path to 7.30.0
-  # next to the framework's own runtime 7.30.1. Check: `pnpm why undici` lists only 7.30.1.
-  'undici@>=7.0.0 <7.30.1': 7.30.1
+  # next to the framework's own runtime 7.30.1.
+  # 2026-11-11: raised 7.30.1 -> 7.30.2, key with it — nest-server 11.46.2 declares 7.30.2 (closes six
+  # advisories incl. GHSA-mqg3-3v4r-cm32, high; migration guide 11.46.1 -> 11.46.2 §1). Check: `pnpm why undici`
+  # lists only 7.30.2.
+  'undici@>=7.0.0 <7.30.2': 7.30.2
 
   # Security: ip-address — Address4 decodes leading-zero octets as decimal
   # (GHSA-mwp4-54f8-5fhr, high, patched >=10.3.1), plus two moderates (CIDR
