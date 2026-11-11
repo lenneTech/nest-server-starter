@@ -162,27 +162,34 @@ projects `nest new` generates since NestJS 12 (nest-server migration guide 11.43
 
 Without `type`, `@UnifiedField` takes a field's type from the `design:type` metadata. The build (`tsc`) writes it
 with the type checker, the SWC loader of the dev start (`pnpm start`) file by file, and for some declarations the two
-differ. The dev API then validates, documents and generates client types differently from the deployed one: with
-`max?: null | number` it refuses `max: 5` as "not an object", while the build accepts it.
+differ. **Since nest-server 12.9.0 a field without `type`, `isAny` or `enum` whose `design:type` is only `Object`
+stops the boot** (`[@UnifiedField] "<Class>.<field>" has no explicit type …`), in the dev start and the deployed build
+alike; 12.8.7 only warned. Before that, the dev API validated, documented and typed such a field as a nested object:
+with `max?: null | number` it refused `max: 5` as "not an object", while the build accepted it.
 
 | Declared type | SWC (dev start) | `tsc` (build) | Declare |
 |---|---|---|---|
 | `null \| number`, `boolean \| null` | `Object` | `Number`, `Boolean` | `type: () => Number` / `Boolean` |
 | a type alias (`kind?: Kind`) | `Object` | what the alias resolves to | that runtime type, e.g. `type: () => String` |
-| an enum (`status?: Status`) | the enum object | `String` / `Number` | `enum: Status` |
+| an enum of strings or of numbers (`status?: Status`) | the enum object | `String` / `Number` | `enum: Status` |
 | an enum or `null` (`status?: Status \| null`) | `Object` | `String` / `Number` | `enum: Status` and `type: () => String` / `Number` |
-| an interface, a `Record`, a mixed union | `Object` | `Object` | a class with `type: () => X`, or `isAny: true` |
+| an enum mixing string and number members | `Object` | `Object` | `enum: Mixed` |
+| an interface, a `Record`, `object` | `Object` | `Object` | `type: () => Object` (today's behaviour), or a class with `type: () => X` |
+| `any`, `unknown`, a mixed union (`string \| number`) | `Object` | `Object` | `isAny: true` (any value), or `type: () => Object` |
+| a class imported with `import type` | `Object` | `Object` | import it as a value, then `type: () => X` |
 
 A plain enum needs only `enum` since nest-server 12.8.7: `@UnifiedField` reads the enum object SWC writes as
-`String` / `Number`, like the build. Before, the Mongoose path of an enum field with `mongoose` took the enum object
-as its type and the dev start failed building the schema. A union with `null` is still `Object` under SWC.
+`String` / `Number`, like the build. A union with `null` is still `Object` under SWC.
 
 `number`, `string`, `boolean`, `Date`, a class imported as a value and a union of string literals written in place
-come out the same in both and need nothing. Code the lt CLI generates is safe already.
+come out the same in both and need nothing. Code the lt CLI generates is safe already. A class field that still
+fails the boot although the check passes is usually an import cycle: declare `type: () => X`.
 
-`pnpm run check:unified-field-types` (part of `check`) finds every field that needs a declaration and fails on it;
-`check:fix` runs it with `-- --fix`, which writes the type the build already uses. A field it cannot fix (an
-interface, a `Record`) it reports with what to declare. Vendor mode runs the same check as
+`pnpm run check:unified-field-types` (part of `check`) finds every field the boot refuses and fails on it; `check:fix`
+runs it with `-- --fix`, which writes the type the build already uses. A field it cannot fix (an interface, a
+`Record`) it reports with what to declare. Its scope is `src`: run it once with `-- --include tests` for model
+classes in test fixtures, which the boot refuses as well (the test run then fails). Under `strictNullChecks` a fixed
+field is marked `[changes the deployed build]`: review it. Vendor mode runs the same check as
 `node ./bin/check-unified-field-types.js`.
 
 ## Development
