@@ -53,9 +53,10 @@ async function bootstrap() {
       envCompressionOptions = envConfig.compression;
     }
     const compressionOptions = {
-      filter: () => {
-        return true;
-      },
+      // Only content types that gain from it (JSON, GraphQL, text, SSE, SVG): the package's own
+      // filter. JPEG, PNG, PDF and ZIP downloads are compressed already; gzipping them again only
+      // costs CPU per download, which adds up under many parallel downloads.
+      filter: compression.filter,
       threshold: 0,
       ...envCompressionOptions,
     };
