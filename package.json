@@ -1,6 +1,6 @@
 {
   "name": "@lenne.tech/nest-server-starter",
-  "version": "12.9.0",
+  "version": "12.9.1",
   "description": "Starter for lenne.Tech Nest Server",
   "keywords": [
     "starter",
@@ -108,7 +108,7 @@
   "dependencies": {
     "@better-auth/core": "1.7.19",
     "@better-auth/passkey": "1.7.19",
-    "@lenne.tech/nest-server": "12.9.0",
+    "@lenne.tech/nest-server": "12.9.1",
     "@nestjs/common": "12.4.2",
     "@nestjs/core": "12.4.2",
     "@nestjs/graphql": "14.2.0",
