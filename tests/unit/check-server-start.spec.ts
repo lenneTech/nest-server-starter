@@ -23,12 +23,14 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  isCleanShutdown,
   isKillablePid,
   isReadyOutput,
   isRenderedStatus,
   killTreePlan,
   NUXT_DEFAULTS,
   parseArgs,
+  PID1_SIGNAL_PRELOAD,
 } from '../../scripts/check-server-start.mjs';
 
 // `process.cwd()`: vitest runs from the repository root (pnpm-pin.spec.ts resolves it the same way).
@@ -110,18 +112,59 @@ describe('check-server-start helpers', () => {
   it('rejects an unknown argument', () => {
     expect(() => parseArgs(['--bogus'])).toThrow(/Unknown argument/);
   });
+
+  it('turns the graceful-shutdown step on only when asked, in seconds', () => {
+    expect(parseArgs([]).shutdownTimeoutMs).toBeUndefined();
+    expect(parseArgs(['--graceful-shutdown=10']).shutdownTimeoutMs).toBe(10_000);
+    expect(parseArgs(['--graceful-shutdown=0.5']).shutdownTimeoutMs).toBe(500);
+  });
+
+  it.each(['0', '-1', 'ten', ''])('refuses --graceful-shutdown=%s instead of silently skipping the step', (value) => {
+    expect(() => parseArgs([`--graceful-shutdown=${value}`])).toThrow(/--graceful-shutdown needs a number/);
+  });
+
+  it('counts only exit code 0 without a signal as a clean shutdown', () => {
+    expect(isCleanShutdown(0, null)).toBe(true);
+    expect(isCleanShutdown(1, null)).toBe(false);
+    expect(isCleanShutdown(null, 'SIGTERM')).toBe(false);
+    expect(isCleanShutdown(null, 'SIGKILL')).toBe(false);
+  });
+
+  it('preloads no-op SIGTERM and SIGINT listeners, so an unhandled signal is swallowed as in PID 1', () => {
+    expect(PID1_SIGNAL_PRELOAD[0]).toBe('--import');
+    expect(PID1_SIGNAL_PRELOAD[1]).toMatch(/^data:text\/javascript,/);
+    expect(PID1_SIGNAL_PRELOAD[1]).toContain('process.on("SIGTERM",()=>{})');
+    expect(PID1_SIGNAL_PRELOAD[1]).toContain('process.on("SIGINT",()=>{})');
+  });
 });
 
 describe('check:server-start as configured for this starter', () => {
   const options = parseArgs(serverStartArgs());
 
-  it('starts the built API on NSC__PORT and smoke-tests /', () => {
+  it('starts the built API on NSC__PORT, smoke-tests / and checks the shutdown on SIGTERM', () => {
     expect(options).toEqual({
       entry: 'dist/src/main.js',
       portEnv: 'NSC__PORT',
       readyPatterns: [expect.any(RegExp)],
+      // 10 s: Docker's and Compose's default stop_grace_period. A server that needs longer is
+      // SIGKILLed by `docker stop`, so the check must not allow more.
+      shutdownTimeoutMs: 10_000,
       smokePath: '/',
     });
+  });
+
+  it('switches off execAfterInit, so the shutdown is not timed against the local docs build', () => {
+    // The local block starts `pnpm run docs:bootstrap` after listen (src/config.env.ts). With the PID 1
+    // preload the server exits only once that child is done, and a cold `pnpm dlx spectaql` alone takes
+    // about 10 s — the step would fail on a fresh machine or CI runner for a reason unrelated to the handler.
+    const command = scripts['check:server-start'] ?? '';
+    expect(command.slice(0, command.indexOf('check-server-start.mjs'))).toContain('NSC__EXEC_AFTER_INIT=false');
+  });
+
+  it('keeps the shutdown handler in src/main.ts that the shutdown step depends on', () => {
+    // The check proves the handler WORKS; this line tells which call it is when it does not.
+    const source = readFileSync(join(ROOT, 'src', 'main.ts'), 'utf-8');
+    expect(source).toMatch(/^\s*installGracefulShutdown\(server\);/m);
   });
 
   it('matches the line src/main.ts actually prints once the server listens', () => {
@@ -156,6 +199,51 @@ describe('check-server-start CLI', () => {
 
     expect(code, output).toBe(0);
     expect(output).toMatch(/rendered GET \/ with HTTP 200/);
+    expect(output).toMatch(
+      process.platform === 'win32' ? /Graceful-shutdown check skipped/ : /shut down cleanly on SIGTERM/,
+    );
+    expect(await portAcceptsConnections(port)).toBe(false);
+  });
+
+  it('leaves the shutdown step off unless --graceful-shutdown is passed', async () => {
+    // A server without any handler passes then: the step is opt-in, so the Nuxt contract is unchanged.
+    const { code, output } = await runFixture('nest-no-shutdown.mjs', 10, [
+      '--port-env=NSC__PORT',
+      '--ready=Server started at',
+    ]);
+
+    expect(code, output).toBe(0);
+    expect(output).not.toMatch(/SIGTERM/);
+  });
+
+  it.skipIf(process.platform === 'win32')(
+    'returns 1 when the server has no shutdown handler, as it would hang in a container',
+    async () => {
+      const { code, ms, output, port } = await runFixture('nest-no-shutdown.mjs', 10, [
+        '--port-env=NSC__PORT',
+        '--ready=Server started at',
+        '--graceful-shutdown=1',
+      ]);
+
+      expect(code, output).toBe(1);
+      // "did not exit" and not "ended with signal SIGTERM": only the PID 1 preload keeps the
+      // handler-less server alive. Without it the default disposition would kill it at once.
+      expect(output).toMatch(/did not exit within 1 s after SIGTERM/);
+      expect(ms).toBeLessThan(10_000);
+      expect(await portAcceptsConnections(port)).toBe(false);
+    },
+  );
+
+  it.skipIf(process.platform === 'win32')('returns 1 when the shutdown exits with an error code', async () => {
+    const { code, output, port } = await runFixture('nest-shutdown-fails.mjs', 10, [
+      '--port-env=NSC__PORT',
+      '--ready=Server started at',
+      '--graceful-shutdown=5',
+    ]);
+
+    expect(code, output).toBe(1);
+    expect(output).toMatch(/exit code 1, signal - after SIGTERM/);
+    expect(output).toMatch(/boom while closing/);
     expect(await portAcceptsConnections(port)).toBe(false);
   });
 

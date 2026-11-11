@@ -237,7 +237,12 @@ overrides:
   # nest-server 12.1.0 carries no overrides, and its released lockfile resolves 1.21.0. 1.21.0 changes
   # how header DEFAULTS are recognised; node-mailjet passes plain per-request headers, so it is not
   # affected. A fresh resolve without this entry lands on 1.21.0 as well.
-  'axios@<1.21.0': 1.21.0
+  # 2026-11-10 (nest-server 12.8.7): raised 1.21.0 -> 1.21.1, key with it. A downgrade lock again:
+  # node-mailjet's `^1.12.0` intersected `<1.21.0`, and a fresh resolve without the block lands on 1.21.1
+  # (published 2026-11-09, past the release-age gate). No axios advisory covers 1.21.0; 1.21.1 raises its
+  # own `follow-redirects` floor to `^1.16.2` (GHSA-mrwp-f3q8-3g9p, high, <= 1.16.1), which this tree
+  # already resolved above.
+  'axios@<1.21.1': 1.21.1
 
   # Security: 3x Hono, all moderate, all patched >=4.12.27 — GHSA-xgm2-5f3f-mvvc
   # (API-Gateway adapter), GHSA-hvrm-45r6-mjfj (jsx request-context bleed),
@@ -285,7 +290,11 @@ overrides:
   # database yet, so `pnpm audit` and `check:overrides` stayed green on the vulnerable 4.13.14 (the undici
   # pattern below). @modelcontextprotocol/sdk 1.32.2 requests `^4.11.4`, which intersected `<4.13.14`, so
   # the old entry PINNED the production tree there. 4.13.16 is the newest 4.x.
-  'hono@>=4.0.0 <4.13.16': 4.13.16
+  # 2026-11-10 (nest-server 12.8.7): raised 4.13.16 -> 4.13.17, key with it. Pure hold-back, no new
+  # advisory (the newest repository advisories, 2026-11-01, are fixed in 4.13.16): the SDK's `^4.11.4`
+  # intersected `<4.13.16`, and a fresh resolve without the block lands on 4.13.17 (published 2026-11-07;
+  # cookie-prefix, URL-query, ETag and media-type matching fixes).
+  'hono@>=4.0.0 <4.13.17': 4.13.17
 
   # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,
   # added 2026-10-06). @nestjs/graphql 14.1.0 pins the patched 12.1.0 itself, so the entry changed
@@ -675,6 +684,10 @@ overrides:
   # second, older 10.3.0.
   # 2026-11-09: raised 10.3.1 -> 10.4.0, key with it — nest-server 12.8.4 declares 10.4.0 (no advisory;
   # migration guide 12.8.3 -> 12.8.4, §3). Same reasoning as above: the tree holds a single 10.4.0 copy.
+  # 2026-11-10 (nest-server 12.8.7, still declaring 10.4.0): NOT raised. Two medium repository advisories
+  # published today cover 10.4.0 (GHSA-2g53-87p2-4qq8 `>= 9.1.0, <= 10.4.0`, GHSA-3q53-mvfw-q9v8
+  # `>= 3.0.0, <= 10.4.0`), fixed in 10.4.1 (2026-11-10 08:17 UTC, inside the release-age gate). Lockstep
+  # entry: move it with the nest-server release that declares the fixed version.
   'nodemailer@<10.4.0': 10.4.0
 
   # REMOVED 2026-10-29: 'multer@>=2.0.0 <2.5.0': 2.5.0 (GHSA-q7qp-rjg7-q26m and the older
@@ -697,6 +710,13 @@ overrides:
   # green on the vulnerable 7.30.0 — do not read a clean audit as "this entry can go". cheerio
   # requests ^7.19.0, which intersected the old key, so the old entry PINNED that path to 7.30.0
   # next to the framework's own runtime 7.30.1. Check: `pnpm why undici` lists only 7.30.1.
+  # 2026-11-10 (nest-server 12.8.7): NOT raised, blocked on the framework. Six repository advisories
+  # published 2026-11-05 cover 7.30.1 and are fixed only in 7.30.2: GHSA-mqg3-3v4r-cm32 (high,
+  # >= 7.30.1 < 7.30.2) and GHSA-5rm8-gv32-r954, GHSA-9v6h-8rgp-m69f, GHSA-r4pc-4jcp-7pqc,
+  # GHSA-3g9m-rv3r-w5w2, GHSA-7xg3-fphp-28hg (medium). Not in the global database yet, so `pnpm audit`
+  # stays green. nest-server 12.8.7 declares undici 7.30.1 EXACTLY, and a key widened to `<7.30.2` would
+  # override that framework pin. Raise key and target to 7.30.2 together with the nest-server release
+  # that declares 7.30.2.
   'undici@>=7.0.0 <7.30.1': 7.30.1
 
   # Security: ip-address — Address4 decodes leading-zero octets as decimal
@@ -719,7 +739,10 @@ overrides:
   # 10.x past the release-age gate (adds tests that every parser rejects fullwidth / non-ASCII
   # digits; no advisory). Same reasoning as above: `^10.2.0` intersected `<10.7.4`, so the old entry
   # had become a downgrade lock holding the tree at 10.7.4.
-  'ip-address@<10.7.5': 10.7.5
+  # 2026-11-10 (nest-server 12.8.7): raised 10.7.5 -> 10.7.6, key with it. Same reasoning: express-rate-limit
+  # 8.7.4 still requests `^10.2.0`, which intersected `<10.7.5`, and a fresh resolve without the block lands
+  # on 10.7.6 (published 2026-11-03). No new advisory (the newest, GHSA-rxp7-6hxx-x8q5, is fixed in 10.7.4).
+  'ip-address@<10.7.6': 10.7.6
 
   # Security: TWO advisories on the 3.x line, and the target must be the LATER of
   # the two — a 3.3.17 target closes the first and leaves the second wide open.

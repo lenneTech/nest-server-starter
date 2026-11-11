@@ -158,6 +158,33 @@ projects `nest new` generates since NestJS 12 (nest-server migration guide 11.43
   mode: `./src/core/modules/migrate/helpers/ts-compiler.js`). Keep exactly these paths: the lt CLI rewrites one
   into the other when it converts between the modes. There is no ts-node.
 
+### `@UnifiedField`: declare the type where the compilers disagree
+
+Without `type`, `@UnifiedField` takes a field's type from the `design:type` metadata. The build (`tsc`) writes it
+with the type checker, the SWC loader of the dev start (`pnpm start`) file by file, and for some declarations the two
+differ. The dev API then validates, documents and generates client types differently from the deployed one: with
+`max?: null | number` it refuses `max: 5` as "not an object", while the build accepts it.
+
+| Declared type | SWC (dev start) | `tsc` (build) | Declare |
+|---|---|---|---|
+| `null \| number`, `boolean \| null` | `Object` | `Number`, `Boolean` | `type: () => Number` / `Boolean` |
+| a type alias (`kind?: Kind`) | `Object` | what the alias resolves to | that runtime type, e.g. `type: () => String` |
+| an enum (`status?: Status`) | the enum object | `String` / `Number` | `enum: Status` |
+| an enum or `null` (`status?: Status \| null`) | `Object` | `String` / `Number` | `enum: Status` and `type: () => String` / `Number` |
+| an interface, a `Record`, a mixed union | `Object` | `Object` | a class with `type: () => X`, or `isAny: true` |
+
+A plain enum needs only `enum` since nest-server 12.8.7: `@UnifiedField` reads the enum object SWC writes as
+`String` / `Number`, like the build. Before, the Mongoose path of an enum field with `mongoose` took the enum object
+as its type and the dev start failed building the schema. A union with `null` is still `Object` under SWC.
+
+`number`, `string`, `boolean`, `Date`, a class imported as a value and a union of string literals written in place
+come out the same in both and need nothing. Code the lt CLI generates is safe already.
+
+`pnpm run check:unified-field-types` (part of `check`) finds every field that needs a declaration and fails on it;
+`check:fix` runs it with `-- --fix`, which writes the type the build already uses. A field it cannot fix (an
+interface, a `Record`) it reports with what to declare. Vendor mode runs the same check as
+`node ./bin/check-unified-field-types.js`.
+
 ## Development
 
 ```bash
@@ -166,6 +193,13 @@ pnpm run test:e2e          # Run E2E tests
 pnpm run build             # Build for production
 pnpm run check             # audit + format + lint + test + build + local-start
 ```
+
+The last step (`check:server-start`) boots the built API, renders `/`, then sends SIGTERM and
+requires exit code 0 within 10 s (`--graceful-shutdown=10`, Docker's default stop grace period). It runs with
+`NSC__EXEC_AFTER_INIT=false`: the local block's `pnpm run docs:bootstrap` would otherwise keep the process alive
+after the shutdown and time the docs build instead of the shutdown.
+The server runs with a no-op SIGTERM listener preloaded, as node does as PID 1 in a container, so
+the step goes red when `installGracefulShutdown()` in `src/main.ts` is missing or the shutdown hangs.
 
 The fail-fast contract of the deployed envs (and that local envs need no `.env`) is a unit test in
 `src/config.env.spec.ts`, so every `pnpm test` / `pnpm run check` verifies it.

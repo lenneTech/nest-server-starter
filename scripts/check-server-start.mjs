@@ -18,18 +18,30 @@
  *   5. Always stops the server: SIGTERM, up to 2 s grace, then SIGKILL on POSIX;
  *      `taskkill /PID <pid> /T /F` on Windows (no signals there).
  *
- * Deviation from the nuxt-base-starter original (8ac2766), and the only one: the
- * second, closed port exported as `NUXT_API_URL` / `NUXT_PUBLIC_API_URL` is gone.
- * It keeps a Nuxt SSR fetch from hanging; a Nest server reads neither variable
- * (checked: the only mention in @lenne.tech/nest-server is a log text in
- * better-auth.config.js), so here it would only suggest a dependency that does
- * not exist. The defaults stay the Nuxt ones so the file diffs cleanly against
- * the original; this repo passes every option on the command line.
+ * Optional, off unless `--graceful-shutdown=<seconds>` is passed (this repo passes it):
+ *   6. After the render, SIGTERM the server and require it to exit on its own with
+ *      code 0 within that many seconds. The server is started with a no-op SIGTERM /
+ *      SIGINT listener preloaded, which reproduces how a container runs it: there node
+ *      is PID 1, and the kernel discards a signal whose disposition is the default, so
+ *      the process ends only when a shutdown handler closes the app and the event loop
+ *      drains. Without the preload a missing handler would go unnoticed here, because
+ *      outside a container the default disposition kills the process at once. Skipped
+ *      on Windows, which delivers no SIGTERM.
  *
- * Exit code: 0 when the server came up and rendered, 1 otherwise — boot
- * timeout (`bootTimeoutMs`, default 60 s), early exit of the server, a non-2xx/3xx
- * response or no response at all. The last 30 lines of server output are printed
- * on failure.
+ * Deviation from the nuxt-base-starter original (fdd137f, which carries the
+ * graceful-shutdown step as step 7), and the only one in behaviour: the second, closed
+ * port exported as `NUXT_API_URL` / `NUXT_PUBLIC_API_URL` is gone. It keeps a Nuxt SSR
+ * fetch from hanging; a Nest server reads neither variable (checked: the only mention
+ * in @lenne.tech/nest-server is a log text in better-auth.config.js), so here it would
+ * only suggest a dependency that does not exist. The shutdown-timeout message names
+ * the NestJS handler instead of Nitro's. The defaults stay the Nuxt ones so the file
+ * diffs cleanly against the original; this repo passes every option on the command line.
+ *
+ * Exit code: 0 when the server came up and rendered (and, with step 6, shut down
+ * cleanly), 1 otherwise — boot timeout (`bootTimeoutMs`, default 60 s), early exit of
+ * the server, a non-2xx/3xx response or no response at all, and with step 6 a server
+ * that outlives the shutdown limit or exits with anything but code 0. The last 30
+ * lines of server output are printed on failure.
  */
 import { execFileSync, spawn } from 'node:child_process';
 import { realpathSync } from 'node:fs';
@@ -51,6 +63,23 @@ export const NUXT_DEFAULTS = Object.freeze({
 /** Pure: whether an HTTP status counts as "rendered". `0` means no response. */
 export function isRenderedStatus(status) {
   return Number.isInteger(status) && status >= 200 && status < 400;
+}
+
+/**
+ * Node arguments that make the server treat SIGTERM / SIGINT like PID 1 in a container does:
+ * a no-op listener is registered before the entry loads, so a signal the app does not handle,
+ * or re-raises after its own handler ran (NestJS's enableShutdownHooks() does), is swallowed
+ * instead of killing the process. The process then ends only when the app closes everything
+ * that keeps the event loop alive. Passed as a `data:` module so nothing is written to disk.
+ */
+export const PID1_SIGNAL_PRELOAD = Object.freeze([
+  '--import',
+  'data:text/javascript,process.on("SIGTERM",()=>{});process.on("SIGINT",()=>{});',
+]);
+
+/** Pure: whether the way a process ended counts as a clean shutdown — exit code 0, no signal. */
+export function isCleanShutdown(code, signal) {
+  return code === 0 && (signal === null || signal === undefined);
 }
 
 /** Pure: whether a chunk of server output signals that it is listening. */
@@ -129,6 +158,25 @@ async function stop(child) {
 }
 
 /**
+ * SIGTERM the server and wait up to `timeoutMs` for it to end on its own. Resolves to how it
+ * ended plus the time it took, or null when it was still running at the limit (`stop()` then
+ * kills it). Only ever called with the child we spawned, on POSIX.
+ */
+async function shutdownWithin(child, exited, timeoutMs) {
+  const plan = killTreePlan(child.pid, 'SIGTERM');
+  if (!plan?.signal) return null;
+  const started = Date.now();
+  child.kill(plan.signal);
+  let timer;
+  const limit = new Promise((settle) => {
+    timer = setTimeout(() => settle(null), timeoutMs);
+  });
+  const result = await Promise.race([exited, limit]);
+  clearTimeout(timer);
+  return result && { ...result, ms: Date.now() - started };
+}
+
+/**
  * Boot, smoke-test, stop. Resolves to the exit code (0 ok, 1 failed); never rejects.
  * `log` receives the human-readable report lines.
  */
@@ -148,7 +196,11 @@ export async function run(options = {}, log = console.log) {
   log(`Using free port: ${port}`);
 
   const env = { ...process.env, [opts.portEnv]: String(port) };
-  const child = spawn(process.execPath, [resolve(cwd, opts.entry)], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  const checkShutdown = opts.shutdownTimeoutMs !== undefined && process.platform !== 'win32';
+  const nodeArgs = [...(checkShutdown ? PID1_SIGNAL_PRELOAD : []), resolve(cwd, opts.entry)];
+  const child = spawn(process.execPath, nodeArgs, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  // Settles once the process is gone, however it ended; the shutdown step waits on it.
+  const exited = new Promise((settle) => child.once('exit', (code, signal) => settle({ code, signal })));
 
   // Settles once with the first of: ready, exit, spawn error, timeout.
   const outcome = await new Promise((settle) => {
@@ -183,7 +235,37 @@ export async function run(options = {}, log = console.log) {
         return 1;
       }
       log(tail(5));
-      log(`Server started and rendered GET ${opts.smokePath} with HTTP ${status} - check complete`);
+      if (opts.shutdownTimeoutMs === undefined) {
+        log(`Server started and rendered GET ${opts.smokePath} with HTTP ${status} - check complete`);
+        return 0;
+      }
+      log(`Server started and rendered GET ${opts.smokePath} with HTTP ${status}`);
+      if (!checkShutdown) {
+        log('Graceful-shutdown check skipped: Windows delivers no SIGTERM - check complete');
+        return 0;
+      }
+      const seconds = opts.shutdownTimeoutMs / 1000;
+      const ended = await shutdownWithin(child, exited, opts.shutdownTimeoutMs);
+      if (!ended) {
+        log(
+          `Server did not exit within ${seconds} s after SIGTERM. In a container it would hang until the ` +
+            'orchestrator kills it, dropping in-flight requests and skipping every shutdown hook. Check that ' +
+            'the server installs a SIGTERM handler that closes it (NestJS: enableShutdownHooks(), in this ' +
+            'stack installGracefulShutdown() in src/main.ts) and that nothing keeps the event loop alive after ' +
+            'close. Last 30 log lines:',
+        );
+        log(tail(30));
+        return 1;
+      }
+      if (!isCleanShutdown(ended.code, ended.signal)) {
+        log(
+          `Server ended with exit code ${ended.code ?? '-'}, signal ${ended.signal ?? '-'} after SIGTERM ` +
+            'instead of exit code 0. Last 30 log lines:',
+        );
+        log(tail(30));
+        return 1;
+      }
+      log(`Server shut down cleanly on SIGTERM in ${(ended.ms / 1000).toFixed(1)} s - check complete`);
       return 0;
     }
     if (outcome.kind === 'exited') {
@@ -204,8 +286,9 @@ export async function run(options = {}, log = console.log) {
 }
 
 /**
- * Parse `--entry=…`, `--port-env=…`, `--path=…`, `--timeout=<seconds>` and
- * `--ready=<regex>` (repeatable; replaces the default ready patterns).
+ * Parse `--entry=…`, `--port-env=…`, `--path=…`, `--timeout=<seconds>`,
+ * `--ready=<regex>` (repeatable; replaces the default ready patterns) and
+ * `--graceful-shutdown=<seconds>` (turns on step 6).
  */
 export function parseArgs(argv) {
   const options = {};
@@ -216,7 +299,12 @@ export function parseArgs(argv) {
     else if (key === '--path') options.smokePath = value;
     else if (key === '--timeout') options.bootTimeoutMs = Number(value) * 1000;
     else if (key === '--ready') (options.readyPatterns ??= []).push(new RegExp(value));
-    else throw new Error(`Unknown argument: ${arg}`);
+    else if (key === '--graceful-shutdown') {
+      const seconds = Number(value);
+      // `!(x > 0)` also refuses NaN: a typo must not silently turn the check off.
+      if (!(seconds > 0)) throw new Error(`--graceful-shutdown needs a number of seconds above 0, got: ${value}`);
+      options.shutdownTimeoutMs = seconds * 1000;
+    } else throw new Error(`Unknown argument: ${arg}`);
   }
   return options;
 }

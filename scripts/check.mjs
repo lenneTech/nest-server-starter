@@ -123,6 +123,11 @@ function classify(cmd) {
   // is only about match precedence, and no other branch matches its command.)
   if (c.includes("prod-scripts"))
     return { fatal: true, kind: "prod-scripts", label: "prod-scripts" };
+  // `pnpm run check:unified-field-types` (nest-server 12.8.7+): every @UnifiedField whose type the SWC dev
+  // start and the tsc build read differently. Matched on the script NAME, so the vendor-mode form the lt CLI
+  // writes (`node ./bin/check-unified-field-types.js`) keeps the label too.
+  if (c.includes("unified-field-types"))
+    return { fatal: true, kind: "other", label: "unified-field-types" };
   return { fatal: true, kind: "other", label: cmd.length > 32 ? `${cmd.slice(0, 29)}…` : cmd };
 }
 
