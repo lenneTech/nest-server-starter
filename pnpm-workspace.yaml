@@ -263,7 +263,19 @@ overrides:
   # (published 2026-10-04) is the newest 4.x past the release-age gate and is where a
   # no-override resolve lands, so 4.13.12 had become a downgrade lock (no new advisory; pure
   # hold-back).
-  'hono@>=4.0.0 <4.13.13': 4.13.13
+  # 2026-11-14 (nest-server 11.46.5, which carries the same entry): raised 4.13.13 -> 4.13.18, key with
+  # it. A SECURITY raise on two fronts. The repository advisories of 2026-11-01 — GHSA-4m76-xfj5-7975 and
+  # GHSA-46wx-v44x-9hh2 (`< 4.13.16`), GHSA-h7mg-cq63-vhpq, GHSA-4h7h-rv7c-7m2v (medium) and
+  # GHSA-3gg2-335m-rxc6 (low), all fixed in 4.13.16 — have reached the global database, so `pnpm audit`
+  # and `check:overrides` were RED on 4.13.13. And four repository advisories of 2026-11-11, not in the
+  # global database yet, cover 4.13.17 as well, all medium and fixed in 4.13.18: GHSA-74fm-fwc7-3fwp
+  # (`serveStatic` with `allowPercentInPath` decodes the path twice, bypassing middleware),
+  # GHSA-39q9-qp46-w8xg (`bodyLimit()` keeps every chunk in memory), GHSA-92p4-j3wq-jmqx (`validator()`
+  # skipped for differently formatted Content-Type parameters) and GHSA-h25j-2p75-qj33 (`mount()`
+  # forwards a wrong path with a custom `getPath`). Production path: @lenne.tech/nest-server >
+  # @modelcontextprotocol/sdk (`^4.11.4`, which intersected `<4.13.13`, so the old entry PINNED it).
+  # 4.13.18 (2026-11-11) is the newest 4.x and past the release-age gate.
+  'hono@>=4.0.0 <4.13.18': 4.13.18
   # Security: @graphql-tools/utils — prototype pollution in mergeDeep (GHSA-7mx3-vvmw-hjmv, high,
   #   patched >=12.0.1) (added 2026-10-06, mirrors nest-server 11.42.4)
   # RUNTIME: mergeDeep runs while the GraphQL schema is assembled. LOAD-BEARING: @nestjs/graphql
@@ -351,7 +363,15 @@ overrides:
   # lands on 8.3.4, WITH it on 8.3.3) — raised 8.3.3 -> 8.3.4, key with it. 8.3.4 is past the
   # release-age gate and nest-server 11.42.11's own vite devDependency (requests postcss
   # ^8.5.29 = the postcss entry's target, rolldown ~1.2.12; no new advisory).
-  'vite@<8.3.4': 8.3.4
+  # 2026-11-14 (nest-server 11.46.5): raised 8.3.4 -> 8.3.8, key with it. A SECURITY raise: repository
+  # advisory GHSA-p4f5-76q4-ffq7 (critical, 2026-11-10, remote code execution through the
+  # `__vite-browser-external` virtual module) covers `>= 8.3.0, <= 8.3.6`, fixed in 8.3.7, so the old
+  # target pinned every resolve INSIDE it. Not in the global advisory database yet, so `pnpm audit` stayed
+  # green. Exploitable through a Vite dev server reachable from the network; here vite runs inside vitest
+  # only, but a project derived from this line may start one. 8.3.8 (2026-11-11) is the newest 8.x and the
+  # version the starter's main line uses. nest-server 11.46.5 still declares 8.3.4 as its own
+  # devDependency, which does not reach this install; vitest 4.1.12 requests `^6 || ^7 || ^8`.
+  'vite@<8.3.8': 8.3.8
 
   # Security: Missing buffer bounds check in uuid v3/v5/v6 generators when buf is
   # provided (GHSA-w5hq-g745-h8pq, <11.1.1). Transitive via @compodoc/compodoc.
@@ -393,7 +413,16 @@ overrides:
   # and express 5.2.1 (`^6.14.0`) request caret ranges that intersected `<6.16.0`, so once 6.16.1
   # (2026-10-14) cleared the release-age gate the old entry had become a DOWNGRADE LOCK holding every
   # path on 6.16.0.
-  'qs@<6.16.1': 6.16.1
+  # 2026-11-14: raised 6.16.1 -> 6.17.1, key with it. A SECURITY raise: repository advisory
+  # GHSA-w4cr-vjpx-p82q (low, 2026-10-27, `qs.stringify` with `allowEmptyArrays` does not encode the
+  # keys of empty arrays, so query parameters can be injected) covers `>= 6.16.0, < 6.16.2`, and the old
+  # target 6.16.1 sat inside it. It is not in the global advisory database yet, so `pnpm audit` stayed
+  # green. Target is the newest 6.x rather than the 6.16.2 floor: body-parser 2.4.0 (`^6.16.1`) and
+  # express 5.2.1 (`^6.14.0`) both intersect the key, so a 6.16.2 target would be a downgrade lock
+  # against 6.17.1 (2026-10-28, `parse` hardening against prototype keys, past the release-age gate),
+  # which is also the starter main's target. nest-server release/11.x still pins 6.16.1 (no effect on
+  # this tree: pnpm overrides do not reach consumers).
+  'qs@<6.17.1': 6.17.1
 
   # Security: Memory exhaustion DoS + uninitialized memory disclosure in ws
   # >=8.0.0 <8.21.0 (GHSA-96hv-2xvq-fx4p). Transitive via @nestjs/graphql>graphql-ws>ws
@@ -403,10 +432,18 @@ overrides:
   # you one patch behind — it puts a SECOND, older ws copy in the tree next to the
   # declared one. Raised 8.21.0 -> 8.21.3 on 2026-08-22; the upper bound moves with it
   # so the declared 8.21.3 itself is never matched. Move both when the framework moves.
-  'ws@>=8.0.0 <8.21.3': 8.21.3
+  # 2026-11-14: raised to 8.23.0, key with it, with nest-server 11.46.5, which declares 8.23.0.
+  # GHSA-37g9-w4hg-h9qr (high): unauthenticated memory-exhaustion DoS through the GraphQL
+  # WebSocket (flooded pings, buffered pongs), patched in 8.23.0. @nestjs/graphql 13.4.5
+  # exact-pins ws 8.21.3, which the old `<8.21.3` key never matched, so raising only the
+  # target would have kept the vulnerable copy. Remove once @nestjs/graphql pins ws >= 8.23.0.
+  'ws@>=8.0.0 <8.23.0': '8.23.0'
   # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — patched
   # release, raised 7.5.11 -> 7.5.13 on 2026-08-22 (latest 7.x).
-  'ws@>=7.0.0 <7.5.13': 7.5.13
+  # 2026-11-14: raised 7.5.13 -> 7.5.14, key with it. GHSA-37g9-w4hg-h9qr (see the 8.x entry)
+  # also covers `>= 7.0.0 < 7.5.14`, so the old target was itself vulnerable. This copy is live
+  # here: @nestjs/graphql 13 > subscriptions-transport-ws > ws 7. 7.5.14 (2026-11-12) is the newest 7.x.
+  'ws@>=7.0.0 <7.5.14': '7.5.14'
 
   # Security: fast-uri — FOUR advisories, all covered by 3.1.4:
   #   <=3.1.1  path traversal via percent-encoded dot segments (GHSA-q3j6-qgpj-74h6)
@@ -498,13 +535,23 @@ overrides:
   # The `>=3.0.0` lower bound also sweeps in 3.x/4.x. Those are ESM-only
   # (`type: module`), so lifting them to 5.x (dual ESM+CJS) is a widening, not a break.
   # Nothing in the tree uses them today.
-  'brace-expansion@>=3.0.0 <5.0.12': 5.0.12
-  'brace-expansion@<1.1.21': 1.1.21
+  # 2026-11-14: raised to 5.0.13 / 1.1.22 / 2.1.8, keys with them, as on the starter's main. A SECURITY
+  # raise: GHSA-6jwq-xf8q-xcwh (high, repository advisory of 2026-11-11, unbounded parsing and expansion
+  # work causes a CPU DoS) covers `< 1.1.22`, `>= 2.0.0 < 2.1.8`, `>= 3.0.0 < 3.0.10` and
+  # `>= 4.0.0 < 5.0.13`, so every old target was vulnerable. Not in the global advisory database yet, so
+  # `pnpm audit` stayed green on 5.0.12. The 5.x line reaches PRODUCTION: @lenne.tech/nest-server >
+  # ts-morph > @ts-morph/common > minimatch@10.2.6 > brace-expansion; the 1.x line is live here through
+  # @nestjs/cli > fork-ts-checker-webpack-plugin > minimatch@3. All three targets were published
+  # 2026-11-11, are past the release-age gate and the newest release in their line. nest-server
+  # release/11.x still carries the old targets (no effect on this tree).
+  'brace-expansion@>=3.0.0 <5.0.13': 5.0.13
+  'brace-expansion@<1.1.22': 1.1.22
   # Matches nothing today (the minimatch 9 -> 10 lift removed the only 2.x consumer),
   # and is kept deliberately as a floor: should a 2.x path reappear, it lands on a
   # patched release rather than reopening the advisory. (The ignoreGhsas suppression this
   # comment used to cite is gone since 2026-08-22.) Cheap insurance — do not tidy away.
-  'brace-expansion@>=2.0.0 <2.1.7': 2.1.7
+  # 2026-11-14: raised 2.1.7 -> 2.1.8, key with it, for GHSA-6jwq-xf8q-xcwh (see above).
+  'brace-expansion@>=2.0.0 <2.1.8': 2.1.8
 
   # Security: lifts every minimatch 9.x consumer onto 10.x so it inherits the PATCHED
   # brace-expansion 5.x. 10.2.6 REQUESTS ^5.0.8 itself, so the fix arrives through the
@@ -527,7 +574,23 @@ overrides:
   #
   # minimatch@3 is deliberately NOT touched: its consumer (fork-ts-checker-webpack-plugin)
   # DOES call it as a callable and would throw.
+  #
+  # KNOWN RESIDUAL (2026-11-14): repository advisory GHSA-c859-jr93-m5j4 (medium, 2026-11-11,
+  # `minimatch.escape()` output matches more or less than the literal input) covers `>= 7.4.0,
+  # <= 11.0.7` and is fixed only in 11.0.8, so 10.2.6, the newest 10.x, stays inside it. It is not in
+  # the global advisory database yet. Once it is, `pnpm audit` turns red on this copy: assess it like
+  # GHSA-g3hv-75wg-m249 in `auditConfig` above (same 10.x consumers, same cross-major fix).
   'minimatch@>=9.0.0 <10.2.6': 10.2.6
+
+  # Security, added 2026-11-14: three repository advisories cover the minimatch 11.0.4 that glob 14.0.x
+  # pulls on the rimraf path (see `rimraf>glob` below): GHSA-cf2h-pxjq-68xw (`>= 11.0.0, <= 11.0.6`),
+  # GHSA-hqmv-qgp3-jx75 (`>= 11.0.3, <= 11.0.7`) and GHSA-c859-jr93-m5j4 (`>= 7.4.0, <= 11.0.7`), all
+  # medium, published 2026-11-10/11, fixed in 11.0.8 (2026-11-11, the newest 11.x, past the release-age
+  # gate). None is in the global advisory database yet, so `pnpm audit` stays green on 11.0.4. Dev tooling
+  # only (rimraf). glob requests `^11.0.x`, which intersects the key, so this pins the newest 11.x. A
+  # separate key for the 11.x line: the 9.x -> 10.x lift above must not touch it, and this key must not
+  # touch 10.x. Mirrors the entry on the starter's main. Remove once glob requests minimatch >= 11.0.8.
+  'minimatch@>=11.0.0 <11.0.8': 11.0.8
 
   # Security, across the major (owner decision 2026-11-01 for main, applied to release/11.x on
   # 2026-11-03): GHSA-3g3m-2fjr-6pw4 (glob >=9.0.0 <=14.0.1, moderate, AbortSignal cancellation bypass,
@@ -536,7 +599,18 @@ overrides:
   # `rimraf --glob` (used here by `prune:migrations`) behaved identically on old and new major
   # (measured 2026-11-01). Scoped to rimraf on purpose: @nestjs/cli 11.0.24 exact-pins glob 13.0.6 and
   # stays under the suppression in `auditConfig`. Drop the entry once rimraf requests glob 14 itself.
-  'rimraf>glob@<14.0.2': 14.0.3
+  # 2026-11-14: raised 14.0.3 -> 14.0.6, key with it. A SECURITY raise: repository advisory
+  # GHSA-qxr8-q827-836c (low, 2026-11-12, `ignore` patterns lack the `braceExpandMax` limit applied to
+  # `pattern`) covers `>= 13.0.5, <= 14.0.5`, fixed in 14.0.6, so the old target sat inside it. Not in
+  # the global advisory database yet, so `pnpm audit` stayed green. 14.0.6 (2026-11-12, past the
+  # release-age gate) is the newest 14.x and requests minimatch `^11.0.5`, which the 11.x entry above
+  # lifts to 11.0.8. rimraf stays 6.1.3 (what nest-server 11.46.5 declares; 6.1.4 requests glob ^14.0.3
+  # itself and would make this entry unnecessary).
+  # KNOWN RESIDUAL (2026-11-14): @nestjs/cli 11.0.24 exact-pins glob 13.0.6, which is inside
+  # GHSA-qxr8-q827-836c as well; the fix exists only in the 14.x major (13.0.7 is still in range), the
+  # same situation as GHSA-3g3m-2fjr-6pw4 in `auditConfig` above. Once the advisory reaches the global
+  # database, `pnpm audit` turns red on that copy: assess it like GHSA-3g3m-2fjr-6pw4.
+  'rimraf>glob@<14.0.6': 14.0.6
 
   # Security: postcss <=8.5.17 (GHSA-r28c-9q8g-f849, high), patched >=8.5.18.
   # Dev/test only: the dominant path is this project's own `vitest` devDependency
