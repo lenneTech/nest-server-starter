@@ -294,7 +294,16 @@ overrides:
   # advisory (the newest repository advisories, 2026-11-01, are fixed in 4.13.16): the SDK's `^4.11.4`
   # intersected `<4.13.16`, and a fresh resolve without the block lands on 4.13.17 (published 2026-11-07;
   # cookie-prefix, URL-query, ETag and media-type matching fixes).
-  'hono@>=4.0.0 <4.13.17': 4.13.17
+  # 2026-11-14 (nest-server 12.9.4): raised 4.13.17 -> 4.13.18, key with it. A SECURITY raise: 4.13.18
+  # (published 2026-11-11) closes four repository advisories of 2026-11-11 that all cover 4.13.17 —
+  # GHSA-74fm-fwc7-3fwp (`serveStatic` with `allowPercentInPath` decodes the path twice, bypassing
+  # middleware), GHSA-39q9-qp46-w8xg (`bodyLimit()` keeps every chunk in memory), GHSA-92p4-j3wq-jmqx
+  # (`validator()` skipped for differently formatted Content-Type parameters, incomplete fix for
+  # GHSA-4h7h-rv7c-7m2v) and GHSA-h25j-2p75-qj33 (`mount()` forwards a wrong path with a custom
+  # `getPath`). None is in the global advisory database yet, so `pnpm audit` stayed green on 4.13.17.
+  # The SDK's `^4.11.4` intersected `<4.13.17`, so the old entry PINNED the production tree there.
+  # 4.13.18 is the newest 4.x.
+  'hono@>=4.0.0 <4.13.18': 4.13.18
 
   # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,
   # added 2026-10-06). @nestjs/graphql 14.1.0 pins the patched 12.1.0 itself, so the entry changed
@@ -437,13 +446,21 @@ overrides:
   # `unmet peer ws` against 12.0.0. Until the framework bump, this also lifts 11.43.x's
   # declared 8.21.3 — one 8.22.0 copy in both states.
   # 2026-11-09: raised to 8.22.1, key with it, with nest-server 12.8.4, which declares 8.22.1.
-  'ws@>=8.0.0 <8.22.1': 8.22.1
+  # 2026-11-14: raised to 8.23.0, key with it, with nest-server 12.9.4, which declares 8.23.0.
+  # GHSA-37g9-w4hg-h9qr (high): unauthenticated memory-exhaustion DoS through the GraphQL
+  # WebSocket (flooded pings, buffered pongs), patched in 8.23.0. @nestjs/graphql 14.2.1
+  # exact-pins ws 8.22.1, which the old `<8.22.1` key never matched, so raising only the
+  # target would have kept the vulnerable copy. Remove once @nestjs/graphql pins ws >= 8.23.0.
+  'ws@>=8.0.0 <8.23.0': '8.23.0'
   # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — patched
   # release, raised 7.5.11 -> 7.5.13 on 2026-08-22 (latest 7.x).
   # 2026-11-09: no 7.x path left in this tree (check:overrides reports it UNUSED). Kept as a pre-emptive
   # floor for generated projects: a GraphQL project that adds subscriptions-transport-ws pulls ws 7.x
   # straight back in, and lands on the patched release instead of reopening the advisory.
-  'ws@>=7.0.0 <7.5.13': 7.5.13
+  # 2026-11-14: raised 7.5.13 -> 7.5.14, key with it. GHSA-37g9-w4hg-h9qr (high, see the 8.x entry)
+  # also covers `>= 7.0.0 < 7.5.14`, so the old target was itself vulnerable. 7.5.14 (published
+  # 2026-11-12) is the newest 7.x.
+  'ws@>=7.0.0 <7.5.14': 7.5.14
 
   # Security: fast-uri — FOUR advisories, all covered by 3.1.4:
   #   <=3.1.1  path traversal via percent-encoded dot segments (GHSA-q3j6-qgpj-74h6)
@@ -533,16 +550,23 @@ overrides:
   # The `>=3.0.0` lower bound also sweeps in 3.x/4.x. Those are ESM-only
   # (`type: module`), so lifting them to 5.x (dual ESM+CJS) is a widening, not a break.
   # Nothing in the tree uses them today.
-  'brace-expansion@>=3.0.0 <5.0.12': 5.0.12
+  # 2026-11-14 (nest-server 12.9.4): raised to 5.0.13 / 1.1.22 / 2.1.8, keys with them. A SECURITY raise:
+  # GHSA-6jwq-xf8q-xcwh (high, repository advisory of 2026-11-11, unbounded parsing and expansion work
+  # causes a CPU DoS) covers `< 1.1.22`, `>= 2.0.0 < 2.1.8`, `>= 3.0.0 < 3.0.10` and `>= 4.0.0 < 5.0.13`,
+  # so every old target was vulnerable. Not in the global advisory database yet, so `pnpm audit` stayed
+  # green on 5.0.12. The 5.x line reaches PRODUCTION: @lenne.tech/nest-server > ts-morph >
+  # @ts-morph/common > minimatch@10.2.6 > brace-expansion. All three targets were published 2026-11-11
+  # and are the newest release in their line.
+  'brace-expansion@>=3.0.0 <5.0.13': 5.0.13
   # 2026-11-09: no 1.x path left in this tree (check:overrides reports it UNUSED). Kept as a pre-emptive
   # floor for generated projects: minimatch@3 is still the dependency of many tools a project adds, and
   # the 1.x line can only be patched, not lifted (see above).
-  'brace-expansion@<1.1.21': 1.1.21
+  'brace-expansion@<1.1.22': 1.1.22
   # Matches nothing today (the minimatch 9 -> 10 lift removed the only 2.x consumer),
   # and is kept deliberately as a floor: should a 2.x path reappear, it lands on a
   # patched release rather than reopening the advisory. (The ignoreGhsas suppression this
   # comment used to cite is gone since 2026-08-22.) Cheap insurance — do not tidy away.
-  'brace-expansion@>=2.0.0 <2.1.7': 2.1.7
+  'brace-expansion@>=2.0.0 <2.1.8': 2.1.8
 
   # Security: lifts every minimatch 9.x consumer onto 10.x so it inherits the PATCHED
   # brace-expansion 5.x. 10.2.6 REQUESTS ^5.0.8 itself, so the fix arrives through the
@@ -565,7 +589,23 @@ overrides:
   #
   # minimatch@3 is deliberately NOT touched: its consumer (fork-ts-checker-webpack-plugin)
   # DOES call it as a callable and would throw.
+  #
+  # KNOWN RESIDUAL (2026-11-14): repository advisory GHSA-c859-jr93-m5j4 (medium, 2026-11-11,
+  # `minimatch.escape()` output matches more or less than the literal input) covers `>= 7.4.0,
+  # <= 11.0.7` and is fixed only in 11.0.8, so 10.2.6, the newest 10.x, stays inside it. It is not in
+  # the global advisory database yet. Once it is, `pnpm audit` turns red on this copy: assess it like
+  # GHSA-g3hv-75wg-m249 in `auditConfig` above (same 10.x consumers, same cross-major fix).
   'minimatch@>=9.0.0 <10.2.6': 10.2.6
+
+  # Security, added 2026-11-14 (nest-server 12.9.4): three repository advisories cover the
+  # minimatch 11.0.5 that @nestjs/cli 12.0.13 EXACT-pins (and glob 14.0.4, via rimraf, dedupes onto):
+  # GHSA-cf2h-pxjq-68xw (`>= 11.0.0, <= 11.0.6`), GHSA-hqmv-qgp3-jx75 (`>= 11.0.3, <= 11.0.7`) and
+  # GHSA-c859-jr93-m5j4 (`>= 7.4.0, <= 11.0.7`), all medium, published 2026-11-10/11, fixed in 11.0.8
+  # (2026-11-11, the newest 11.x). None is in the global advisory database yet, so `pnpm audit` stays
+  # green on 11.0.5. Dev tooling only (@nestjs/cli, rimraf). The exact pin means no re-resolve can lift
+  # it, hence an override. A separate key for the 11.x line: the 9.x -> 10.x lift above must not touch
+  # it, and this key must not touch 10.x. Remove once @nestjs/cli pins minimatch >= 11.0.8.
+  'minimatch@>=11.0.0 <11.0.8': 11.0.8
 
   # REMOVED 2026-10-24: 'postcss@<8.5.30': 8.5.30 (GHSA-r28c-9q8g-f849 floor, dev/test only via
   # vitest > vite > postcss; raised in lockstep with nest-server, which dropped it in 12.0.0).
@@ -691,7 +731,11 @@ overrides:
   # 2026-11-11: raised 10.4.0 -> 10.4.1, key with it — nest-server 12.8.8 declares 10.4.1 (closes both
   # advisories above; migration guide 12.8.7 -> 12.8.8, §1). 10.4.1 cleared the release-age gate at
   # 08:17 UTC today, so it needs no minimumReleaseAgeExclude entry.
-  'nodemailer@<10.4.1': 10.4.1
+  # 2026-11-14: raised 10.4.1 -> 10.5.0, key with it — nest-server 12.9.4 declares 10.5.0 (published
+  # 2026-11-10; no advisory, 10.4.1 already closes the two above). Same reasoning as above: the
+  # framework's exact 10.5.0 never intersected `<10.4.1`, so the tree already held a single 10.5.0 copy;
+  # the raise keeps a `^10` requester from being pinned to a second, older 10.4.1.
+  'nodemailer@<10.5.0': 10.5.0
 
   # REMOVED 2026-10-29: 'multer@>=2.0.0 <2.5.0': 2.5.0 (GHSA-q7qp-rjg7-q26m and the older
   # multer advisories). It was a LOCKSTEP entry mirroring the framework's, and nest-server 12.1.0
