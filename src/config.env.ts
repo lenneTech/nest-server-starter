@@ -305,6 +305,29 @@ function deployedConfig(
       // exactly what the switch closes: a flow built on it stops working once the switch is set, and
       // keeping such a flow alive is how sign-up stays open for everybody.
       //
+      // Sign-in through Microsoft Entra ID for one organization, identity only. Needs nest-server
+      // 12.9.5 or later: older versions hand a provider its credentials and `disableSignUp` only and
+      // drop the other options below, so the sign-in runs against `common` with Microsoft Graph
+      // scopes, and `disableSignUp: false` then opens sign-up to every account `common` admits. The
+      // values that differ per stage come from NSC__BETTER_AUTH__SOCIAL_PROVIDERS__MICROSOFT__CLIENT_ID,
+      // __CLIENT_SECRET and __TENANT_ID (see .env.example); the provider stays off while the client
+      // id or secret is empty. Combine it with `emailAndPassword: { disableSignUp: true }` above to
+      // close e-mail sign-up while the organization's members get their account through Microsoft.
+      // A failed sign-in lands on <appUrl>/auth/login?error=<code> (`betterAuth.errorUrl`, nest-server 12.9.5+).
+      //
+      // socialProviders: {
+      //   microsoft: {
+      //     clientId: '', // NSC__…__CLIENT_ID: the app registration's application (client) id
+      //     clientSecret: '', // NSC__…__CLIENT_SECRET
+      //     // tenantId from NSC__…__TENANT_ID. Unset, Better-Auth signs in through `common`, which admits
+      //     // accounts of every organization and personal Microsoft accounts.
+      //     disableDefaultScope: true, // leave out Better-Auth's default User.Read and offline_access
+      //     scope: ['openid', 'profile', 'email'], // identity only: no Graph scope, no refresh token
+      //     disableProfilePhoto: true, // no Graph request for the profile photo on every sign-in
+      //     disableSignUp: false, // a member's first Microsoft sign-in creates the account
+      //   },
+      // },
+      //
       // Route-level limiter for all /iam/* endpoints. Presence of the object enables it — an
       // explicit `enabled: false` pre-configures without switching it on. Set `trustProxy` (below)
       // whenever you turn this on behind a reverse proxy, or every client shares one bucket.
