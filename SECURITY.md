@@ -85,7 +85,7 @@ Two guards, one per way an entry goes wrong, and an entry needs both:
 
 | Question | Guard | Fails when |
 |----------|-------|------------|
-| Is it still TRUE? | `pnpm run check:overrides` (part of `check`) | the GitHub advisory gains a patched version or is withdrawn — the entry is obsolete, remove it. Under `CI` an unreachable API fails too, so the workflow passes `GITHUB_TOKEN` |
+| Is it still TRUE? | `pnpm run check:overrides` (part of `check`) | the GitHub advisory gains a patched version, or is withdrawn and npm's audit no longer lists it — the entry is obsolete, remove it. While npm still lists a withdrawn advisory (its feed lags GitHub; about 1.5 h for GHSA-fc5q-39xc-vjpf), the run passes and names it, because removing the entry would turn `pnpm audit` red. Under `CI` an unreachable API fails too, so the workflow passes `GITHUB_TOKEN` |
 | Is the THIRD claim still true? | the same guard, against `auditConfig.unusableFixConsumers` | the declared consumer moves or leaves the tree, the advisory gains a patched version nobody assessed (a BACKPORT into a line the consumer *can* use), anything other than the declared `consumer@version` entries starts pulling the affected package — including a dependency this repository declares itself, which is a version bump nobody made rather than a dead end —, or a declared consumer stops pulling it |
 | Is it still in SCOPE? | `tests/unit/audit-suppression-scope.spec.ts` | the package reaches the PRODUCTION tree beyond what its entry allows (none at all, or only under the parent its `prodVia` names), or an entry has no matching case there |
 

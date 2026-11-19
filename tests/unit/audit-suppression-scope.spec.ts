@@ -31,10 +31,11 @@ const ROOT = join(import.meta.dirname, '../..');
  * `check:overrides`). Its sibling GHSA-3g3m-2fjr-6pw4 (glob, via rimraf) left on 2026-11-02, when the override
  * `'rimraf>glob@<14.0.2': 14.0.3` lifted the only vulnerable glob; its assessment stays commented out there.
  *
- * - GHSA-g3hv-75wg-m249 (minimatch): reaches production through exactly ONE parent, `@ts-morph/common` (ts-morph, a
- *   dependency of @lenne.tech/nest-server and @nestjs/graphql), which matches globs the developer writes. The argument
- *   is "no request input reaches the matcher", and it holds only for that parent, so any other production parent
- *   voids it (`prodVia`) — in this tree and in every project generated from it.
+ * - GHSA-g3hv-75wg-m249 (minimatch): dev tooling only (nodemon, @swc/cli). Until 2026-11-19 it reached production
+ *   through `@ts-morph/common` (ts-morph, a dependency of @lenne.tech/nest-server and @nestjs/graphql), guarded here in
+ *   the `prodVia` form; @ts-morph/common 0.29.1 moved to minimatch 11, so no vulnerable minimatch (< 11.0.1) may appear
+ *   in the production tree at all any more — in this tree and in every project generated from it (same change as
+ *   nest-server 12.10.1).
  *
  * Empty from 2026-10-24 until then. GHSA-vfj7-8cjw-p6xm (braces, since 2026-10-03) had an entry here, an
  * advisory with NO patched release at all, reached only through dev tooling. GitHub withdrew it
@@ -86,7 +87,8 @@ const ROOT = join(import.meta.dirname, '../..');
  * when upstream moves, not when your own reasoning stopped applying.
  */
 const DEV_ONLY_SUPPRESSIONS: { ghsa: string; pkg: string; prodVia?: string; vulnerableInProd: RegExp }[] = [
-  { ghsa: 'GHSA-g3hv-75wg-m249', pkg: 'minimatch', prodVia: '@ts-morph/common', vulnerableInProd: /minimatch@/ },
+  // Vulnerable range is < 11.0.1; the production tree carries minimatch 11 only (via @ts-morph/common 0.29.1).
+  { ghsa: 'GHSA-g3hv-75wg-m249', pkg: 'minimatch', vulnerableInProd: /minimatch@(?:\d|10)\.|minimatch@11\.0\.0\b/ },
 ];
 
 /**

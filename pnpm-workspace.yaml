@@ -123,12 +123,15 @@ auditConfig:
     # ACTIVE since 2026-11-01 (owner decision, mirroring nest-server's entries of 2026-10-31, DEV-3899),
     # re-verified 2026-11-09 with nest-server 12.8.5.
     # GHSA-g3hv-75wg-m249 (minimatch < 11.0.1, moderate, DoS through globparts amplification). The fix exists
-    # only in the new major (minimatch 11.0.1, released 2026-10-27). @nestjs/cli 12.0.12 moved to minimatch 11;
-    # the consumers left are each on their newest release without it: @ts-morph/common 0.29.0 (via ts-morph, a
-    # dependency of @lenne.tech/nest-server and @nestjs/graphql) and nodemon 3.1.14 need ^10, @swc/cli 0.8.2
-    # needs ^9. An override across the major is ruled out by the fixed-target rule, and
-    # minimatch 11 removed `makeRe()` and `Minimatch#regexp`. Every path matches patterns the DEVELOPER
-    # writes (tsconfig and scanner globs, CLI file arguments), never request input.
+    # only in the new major (minimatch 11.0.1, released 2026-10-27). @nestjs/cli 12.0.12 moved to minimatch 11,
+    # and so did @ts-morph/common 0.29.1 (2026-11-16, `^11.0.1`; ts-morph 28.0.0 requests `~0.29.0`), which
+    # removed the only PRODUCTION path (@lenne.tech/nest-server > ts-morph): a fresh resolve takes 0.29.1, so
+    # the declaration below dropped `@ts-morph/common@0.29.0` on 2026-11-19, or check:overrides failed with
+    # RE-TEST in every newly generated project. The consumers left are dev tooling, each on its newest
+    # release without the fix: nodemon 3.1.14 needs ^10, @swc/cli 0.8.2 needs ^9. An override across the
+    # major is ruled out by the fixed-target rule, and minimatch 11 removed `makeRe()` and
+    # `Minimatch#regexp`. Every path matches patterns the DEVELOPER writes (CLI file arguments, watch
+    # globs), never request input.
     # Hoisted into every generated project (point 1 at the top of the starter's pnpm-workspace.yaml):
     # there, too, check:overrides fails with RE-TEST once a consumer moves or a second one appears, and
     # tests/unit/audit-suppression-scope.spec.ts fails once minimatch reaches production through any
@@ -136,7 +139,7 @@ auditConfig:
     # Re-verify when any of these consumers releases a version on minimatch 11.
     - GHSA-g3hv-75wg-m249
   unusableFixConsumers:
-    GHSA-g3hv-75wg-m249: '@swc/cli@0.8.2 + @ts-morph/common@0.29.0 + nodemon@3.1.14 cannot use 11.0.1'
+    GHSA-g3hv-75wg-m249: '@swc/cli@0.8.2 + nodemon@3.1.14 cannot use 11.0.1'
 
 # pnpm 11 configuration
 #
@@ -303,7 +306,11 @@ overrides:
   # `getPath`). None is in the global advisory database yet, so `pnpm audit` stayed green on 4.13.17.
   # The SDK's `^4.11.4` intersected `<4.13.17`, so the old entry PINNED the production tree there.
   # 4.13.18 is the newest 4.x.
-  'hono@>=4.0.0 <4.13.18': 4.13.18
+  # 2026-11-19: raised 4.13.18 -> 4.13.19, key with it. Pure hold-back, no new advisory (the newest
+  # repository advisories, 2026-11-11, are fixed in 4.13.18): the SDK's `^4.11.4` intersected `<4.13.18`,
+  # so the entry held the production tree on 4.13.18 after 4.13.19 (published 2026-11-16; JSX/DOM, proxy
+  # header and method-override fixes) had cleared the release-age gate. 4.13.19 is the newest 4.x.
+  'hono@>=4.0.0 <4.13.19': 4.13.19
 
   # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,
   # added 2026-10-06). @nestjs/graphql 14.1.0 pins the patched 12.1.0 itself, so the entry changed
@@ -605,7 +612,21 @@ overrides:
   # green on 11.0.5. Dev tooling only (@nestjs/cli, rimraf). The exact pin means no re-resolve can lift
   # it, hence an override. A separate key for the 11.x line: the 9.x -> 10.x lift above must not touch
   # it, and this key must not touch 10.x. Remove once @nestjs/cli pins minimatch >= 11.0.8.
-  'minimatch@>=11.0.0 <11.0.8': 11.0.8
+  # 2026-11-19: raised 11.0.8 -> 11.0.9, key with it, mirroring nest-server's entry for 12.10.0. Pure
+  # hold-back, no new advisory: glob 14 (via rimraf) requests `^11.0.5`, which intersected `<11.0.8`, so the
+  # entry held every ^11 consumer below the 11.0.9 (published 2026-11-16; numeric ranges inside extglobs)
+  # that a fresh resolve gives them. 11.0.9 is the newest 11.x.
+  'minimatch@>=11.0.0 <11.0.9': 11.0.9
+
+  # Security, added 2026-11-19 (nest-server 12.10.0, same entry): GHSA-5jr9-983r-c8x4 (high, ReDoS in the
+  # nesting regexp via an unclosed $t( in interpolated values, patched 26.4.4) and GHSA-6jcc-5g8w-32mx
+  # (medium, patched 26.3.4). @compodoc/compodoc 2.0.0 (newest) exact-pins i18next 26.3.3 for its own UI
+  # strings, so no re-resolve can lift it. Dev tooling only (`pnpm run docs`). Target is the oldest 26.x
+  # that clears both (published 2026-10-12). Neither is in GitHub's global database yet (repository
+  # advisories only), so `pnpm audit` did not report them. GHSA-q76c-gcvw-89x9 (high) is fixed only in
+  # 27.1.3, a new major: once the global database lists it, decide it like GHSA-g3hv (`auditConfig`).
+  # Remove once compodoc pins >= 26.4.4.
+  'i18next@>=26.0.0 <26.4.4': 26.4.4
 
   # REMOVED 2026-10-24: 'postcss@<8.5.30': 8.5.30 (GHSA-r28c-9q8g-f849 floor, dev/test only via
   # vitest > vite > postcss; raised in lockstep with nest-server, which dropped it in 12.0.0).
@@ -735,7 +756,10 @@ overrides:
   # 2026-11-10; no advisory, 10.4.1 already closes the two above). Same reasoning as above: the
   # framework's exact 10.5.0 never intersected `<10.4.1`, so the tree already held a single 10.5.0 copy;
   # the raise keeps a `^10` requester from being pinned to a second, older 10.4.1.
-  'nodemailer@<10.5.0': 10.5.0
+  # 2026-11-19: raised 10.5.0 -> 10.6.0, key with it — nest-server 12.10.0 declares 10.6.0 (published
+  # 2026-11-15, no advisory). Same reasoning: the framework's exact 10.6.0 never intersected `<10.5.0`,
+  # and the raise keeps a `^10` requester from being pinned to a second, older 10.5.0.
+  'nodemailer@<10.6.0': 10.6.0
 
   # REMOVED 2026-10-29: 'multer@>=2.0.0 <2.5.0': 2.5.0 (GHSA-q7qp-rjg7-q26m and the older
   # multer advisories). It was a LOCKSTEP entry mirroring the framework's, and nest-server 12.1.0
