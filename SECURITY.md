@@ -51,10 +51,10 @@ So a suppression is not only a statement about today's tree — it is a standing
 detection. Whenever a suppressed advisory affects a package that also has a production
 path, record that explicitly and state what to re-check after a dependency bump. The
 retired assessments kept as comments there follow that shape — copy it: `GHSA-vfj7-8cjw-p6xm`
-(withdrawn by GitHub on 2026-10-23) and `GHSA-ch52-4w7c-c8xp`. On this maintenance line three
-entries are active since 2026-11-03: `GHSA-gcqx-w48m-w2h4` (deepmerge, no patched release, dev
-tooling only) and two third-claim residuals, `GHSA-g3hv-75wg-m249` (minimatch) and
-`GHSA-3g3m-2fjr-6pw4` (glob, under `@nestjs/cli` 11): minimatch reaches the production tree
+(withdrawn by GitHub on 2026-10-23), `GHSA-gcqx-w48m-w2h4` (deepmerge, active from 2026-11-03,
+withdrawn by GitHub on 2026-11-16, removed with 11.46.6) and `GHSA-ch52-4w7c-c8xp`. On this
+maintenance line two entries are active since 2026-11-03, both third-claim residuals:
+`GHSA-g3hv-75wg-m249` (minimatch) and `GHSA-3g3m-2fjr-6pw4` (glob, under `@nestjs/cli` 11): minimatch reaches the production tree
 through `@ts-morph/common` only, and the scope spec fails as soon as any other production parent
 appears.
 

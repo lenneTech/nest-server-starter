@@ -26,13 +26,12 @@ const ROOT = join(__dirname, '../..');
 /**
  * Packages whose advisories are currently suppressed, and the production reach each justification allows.
  *
- * On release/11.x since 2026-11-03 (starter 11.43.4), three entries. Two mirror main's owner decision of 2026-11-01
+ * On release/11.x since 2026-11-03 (starter 11.43.4), two entries that mirror main's owner decision of 2026-11-01
  * (nest-server's DEV-3899 entries of 2026-10-31): a fix only in a new major that no consumer can take yet
- * (`unusableFixConsumers` in `pnpm-workspace.yaml`, re-tested by `check:overrides`). The third mirrors
- * nest-server 11.43.4: an advisory with no patched release at all.
- *
- * - GHSA-gcqx-w48m-w2h4 (deepmerge, via @nestjs/cli 11 > fork-ts-checker-webpack-plugin): dev tooling only — any
- *   deepmerge in the production tree voids it.
+ * (`unusableFixConsumers` in `pnpm-workspace.yaml`, re-tested by `check:overrides`). A third, GHSA-gcqx-w48m-w2h4
+ * (deepmerge, via @nestjs/cli 11 > fork-ts-checker-webpack-plugin, an advisory with no patched release at all), was
+ * here from 11.43.4 until 11.46.6: GitHub withdrew it on 2026-11-16, and entry and guard left together, as in
+ * nest-server 11.46.6.
  * - GHSA-3g3m-2fjr-6pw4 (glob, via @nestjs/cli 11, which pins 13.0.6; rimraf's glob is lifted by an override): dev
  *   tooling only — any glob in the production tree voids it.
  * - GHSA-g3hv-75wg-m249 (minimatch): reaches production through exactly ONE parent, `@ts-morph/common` (ts-morph, a
@@ -90,7 +89,6 @@ const ROOT = join(__dirname, '../..');
  * when upstream moves, not when your own reasoning stopped applying.
  */
 const DEV_ONLY_SUPPRESSIONS: { ghsa: string; pkg: string; prodVia?: string; vulnerableInProd: RegExp }[] = [
-  { ghsa: 'GHSA-gcqx-w48m-w2h4', pkg: 'deepmerge', vulnerableInProd: /deepmerge@/ },
   { ghsa: 'GHSA-3g3m-2fjr-6pw4', pkg: 'glob', vulnerableInProd: /glob@/ },
   { ghsa: 'GHSA-g3hv-75wg-m249', pkg: 'minimatch', prodVia: '@ts-morph/common', vulnerableInProd: /minimatch@/ },
 ];
