@@ -76,4 +76,17 @@ export class Meta extends CoreModel {
     // If something comes up, you can use `mapClasses` / `mapClassesAsync` from ModelHelper.
     return this;
   }
+
+  /**
+   * Verification of the user's rights to access the properties of this object
+   *
+   * Meta is public on purpose: `GET /meta` and the `getMeta` query answer every caller, signed in
+   * or not (`@Roles(S_EVERYONE)`), and every field is `@Restricted(S_EVERYONE)`. Title, package,
+   * version, environment and commit identify the running build, so a frontend can tell whether
+   * it talks to the API it was deployed with. A field added here that is not meant for everybody
+   * is removed in this method for callers without the role, and gets its own `@Restricted`.
+   */
+  override securityCheck(_user: unknown, _force?: boolean) {
+    return this;
+  }
 }

@@ -335,6 +335,12 @@ function deployedConfig(
       //     scope: ['openid', 'profile', 'email'], // identity only: no Graph scope, no refresh token
       //     disableProfilePhoto: true, // no Graph request for the profile photo on every sign-in
       //     disableSignUp: false, // a member's first Microsoft sign-in creates the account
+      //     // Sign-in only through the redirect to Microsoft. Without it, POST /iam/sign-in/social and
+      //     // /iam/link-social accept a Microsoft ID token directly: the one a user's last sign-in stored,
+      //     // which POST /iam/get-access-token hands back, opens a new session without asking Microsoft
+      //     // until about an hour after that sign-in, also after the organization revoked the user's
+      //     // access. The redirect flow does not use that path and keeps working.
+      //     disableIdTokenSignIn: true,
       //   },
       // },
       //
