@@ -423,10 +423,19 @@ overrides:
   # range to the override target, so a target left on 8.21.3 makes `pnpm peers check` report
   # `unmet peer ws` against 12.0.0. Until the framework bump, this also lifts 11.43.x's
   # declared 8.21.3 — one 8.22.0 copy in both states.
-  'ws@>=8.0.0 <8.22.0': 8.22.0
+  # 2026-11-23 (release/12.6.x, nest-server 12.6.12): GHSA-37g9-w4hg-h9qr (high, published 2026-11-12):
+  # memory-exhaustion DoS through unbounded automatic pong replies, a client floods ping frames without
+  # reading, before any authentication. Patched in 8.23.0 and 7.5.14. The GraphQL WebSocket server runs
+  # on @nestjs/graphql's own ws, and @nestjs/graphql 14.1.2 exact-pins ws 8.22.0, so the declared `ws`
+  # of nest-server alone cannot lift it. Key REPLACED, not only the target raised: the old key
+  # `<8.22.0` never matched that exact 8.22.0 (migration guide 12.6.11 -> 12.6.12, §6). Target in
+  # lockstep with the ws version nest-server 12.6.12 declares. Check: `pnpm why ws` lists one 8.23.0.
+  'ws@>=8.0.0 <8.23.0': 8.23.0
   # The 7.x line (deprecated subscriptions-transport-ws>ws) stays on 7.x — patched
   # release, raised 7.5.11 -> 7.5.13 on 2026-08-22 (latest 7.x).
-  'ws@>=7.0.0 <7.5.13': 7.5.13
+  # 2026-11-23: raised 7.5.13 -> 7.5.14, key with it — GHSA-37g9-w4hg-h9qr covers 7.x as well and is
+  # patched in 7.5.14. No ws 7 is in this tree today; the floor guards a generated project that adds one.
+  'ws@>=7.0.0 <7.5.14': 7.5.14
 
   # Security: fast-uri — FOUR advisories, all covered by 3.1.4:
   #   <=3.1.1  path traversal via percent-encoded dot segments (GHSA-q3j6-qgpj-74h6)
