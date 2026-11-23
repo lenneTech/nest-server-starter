@@ -15,7 +15,8 @@ import { describe, expect, it } from 'vitest';
  * access there. The redirect flow never takes that path.
  *
  * The first case also holds in a project that switched the example on (uncommented) and skips once
- * the project removed the Microsoft block altogether.
+ * the project removed the Microsoft block altogether. The last case pins nest-server's default: a
+ * provider without the option is closed as well.
  *
  * The cases build the REAL Better-Auth instance through nest-server with the example's options and
  * call Better-Auth's own handler. The token is not a JWT, so the verifier refuses it without a
@@ -88,5 +89,10 @@ describe('Microsoft Entra ID example (src/config.env.ts)', () => {
     const code = await idTokenSignInCode({ ...EXAMPLE, disableIdTokenSignIn: false });
     expect(code).toBeDefined();
     expect(code).not.toBe('ID_TOKEN_NOT_SUPPORTED');
+  });
+
+  it('refuses a submitted ID token without the option, the default since nest-server 12.11.0', async () => {
+    const { disableIdTokenSignIn: _default, ...withoutOption } = EXAMPLE;
+    expect(await idTokenSignInCode(withoutOption)).toBe('ID_TOKEN_NOT_SUPPORTED');
   });
 });

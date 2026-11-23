@@ -310,7 +310,12 @@ overrides:
   # repository advisories, 2026-11-11, are fixed in 4.13.18): the SDK's `^4.11.4` intersected `<4.13.18`,
   # so the entry held the production tree on 4.13.18 after 4.13.19 (published 2026-11-16; JSX/DOM, proxy
   # header and method-override fixes) had cleared the release-age gate. 4.13.19 is the newest 4.x.
-  'hono@>=4.0.0 <4.13.19': 4.13.19
+  # 2026-11-23 (nest-server 12.11.0): raised 4.13.19 -> 4.13.20, key with it. Pure hold-back, no new
+  # advisory (the newest repository advisories, 2026-11-11, are fixed in 4.13.18): the SDK's `^4.11.4`
+  # intersected `<4.13.19`, so the entry held the production tree on 4.13.19 after 4.13.20 (published
+  # 2026-11-22; cookie, compress-on-HEAD, client and JSX fixes) had cleared the release-age gate. 4.13.21
+  # (published 2026-11-23 09:59 UTC) is still inside the gate; take it in the next run.
+  'hono@>=4.0.0 <4.13.20': 4.13.20
 
   # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,
   # added 2026-10-06). @nestjs/graphql 14.1.0 pins the patched 12.1.0 itself, so the entry changed
@@ -604,19 +609,13 @@ overrides:
   # GHSA-g3hv-75wg-m249 in `auditConfig` above (same 10.x consumers, same cross-major fix).
   'minimatch@>=9.0.0 <10.2.6': 10.2.6
 
-  # Security, added 2026-11-14 (nest-server 12.9.4): three repository advisories cover the
-  # minimatch 11.0.5 that @nestjs/cli 12.0.13 EXACT-pins (and glob 14.0.4, via rimraf, dedupes onto):
-  # GHSA-cf2h-pxjq-68xw (`>= 11.0.0, <= 11.0.6`), GHSA-hqmv-qgp3-jx75 (`>= 11.0.3, <= 11.0.7`) and
-  # GHSA-c859-jr93-m5j4 (`>= 7.4.0, <= 11.0.7`), all medium, published 2026-11-10/11, fixed in 11.0.8
-  # (2026-11-11, the newest 11.x). None is in the global advisory database yet, so `pnpm audit` stays
-  # green on 11.0.5. Dev tooling only (@nestjs/cli, rimraf). The exact pin means no re-resolve can lift
-  # it, hence an override. A separate key for the 11.x line: the 9.x -> 10.x lift above must not touch
-  # it, and this key must not touch 10.x. Remove once @nestjs/cli pins minimatch >= 11.0.8.
-  # 2026-11-19: raised 11.0.8 -> 11.0.9, key with it, mirroring nest-server's entry for 12.10.0. Pure
-  # hold-back, no new advisory: glob 14 (via rimraf) requests `^11.0.5`, which intersected `<11.0.8`, so the
-  # entry held every ^11 consumer below the 11.0.9 (published 2026-11-16; numeric ranges inside extglobs)
-  # that a fresh resolve gives them. 11.0.9 is the newest 11.x.
-  'minimatch@>=11.0.0 <11.0.9': 11.0.9
+  # REMOVED 2026-11-23 (nest-server 12.11.0): 'minimatch@>=11.0.0 <11.0.9': 11.0.9 (added 2026-11-14 for
+  # GHSA-cf2h-pxjq-68xw, GHSA-hqmv-qgp3-jx75 and GHSA-c859-jr93-m5j4, all fixed in 11.0.8). Its removal
+  # condition is met: @nestjs/cli 12.0.15 exact-pins minimatch 11.0.9 itself, and nest-server 12.11.0
+  # dropped its own copy (migration guide 12.10.x -> 12.11.x, §8). Two fresh resolves, with and without the
+  # entry, gave the identical package set: minimatch 10.2.6 (@swc/cli, nodemon) and 11.0.9 (@nestjs/cli,
+  # @ts-morph/common, glob via rimraf), no 11.x below 11.0.9. Bring it back only if a consumer pins an 11.x
+  # below 11.0.8 again.
 
   # Security, added 2026-11-19 (nest-server 12.10.0, same entry): GHSA-5jr9-983r-c8x4 (high, ReDoS in the
   # nesting regexp via an unclosed $t( in interpolated values, patched 26.4.4) and GHSA-6jcc-5g8w-32mx
@@ -759,7 +758,11 @@ overrides:
   # 2026-11-19: raised 10.5.0 -> 10.6.0, key with it — nest-server 12.10.0 declares 10.6.0 (published
   # 2026-11-15, no advisory). Same reasoning: the framework's exact 10.6.0 never intersected `<10.5.0`,
   # and the raise keeps a `^10` requester from being pinned to a second, older 10.5.0.
-  'nodemailer@<10.6.0': 10.6.0
+  # 2026-11-23: raised 10.6.0 -> 10.6.1, key with it — nest-server 12.11.0 declares 10.6.1 (published
+  # 2026-11-20; DKIM signs List-Unsubscribe-Post, fetch identifies cookies by name/domain/path; no advisory).
+  # Same reasoning: the framework's exact 10.6.1 never intersected `<10.6.0`, so the tree already held a
+  # single 10.6.1 copy; the raise keeps a `^10` requester from being pinned to a second, older 10.6.0.
+  'nodemailer@<10.6.1': 10.6.1
 
   # REMOVED 2026-10-29: 'multer@>=2.0.0 <2.5.0': 2.5.0 (GHSA-q7qp-rjg7-q26m and the older
   # multer advisories). It was a LOCKSTEP entry mirroring the framework's, and nest-server 12.1.0

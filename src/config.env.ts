@@ -325,6 +325,11 @@ function deployedConfig(
       // close e-mail sign-up while the organization's members get their account through Microsoft.
       // A failed sign-in lands on the page `errorUrl` (above) names.
       //
+      // Microsoft as the only way in (`emailAndPassword: { enabled: false }`) switches Passkey and
+      // two-factor off since nest-server 12.11.0: a passkey registered once would keep signing its
+      // owner in after the organization withdrew the access. `twoFactor` below then logs a warning;
+      // keep a factor deliberately with `passkey: true` or `twoFactor: { …, enabled: true }`.
+      //
       // socialProviders: {
       //   microsoft: {
       //     clientId: '', // NSC__…__CLIENT_ID: the app registration's application (client) id
@@ -335,14 +340,23 @@ function deployedConfig(
       //     scope: ['openid', 'profile', 'email'], // identity only: no Graph scope, no refresh token
       //     disableProfilePhoto: true, // no Graph request for the profile photo on every sign-in
       //     disableSignUp: false, // a member's first Microsoft sign-in creates the account
-      //     // Sign-in only through the redirect to Microsoft. Without it, POST /iam/sign-in/social and
-      //     // /iam/link-social accept a Microsoft ID token directly: the one a user's last sign-in stored,
-      //     // which POST /iam/get-access-token hands back, opens a new session without asking Microsoft
-      //     // until about an hour after that sign-in, also after the organization revoked the user's
-      //     // access. The redirect flow does not use that path and keeps working.
+      //     // Sign-in only through the redirect to Microsoft. nest-server sets this for every social
+      //     // provider since 12.11.0, so the line states the default. Only `false` opens
+      //     // POST /iam/sign-in/social and /iam/link-social for a Microsoft ID token sent directly (up to
+      //     // 12.10.x, leaving the line out did): the one a user's last sign-in stored, which
+      //     // POST /iam/get-access-token hands back, opens a new session without asking Microsoft until
+      //     // about an hour after that sign-in, also after the organization revoked the user's access.
+      //     // The redirect flow does not use that path and keeps working.
       //     disableIdTokenSignIn: true,
       //   },
       // },
+      //
+      // Sessions last 7 days and are extended once a day while they are used, so a session used every
+      // day never ends and a withdrawal at the sign-in provider never reaches it. A fixed lifetime signs
+      // the user out after that many hours, every time, and the next sign-in asks Microsoft again
+      // (nest-server 12.11.0+; NSC__BETTER_AUTH__SESSION__EXPIRES_IN_HOURS / __EXTEND_ON_USE):
+      //
+      // session: { expiresInHours: 8, extendOnUse: false },
       //
       // Route-level limiter for all /iam/* endpoints. Presence of the object enables it — an
       // explicit `enabled: false` pre-configures without switching it on. Set `trustProxy` (below)
@@ -539,6 +553,12 @@ function deployedConfig(
     // installProcessDiagnostics() force-exits after 30s). Exceed any of them and the
     // process is SIGKILLed mid-wait with no hook running. >10000 warns, >60000 caps.
     //   shutdownDelayMs: 5000,
+    //
+    // A load balancer that polls readiness drains the replica during that delay (nest-server
+    // 12.11.0+): `healthCheck: { ...PROJECT_HEALTH_CHECK, readiness: true }` mounts
+    // GET /health-check/ready, which answers 503 `shutting_down` from the first SIGTERM on and 503
+    // while the database or build check fails. GET /health-check (the Dockerfile's HEALTHCHECK) stays
+    // as it is. From the environment: NSC__HEALTH_CHECK__READINESS=true.
     //
     // Storage note: `file.storage` and `s3` are deliberately NOT set here. Unset,
     // the driver derives to GridFS (a database is configured, no `s3` block is) —
