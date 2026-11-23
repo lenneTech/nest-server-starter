@@ -7,8 +7,9 @@ import { describe, expect, it } from 'vitest';
 /**
  * The commented Microsoft Entra ID example in `src/config.env.ts` signs in through the redirect only.
  *
- * Without `disableIdTokenSignIn`, Better-Auth's `POST /iam/sign-in/social` (and `/iam/link-social`)
- * accepts a Microsoft ID token directly. A signed-in user can read the ID token of their last
+ * With `disableIdTokenSignIn: false` (and up to nest-server 12.10.x without the option, which 12.11.0
+ * closes by default), Better-Auth's `POST /iam/sign-in/social` (and `/iam/link-social`) accepts a
+ * Microsoft ID token directly. A signed-in user can read the ID token of their last
  * Microsoft sign-in back (`POST /iam/get-access-token`), and until about an hour after that sign-in
  * it opens a new session without asking Microsoft, also after the organization revoked the user's
  * access there. The redirect flow never takes that path.
@@ -83,9 +84,8 @@ describe('Microsoft Entra ID example (src/config.env.ts)', () => {
     expect(await idTokenSignInCode(EXAMPLE)).toBe('ID_TOKEN_NOT_SUPPORTED');
   });
 
-  it('would verify a submitted ID token without the option, so the option is what closes the path', async () => {
-    const { disableIdTokenSignIn: _closed, ...open } = EXAMPLE;
-    const code = await idTokenSignInCode(open);
+  it('would verify a submitted ID token with the option set to false, so the option is what closes the path', async () => {
+    const code = await idTokenSignInCode({ ...EXAMPLE, disableIdTokenSignIn: false });
     expect(code).toBeDefined();
     expect(code).not.toBe('ID_TOKEN_NOT_SUPPORTED');
   });
