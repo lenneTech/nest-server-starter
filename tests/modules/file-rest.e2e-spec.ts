@@ -268,6 +268,29 @@ describe('File Module REST (e2e)', () => {
     expect(res).toEqual(null);
   });
 
+  // Browsers send the multipart filename as raw UTF-8 bytes without a charset parameter, and multer
+  // reads such parameters as latin1 by default: `Prüfbericht.pdf` was stored as `PrÃ¼fbericht.pdf`
+  // and offered under that name on every download.
+  it('uploadFileViaREST keeps a UTF-8 filename', async () => {
+    const filename = `Prüfbericht Müller ${Math.random().toString(36).substring(7)}.txt`;
+    const local = path.join(fixtureDir, filename);
+    await fs.promises.writeFile(local, 'Hello UTF-8', { flag: 'wx' });
+
+    const uploaded = await testHelper.rest('/files/upload', {
+      attachments: { file: local },
+      cookies: users[0].token,
+      statusCode: 201,
+    });
+    expect(uploaded.filename).toEqual(filename);
+
+    const download = await testHelper.download(`/files/id/${uploaded.id}`, { cookies: users[0].token });
+    expect(download.statusCode).toEqual(200);
+    expect(download.headers['content-disposition']).toContain(`filename*=UTF-8''${encodeURIComponent(filename)}`);
+
+    const deleted = await testHelper.rest(`/files/${uploaded.id}`, { cookies: users[0].token, method: 'DELETE' });
+    expect(deleted.id).toEqual(uploaded.id);
+  });
+
   // ===================================================================================================================
   // Permission tests
   //
