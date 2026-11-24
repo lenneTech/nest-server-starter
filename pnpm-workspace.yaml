@@ -315,7 +315,12 @@ overrides:
   # intersected `<4.13.19`, so the entry held the production tree on 4.13.19 after 4.13.20 (published
   # 2026-11-22; cookie, compress-on-HEAD, client and JSX fixes) had cleared the release-age gate. 4.13.21
   # (published 2026-11-23 09:59 UTC) is still inside the gate; take it in the next run.
-  'hono@>=4.0.0 <4.13.20': 4.13.20
+  # 2026-11-24 (nest-server 12.11.1): raised 4.13.20 -> 4.13.21, key with it. Pure hold-back, no new
+  # advisory (the newest repository advisories, 2026-11-11, are fixed in 4.13.18): the SDK's `^4.11.4`
+  # intersected `<4.13.20`, and a fresh resolve without the block lands on 4.13.21 (published 2026-11-23
+  # 09:59 UTC, past the release-age gate; `hono/jwt` accepts only the canonical Base64URL signature,
+  # `hono/client` path params can no longer change the host). 4.13.21 is the newest 4.x.
+  'hono@>=4.0.0 <4.13.21': 4.13.21
 
   # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,
   # added 2026-10-06). @nestjs/graphql 14.1.0 pins the patched 12.1.0 itself, so the entry changed
@@ -569,7 +574,12 @@ overrides:
   # green on 5.0.12. The 5.x line reaches PRODUCTION: @lenne.tech/nest-server > ts-morph >
   # @ts-morph/common > minimatch@10.2.6 > brace-expansion. All three targets were published 2026-11-11
   # and are the newest release in their line.
-  'brace-expansion@>=3.0.0 <5.0.13': 5.0.13
+  # 2026-11-24 (nest-server 12.11.1): raised the 5.x target 5.0.13 -> 5.1.0, key with it. Pure hold-back, no
+  # new advisory: minimatch 10.2.6 (`^5.0.8`) and 11.0.9 (`^5.0.12`) intersected `<5.0.13`, so the entry
+  # pinned 5.0.13, and a fresh resolve without the block lands on 5.1.0 (published 2026-11-23 15:56 UTC, past
+  # the release-age gate). 5.1.0 only adds `expand` as a default export (`exports.default` / `export default`);
+  # the named `expand` minimatch imports is unchanged. The 1.x and 2.x lines below are still at their newest.
+  'brace-expansion@>=3.0.0 <5.1.0': 5.1.0
   # 2026-11-09: no 1.x path left in this tree (check:overrides reports it UNUSED). Kept as a pre-emptive
   # floor for generated projects: minimatch@3 is still the dependency of many tools a project adds, and
   # the 1.x line can only be patched, not lifted (see above).
@@ -976,6 +986,13 @@ allowBuilds:
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
   - '@lenne.tech/nest-server'
+  # Security fix, added 2026-11-24 with nest-server 12.11.1 (mirrors its entry). mongodb 7.9.1 (mature) fixes
+  # GHSA-779g-w5r4-wr2x (credentials from the connection string in parse errors and in logged clients),
+  # GHSA-prmg-mvj2-c4f7 (NUL bytes in SASL PLAIN credentials change the authenticated identity) and
+  # GHSA-c5cf-gf4q-92vj (OIDC bearer token leak), all medium. mongoose 9.12.3 requires mongodb ~7.8, which has no fix,
+  # so the driver can only move together with mongoose 9.13.0 (mongodb ~7.9), published 2026-11-23 18:39 UTC.
+  # Inert from 2026-11-24 18:39 UTC: remove it at the next dependency change.
+  - 'mongoose@9.13.0'
   # 2026-08-22: removed six machine-written entries left behind by `pnpm audit --fix`
   # during the 11.33.0 bump — '@nestjs/common@11.1.29', '@nestjs/core@11.1.29' and
   # '@nestjs/platform-express@11.1.29', each listed TWICE. The project now declares
