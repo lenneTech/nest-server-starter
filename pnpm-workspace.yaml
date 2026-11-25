@@ -635,6 +635,10 @@ overrides:
   # advisories only), so `pnpm audit` did not report them. GHSA-q76c-gcvw-89x9 (high) is fixed only in
   # 27.1.3, a new major: once the global database lists it, decide it like GHSA-g3hv (`auditConfig`).
   # Remove once compodoc pins >= 26.4.4.
+  # 2026-11-25 (nest-server 12.11.2): unchanged, now load-bearing for `pnpm audit` too. GHSA-6jcc-5g8w-32mx
+  # reached GitHub's global database on 2026-11-23 (`< 26.3.4`): a fresh resolve without this entry lands on
+  # compodoc's 26.3.3 and `pnpm audit` reports it, with the entry the audit is clean. GHSA-5jr9-983r-c8x4 and
+  # GHSA-q76c-gcvw-89x9 are still repository advisories only. compodoc 2.0.0 is still the newest release.
   'i18next@>=26.0.0 <26.4.4': 26.4.4
 
   # REMOVED 2026-10-24: 'postcss@<8.5.30': 8.5.30 (GHSA-r28c-9q8g-f849 floor, dev/test only via
@@ -986,13 +990,6 @@ allowBuilds:
 # ---------------------------------------------------------------------------
 minimumReleaseAgeExclude:
   - '@lenne.tech/nest-server'
-  # Security fix, added 2026-11-24 with nest-server 12.11.1 (mirrors its entry). mongodb 7.9.1 (mature) fixes
-  # GHSA-779g-w5r4-wr2x (credentials from the connection string in parse errors and in logged clients),
-  # GHSA-prmg-mvj2-c4f7 (NUL bytes in SASL PLAIN credentials change the authenticated identity) and
-  # GHSA-c5cf-gf4q-92vj (OIDC bearer token leak), all medium. mongoose 9.12.3 requires mongodb ~7.8, which has no fix,
-  # so the driver can only move together with mongoose 9.13.0 (mongodb ~7.9), published 2026-11-23 18:39 UTC.
-  # Inert from 2026-11-24 18:39 UTC: remove it at the next dependency change.
-  - 'mongoose@9.13.0'
   # 2026-08-22: removed six machine-written entries left behind by `pnpm audit --fix`
   # during the 11.33.0 bump — '@nestjs/common@11.1.29', '@nestjs/core@11.1.29' and
   # '@nestjs/platform-express@11.1.29', each listed TWICE. The project now declares
