@@ -40,6 +40,7 @@ overrides:
   browserslist@<4.28.7: 4.29.4
   '@nestjs/cli>webpack': 5.112.0
   fflate@<0.8.3: 0.8.3
+  i18next@>=26.0.0 <26.4.4: 26.4.4
 
 importers:
 
@@ -52,8 +53,8 @@ importers:
         specifier: 1.7.16
         version: 1.7.16(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5)
       '@lenne.tech/nest-server':
-        specifier: 11.46.6
-        version: 11.46.6(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/passkey@1.7.16(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5))(@types/express@5.0.6)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(debug@4.4.3(supports-color@5.5.0))(ioredis@5.11.1(supports-color@5.5.0))(supports-color@5.5.0)(zod@4.6.7)
+        specifier: 11.46.7
+        version: 11.46.7(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/passkey@1.7.16(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5))(@types/express@5.0.6)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(debug@4.4.3(supports-color@5.5.0))(ioredis@5.11.1(supports-color@5.5.0))(supports-color@5.5.0)(zod@4.6.7)
       '@nestjs/common':
         specifier: 11.2.10
         version: 11.2.10(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@5.5.0)
@@ -717,8 +718,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lenne.tech/nest-server@11.46.6':
-    resolution: {integrity: sha512-y2C/wv9QHMiSPVgm56UXAM271bPdihPNQuuXOwJuu0mm/weIbSNmtDSoeYrMlfkuwUpEzPh9k4b/1bhTS7qsmw==}
+  '@lenne.tech/nest-server@11.46.7':
+    resolution: {integrity: sha512-OpN31X3xdLRv7MJcW9tV8pFd0DQ/LZ83WKvra6D/XTV+s/tPxGb3d92hWHzOmkNqpQ14f10P/Hp/4qRDgI2GUA==}
     engines: {node: '>= 22.15', pnpm: ^11.0.0}
     hasBin: true
     peerDependencies:
@@ -3079,10 +3080,10 @@ packages:
     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
     engines: {node: '>=16.17.0'}
 
-  i18next@26.3.3:
-    resolution: {integrity: sha512-aYVegyBdXSO93CMMihvr47jI7GHSOcIahMpJX+qzUXDzW4xDJf2uenIA+45vDU+YhiVdcfsql70AC9RVdMNrHg==}
+  i18next@26.4.4:
+    resolution: {integrity: sha512-O+rqmQUi54OwAgnZ4SAwO6aRrbXZt36VZXWt6zvq0FpC3vJbH46oQRs6u4Uwm1vf8ZI7UqOXQiJhQVTor7vRiQ==}
     peerDependencies:
-      typescript: ^5 || ^6
+      typescript: ^5 || ^6 || ^7
     peerDependenciesMeta:
       typescript:
         optional: true
@@ -5226,7 +5227,7 @@ snapshots:
       fs-extra: 11.4.1
       handlebars: 4.7.10
       html-entities: 2.6.0
-      i18next: 26.3.3(typescript@5.9.3)
+      i18next: 26.4.4(typescript@5.9.3)
       json5: 2.2.3
       loglevel: 1.9.2
       loglevel-plugin-prefix: 0.8.4
@@ -5514,7 +5515,7 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lenne.tech/nest-server@11.46.6(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/passkey@1.7.16(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5))(@types/express@5.0.6)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(debug@4.4.3(supports-color@5.5.0))(ioredis@5.11.1(supports-color@5.5.0))(supports-color@5.5.0)(zod@4.6.7)':
+  '@lenne.tech/nest-server@11.46.7(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/passkey@1.7.16(@better-auth/core@1.7.16(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-call@1.4.5(zod@4.6.7))(jose@6.2.12)(kysely@0.29.7)(nanostores@1.5.5))(@better-auth/utils@0.5.1)(@better-fetch/fetch@1.3.3)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(better-call@1.4.5(zod@4.6.7))(nanostores@1.5.5))(@types/express@5.0.6)(better-auth@1.7.16(mongodb@7.8.0)(vitest@4.1.12))(debug@4.4.3(supports-color@5.5.0))(ioredis@5.11.1(supports-color@5.5.0))(supports-color@5.5.0)(zod@4.6.7)':
     dependencies:
       '@apollo/server': 5.5.1(graphql@16.14.2)(supports-color@5.5.0)
       '@as-integrations/express5': 1.1.2(@apollo/server@5.5.1(graphql@16.14.2)(supports-color@5.5.0))(express@5.2.1(supports-color@5.5.0))
@@ -7840,7 +7841,7 @@ snapshots:
 
   human-signals@5.0.0: {}
 
-  i18next@26.3.3(typescript@5.9.3):
+  i18next@26.4.4(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
 
