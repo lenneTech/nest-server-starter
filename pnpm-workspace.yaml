@@ -815,6 +815,13 @@ overrides:
   # again, and every generated project inheriting this file is one such `pnpm add` away from it.
   'fflate@<0.8.3': 0.8.3
 
+  # Security, added 2026-11-25 (nest-server 12.6.15, same entry): GHSA-6jcc-5g8w-32mx (medium, patched 26.3.4;
+  # in GitHub's global database since 2026-11-23, so `pnpm audit` reports it) and GHSA-5jr9-983r-c8x4 (high,
+  # ReDoS in the nesting regexp, patched 26.4.4). @compodoc/compodoc 2.0.0 (newest) exact-pins i18next 26.3.3
+  # for its own UI strings, so no re-resolve can lift it. Dev tooling only (`pnpm run docs`). Target is the
+  # oldest 26.x that clears both, as on main since 12.10.0. Remove once compodoc pins >= 26.4.4.
+  'i18next@>=26.0.0 <26.4.4': 26.4.4
+
 
 # ---------------------------------------------------------------------------
 # Build script approvals (pnpm 11 replacement for onlyBuiltDependencies).
