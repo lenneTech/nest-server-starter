@@ -320,7 +320,13 @@ overrides:
   # intersected `<4.13.20`, and a fresh resolve without the block lands on 4.13.21 (published 2026-11-23
   # 09:59 UTC, past the release-age gate; `hono/jwt` accepts only the canonical Base64URL signature,
   # `hono/client` path params can no longer change the host). 4.13.21 is the newest 4.x.
-  'hono@>=4.0.0 <4.13.21': 4.13.21
+  # 2026-11-26 (nest-server 12.11.3): raised 4.13.21 -> 4.13.22, key with it. Pure hold-back, no new
+  # advisory (the newest repository advisories, 2026-11-11, are fixed in 4.13.18): the SDK's `^4.11.4`
+  # intersected `<4.13.21`, and a fresh resolve without the block lands on 4.13.22 (published 2026-11-25
+  # 00:06 UTC, past the release-age gate; a hardening release: the malformed-path guard of `mount()` stays
+  # in the built output, `parseBody()` skips `constructor.prototype` keys, `basicAuth()` refuses a
+  # non-string username or password at setup). 4.13.22 is the newest 4.x.
+  'hono@>=4.0.0 <4.13.22': 4.13.22
 
   # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,
   # added 2026-10-06). @nestjs/graphql 14.1.0 pins the patched 12.1.0 itself, so the entry changed
