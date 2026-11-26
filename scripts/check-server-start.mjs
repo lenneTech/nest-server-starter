@@ -11,7 +11,10 @@
  *
  * Behaviour (the contract other repos adopt; defaults are the Nuxt ones):
  *   1. Allocates a free port by binding `:0` on 127.0.0.1 and releasing it.
- *   2. Spawns `node <entry>` with `<portEnv>=<port>` (no shell).
+ *   2. Spawns `node <entry>` with `<portEnv>=<port>` (no shell). The port is free when it is
+ *      allocated, not reserved: another process (a parallel check, a dev server, a test runner)
+ *      can bind it before the server does. A server that dies with EADDRINUSE before it is up
+ *      is therefore started again on a newly allocated port, up to `portAttempts` (3) times.
  *   3. "Up" = a line of server output matches one of `readyPatterns`.
  *   4. Then GETs `smokePath` (30 s timeout, redirects not followed). Only a
  *      2xx or 3xx counts: a bundle can listen and still throw on every render.
@@ -37,9 +40,12 @@
  * the NestJS handler instead of Nitro's. The defaults stay the Nuxt ones so the file
  * diffs cleanly against the original; this repo passes every option on the command line.
  *
+ * The EADDRINUSE retry of step 2 came with nuxt-base-starter 4.0.7 (359d5e5), unchanged in behaviour.
+ *
  * Exit code: 0 when the server came up and rendered (and, with step 6, shut down
  * cleanly), 1 otherwise — boot timeout (`bootTimeoutMs`, default 60 s), early exit of
- * the server, a non-2xx/3xx response or no response at all, and with step 6 a server
+ * the server (EADDRINUSE only once every attempt of step 2 hit it), a non-2xx/3xx
+ * response or no response at all, and with step 6 a server
  * that outlives the shutdown limit or exits with anything but code 0. The last 30
  * lines of server output are printed on failure.
  */
@@ -53,6 +59,8 @@ import { fileURLToPath } from 'node:url';
 export const NUXT_DEFAULTS = Object.freeze({
   bootTimeoutMs: 60_000,
   entry: '.output/server/index.mjs',
+  /** Starts on new ports after an EADDRINUSE during boot, the first one included (step 2). */
+  portAttempts: 3,
   // NITRO_PORT, not PORT: Nitro reads PORT as a string without parseInt and feeds
   // it straight into net.Server#listen.
   portEnv: 'NITRO_PORT',
@@ -88,6 +96,17 @@ export const PID1_SIGNAL_PRELOAD = Object.freeze([
 /** Pure: whether the way a process ended counts as a clean shutdown — exit code 0, no signal. */
 export function isCleanShutdown(code, signal) {
   return code === 0 && (signal === null || signal === undefined);
+}
+
+/**
+ * Pure: whether the server's output says its port was taken. Node reports a failed bind as
+ * `listen EADDRINUSE: address already in use <host>:<port>`. Nitro lets that error end the
+ * process before it prints a ready line; this starter's `bootstrap().catch(handleFatalBootstrapError)`
+ * logs it as `[bootstrap] fatal startup error — exiting: Error: listen EADDRINUSE …` and exits with 1.
+ * The exit code differs between the two (Nitro exits with 0), so the text decides.
+ */
+export function isPortTakenOutput(text) {
+  return /\bEADDRINUSE\b/.test(text);
 }
 
 /** Pure: whether a chunk of server output signals that it is listening. */
@@ -191,54 +210,75 @@ async function shutdownWithin(child, exited, timeoutMs) {
 export async function run(options = {}, log = console.log) {
   const opts = { ...NUXT_DEFAULTS, ...options };
   const cwd = opts.cwd ?? process.cwd();
-  const lines = [];
+  // The output of the current attempt; a retry starts with an empty one.
+  let lines = [];
   const tail = (n) => lines.slice(-n).join('\n');
+  const checkShutdown = opts.shutdownTimeoutMs !== undefined && process.platform !== 'win32';
 
   let port;
-  try {
-    port = await allocPort();
-  } catch (err) {
-    log(String(err?.message || err));
-    return 1;
-  }
-  log(`Using free port: ${port}`);
+  let child;
+  let exited;
+  let outcome;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      port = await allocPort();
+    } catch (err) {
+      log(String(err?.message || err));
+      return 1;
+    }
+    log(`Using free port: ${port}`);
 
-  const env = { ...process.env, [opts.portEnv]: String(port) };
-  const checkShutdown = opts.shutdownTimeoutMs !== undefined && process.platform !== 'win32';
-  const nodeArgs = [...(checkShutdown ? PID1_SIGNAL_PRELOAD : []), resolve(cwd, opts.entry)];
-  const child = spawn(process.execPath, nodeArgs, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
-  // Settles once the process is gone, however it ended; the shutdown step waits on it.
-  const exited = new Promise((settle) => child.once('exit', (code, signal) => settle({ code, signal })));
+    const env = { ...process.env, [opts.portEnv]: String(port) };
+    const nodeArgs = [...(checkShutdown ? PID1_SIGNAL_PRELOAD : []), resolve(cwd, opts.entry)];
+    lines = [];
+    const current = spawn(process.execPath, nodeArgs, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    child = current;
+    // Settles once the process is gone, however it ended; the shutdown step waits on it.
+    exited = new Promise((settle) => current.once('exit', (code, signal) => settle({ code, signal })));
 
-  // Settles once with the first of: ready, exit, spawn error, timeout.
-  const outcome = await new Promise((settle) => {
-    const timer = setTimeout(() => settle({ kind: 'timeout' }), opts.bootTimeoutMs);
-    const done = (result) => {
-      clearTimeout(timer);
-      settle(result);
-    };
-    let pending = '';
-    const onData = (chunk) => {
-      pending += chunk.toString();
-      const parts = pending.split(/\r?\n/);
-      pending = parts.pop();
-      lines.push(...parts);
-      if (isReadyOutput(parts.join('\n') + '\n' + pending, opts.readyPatterns)) done({ kind: 'ready' });
-    };
-    child.stdout.on('data', onData);
-    child.stderr.on('data', onData);
-    child.once('exit', (code, signal) => {
-      if (pending) lines.push(pending);
-      done({ code, kind: 'exited', signal });
+    // Settles once with the first of: ready, exit, spawn error, timeout.
+    outcome = await new Promise((settle) => {
+      const timer = setTimeout(() => settle({ kind: 'timeout' }), opts.bootTimeoutMs);
+      const done = (result) => {
+        clearTimeout(timer);
+        settle(result);
+      };
+      let pending = '';
+      const onData = (chunk) => {
+        pending += chunk.toString();
+        const parts = pending.split(/\r?\n/);
+        pending = parts.pop();
+        lines.push(...parts);
+        if (isReadyOutput(parts.join('\n') + '\n' + pending, opts.readyPatterns)) done({ kind: 'ready' });
+      };
+      current.stdout.on('data', onData);
+      current.stderr.on('data', onData);
+      current.once('exit', (code, signal) => {
+        if (pending) lines.push(pending);
+        done({ code, kind: 'exited', signal });
+      });
+      current.once('error', (err) => done({ error: err, kind: 'error' }));
     });
-    child.once('error', (err) => done({ error: err, kind: 'error' }));
-  });
+
+    // Another process bound the port between its allocation and the server's own bind. The server is
+    // gone already, so nothing has to be stopped; the next attempt allocates a new port.
+    if (outcome.kind === 'exited' && isPortTakenOutput(lines.join('\n')) && attempt < opts.portAttempts) {
+      log(
+        `Port ${port} was taken before the server bound it (EADDRINUSE), attempt ${attempt} of ${opts.portAttempts}: ` +
+          'starting again on a new port',
+      );
+      continue;
+    }
+    break;
+  }
 
   try {
     if (outcome.kind === 'ready') {
       const status = await smokeRequest(`http://127.0.0.1:${port}${opts.smokePath}`);
       if (!isRenderedStatus(status)) {
-        log(`Server booted but GET ${opts.smokePath} did not render (HTTP ${status || '<no response>'}). Last 30 log lines:`);
+        log(
+          `Server booted but GET ${opts.smokePath} did not render (HTTP ${status || '<no response>'}). Last 30 log lines:`,
+        );
         log(tail(30));
         return 1;
       }
@@ -276,8 +316,18 @@ export async function run(options = {}, log = console.log) {
       log(`Server shut down cleanly on SIGTERM in ${(ended.ms / 1000).toFixed(1)} s - check complete`);
       return 0;
     }
+    if (outcome.kind === 'exited' && isPortTakenOutput(lines.join('\n'))) {
+      log(
+        `Server could not bind a port in ${opts.portAttempts} attempts (EADDRINUSE): something takes the ports this runner ` +
+          'allocates before the server binds them, for example many servers starting at once. Full log of the last attempt:',
+      );
+      log(lines.join('\n'));
+      return 1;
+    }
     if (outcome.kind === 'exited') {
-      log(`Server process exited unexpectedly (code ${outcome.code ?? '-'}, signal ${outcome.signal ?? '-'}). Full log:`);
+      log(
+        `Server process exited unexpectedly (code ${outcome.code ?? '-'}, signal ${outcome.signal ?? '-'}). Full log:`,
+      );
       log(lines.join('\n'));
       return 1;
     }
@@ -325,7 +375,9 @@ function isCliEntry() {
     return realpathSync(entry) === realpathSync(fileURLToPath(import.meta.url));
   } catch (err) {
     // Fail closed: "cannot tell" must never become a green check that never ran.
-    process.stderr.write(`[check-server-start] cannot resolve the CLI entry (${err?.code || err}) — refusing to report success\n`);
+    process.stderr.write(
+      `[check-server-start] cannot resolve the CLI entry (${err?.code || err}) — refusing to report success\n`,
+    );
     process.exit(1);
   }
 }

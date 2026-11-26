@@ -10,6 +10,8 @@ export interface ServerStartOptions {
   cwd?: string;
   /** Server entry, relative to `cwd`; started as `node <entry>`. */
   entry?: string;
+  /** Starts, the first one included, on new ports when the server dies with EADDRINUSE before it is up. */
+  portAttempts?: number;
   /** Environment variable the server reads its port from. */
   portEnv?: string;
   /** A line of server output matching any of these means "listening". */
@@ -33,6 +35,8 @@ export const NUXT_DEFAULTS: Readonly<Required<Omit<ServerStartOptions, 'cwd' | '
 export const PID1_SIGNAL_PRELOAD: readonly string[];
 /** Exit code 0 and no signal. */
 export function isCleanShutdown(code: null | number | undefined, signal: NodeJS.Signals | null | undefined): boolean;
+/** The server's output reports a port another process had bound (EADDRINUSE). */
+export function isPortTakenOutput(text: string): boolean;
 export function isReadyOutput(text: string, patterns: RegExp[]): boolean;
 export function isRenderedStatus(status: number): boolean;
 export function isKillablePid(pid: unknown, platform?: NodeJS.Platform): boolean;

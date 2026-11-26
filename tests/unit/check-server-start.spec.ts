@@ -15,16 +15,22 @@
  * matching only the typo and timed out on every platform until it was removed. So the pattern is checked
  * against the real source line here, where a mismatch fails in milliseconds, instead of surfacing
  * as a 60-second boot timeout in CI that looks like a slow machine.
+ *
+ * The EADDRINUSE retry came with nuxt-base-starter 4.0.7 (359d5e5). Its fixtures here end the way this
+ * starter's server does (`bootstrap().catch(handleFatalBootstrapError)`, exit code 1), not the way
+ * Nitro does (exit code 0); the runner decides by the output text, so both must pass.
  */
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { connect } from 'node:net';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
   isCleanShutdown,
   isKillablePid,
+  isPortTakenOutput,
   isReadyOutput,
   isRenderedStatus,
   killTreePlan,
@@ -47,23 +53,29 @@ function serverStartArgs(): string[] {
   return (tail.match(/(?:[^\s"]+|"[^"]*")+/g) ?? []).map((arg: string) => arg.replace(/"/g, ''));
 }
 
-/** Run the CLI against a fixture; resolves to its exit code, output, port and duration. */
+/**
+ * Run the CLI against a fixture; resolves to its exit code, output, duration and every port it
+ * started the server on, in order (`port` is the last one).
+ */
 function runFixture(
   entry: string,
   timeoutSeconds = 10,
   extraArgs: string[] = [],
-): Promise<{ code: null | number; ms: number; output: string; port: number }> {
+  extraEnv: Record<string, string> = {},
+): Promise<{ code: null | number; ms: number; output: string; port: number; ports: number[] }> {
   return new Promise((resolve) => {
     const started = Date.now();
     const child = spawn(process.execPath, [runner, `--entry=${entry}`, `--timeout=${timeoutSeconds}`, ...extraArgs], {
       cwd: fixtures,
+      env: { ...process.env, ...extraEnv },
     });
     let output = '';
     child.stdout.on('data', (d) => (output += d));
     child.stderr.on('data', (d) => (output += d));
-    child.once('close', (code) =>
-      resolve({ code, ms: Date.now() - started, output, port: Number(/Using free port: (\d+)/.exec(output)?.[1]) }),
-    );
+    child.once('close', (code) => {
+      const ports = [...output.matchAll(/Using free port: (\d+)/g)].map((match) => Number(match[1]));
+      resolve({ code, ms: Date.now() - started, output, port: ports.at(-1) ?? Number.NaN, ports });
+    });
   });
 }
 
@@ -86,6 +98,19 @@ describe('check-server-start helpers', () => {
 
   it.each([0, 199, 400, 404, 500, Number.NaN])('does not count HTTP %s as rendered', (status) => {
     expect(isRenderedStatus(status)).toBe(false);
+  });
+
+  it('recognises a port another process had bound, as Node and this starter’s bootstrap report it', () => {
+    expect(isPortTakenOutput('Error: listen EADDRINUSE: address already in use 127.0.0.1:41235')).toBe(true);
+    // handleFatalBootstrapError (nest-server), reached via `bootstrap().catch(…)` in src/main.ts.
+    expect(
+      isPortTakenOutput(
+        '[bootstrap] fatal startup error — exiting: Error: listen EADDRINUSE: address already in use :::51343',
+      ),
+    ).toBe(true);
+    expect(isPortTakenOutput('Server started at http://[::1]:41235')).toBe(false);
+    expect(isPortTakenOutput('boom during boot')).toBe(false);
+    expect(NUXT_DEFAULTS.portAttempts).toBe(3);
   });
 
   it('recognises the Nitro ready lines', () => {
@@ -275,6 +300,43 @@ describe('check-server-start CLI', () => {
     expect(code).toBe(1);
     expect(output).toMatch(/exited unexpectedly \(code 3/);
     expect(output).toMatch(/boom during boot/);
+  });
+
+  it('starts the server again on a new port when another process took the first before the server bound it', async () => {
+    // With this starter's own arguments, so the shutdown step runs against the second server, not the first.
+    const own = serverStartArgs().filter((arg) => !arg.startsWith('--entry='));
+    const dir = mkdtempSync(join(tmpdir(), 'server-start-'));
+    try {
+      const { code, output, port, ports } = await runFixture('nest-port-taken-once.mjs', 10, own, {
+        FIXTURE_MARKER: join(dir, 'first-start'),
+      });
+
+      expect(code, output).toBe(0);
+      expect(output).toMatch(/EADDRINUSE\), attempt 1 of 3: starting again on a new port/);
+      expect(ports).toHaveLength(2);
+      expect(ports[1]).not.toBe(ports[0]);
+      expect(output).toMatch(
+        process.platform === 'win32' ? /Graceful-shutdown check skipped/ : /shut down cleanly on SIGTERM/,
+      );
+      expect(await portAcceptsConnections(port)).toBe(false);
+    } finally {
+      rmSync(dir, { force: true, recursive: true });
+    }
+  });
+
+  it('returns 1 when every attempt finds its port taken, and says why', async () => {
+    const { code, output, ports } = await runFixture('nest-port-always-taken.mjs', 10, ['--port-env=NSC__PORT']);
+
+    expect(code).toBe(1);
+    expect(ports).toHaveLength(3);
+    expect(output).toMatch(/could not bind a port in 3 attempts \(EADDRINUSE\)/);
+  });
+
+  it('does not start a server again that died for another reason', async () => {
+    const { code, ports } = await runFixture('crash.mjs');
+
+    expect(code).toBe(1);
+    expect(ports).toHaveLength(1);
   });
 
   it('returns 1 when the server never reports ready', async () => {

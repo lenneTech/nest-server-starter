@@ -207,6 +207,9 @@ requires exit code 0 within 10 s (`--graceful-shutdown=10`, Docker's default sto
 after the shutdown and time the docs build instead of the shutdown.
 The server runs with a no-op SIGTERM listener preloaded, as node does as PID 1 in a container, so
 the step goes red when `installGracefulShutdown()` in `src/main.ts` is missing or the shutdown hangs.
+The port it starts the API on is free when allocated, not reserved. If another process binds it first, the
+API dies with `EADDRINUSE` before it is up, and the step starts it again on a new port, up to three times. Only
+when all three are taken does it fail, with `could not bind a port in 3 attempts (EADDRINUSE)`.
 
 The fail-fast contract of the deployed envs (and that local envs need no `.env`) is a unit test in
 `src/config.env.spec.ts`, so every `pnpm test` / `pnpm run check` verifies it.
