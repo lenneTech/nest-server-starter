@@ -98,7 +98,8 @@ if (added) console.log(added + ' packages added');
 // Save package.json
 console.log('Save package.json');
 try {
-  fs.writeFileSync(__dirname + '/../package.json', JSON.stringify(packageJson, null, 2));
+  // Trailing newline as npm and pnpm write it; without it every `pnpm run update` leaves a diff.
+  fs.writeFileSync(__dirname + '/../package.json', JSON.stringify(packageJson, null, 2) + '\n');
 } catch (e) {
   console.log('Error during saving package.json: ' + e.message);
   process.exit(1);
