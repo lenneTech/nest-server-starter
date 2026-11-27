@@ -206,7 +206,10 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
   /** Every deployed block of the matrix. `preview` runs on the same baseline, outside the pipeline. */
   const DEPLOYED = ['develop', 'test', 'preview', 'production'];
 
-  /** A value for every unconditional requirement — public dummies, never real secrets. */
+  /**
+   * A value for every requirement of a deployment without opt-ins — on MongoDB, the default. Public dummies, never
+   * real secrets. The PostgreSQL case is below (`POSTGRES`).
+   */
   const COMPLETE: Record<string, string> = {
     NSC__BASE_URL: 'https://api.example.test',
     NSC__BETTER_AUTH__SECRET: 'contract-test-secret-contract-test-secret',
@@ -237,10 +240,15 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
     }
   }
 
-  /** The env vars the guard enforces without an opt-in condition. */
+  /**
+   * The env vars the guard enforces on a deployment that opts into nothing: every entry without a condition, and
+   * every one whose condition holds for an empty configuration (NSC__MONGOOSE__URI: no `database` block).
+   */
   async function unconditional(): Promise<string[]> {
     const { REQUIRED_DEPLOYED_ENV_VARS } = await load('local');
-    return REQUIRED_DEPLOYED_ENV_VARS.filter(({ condition }) => !condition).map(({ envVar }) => envVar);
+    return REQUIRED_DEPLOYED_ENV_VARS.filter(({ condition }) => !condition || condition({})).map(
+      ({ envVar }) => envVar,
+    );
   }
 
   beforeEach(() => {
@@ -357,6 +365,110 @@ describe('config.env.ts — fail-fast for deployed envs', () => {
 
   it.each(['local', 'e2e', 'ci'])('%s starts without any of them', async (env) => {
     await expect(load(env)).resolves.toBeDefined();
+  });
+
+  /*
+   * PostgreSQL instead of MongoDB (nest-server 12.1.0+): `PROJECT_SQL_ENGINE` in config.env.ts or the NSC__DATABASE__*
+   * variables. A deployment on PostgreSQL needs the application and the owner URL and no MongoDB; without either, the
+   * default stays MongoDB and asks for NSC__MONGOOSE__URI as before. The local envs switch with the variables too, to
+   * the PostgreSQL of docker-compose.yml, and then connect no MongoDB beside it.
+   */
+  describe('PostgreSQL (database)', () => {
+    const POSTGRES = {
+      NSC__DATABASE__OWNER_URL: 'postgres://contract_owner:contract-owner-pw@db.example.test/contract',
+      NSC__DATABASE__URL: 'postgres://contract_app:contract-app-pw@db.example.test/contract',
+    };
+    const { NSC__MONGOOSE__URI: _mongo, ...WITHOUT_MONGODB } = COMPLETE;
+
+    it.each(DEPLOYED)('%s starts on PostgreSQL without NSC__MONGOOSE__URI', async (env) => {
+      const { default: resolved } = await load(env, { ...WITHOUT_MONGODB, ...POSTGRES });
+      expect(resolved.database).toMatchObject({
+        ownerUrl: POSTGRES.NSC__DATABASE__OWNER_URL,
+        url: POSTGRES.NSC__DATABASE__URL,
+      });
+      expect(resolved.mongoose?.uri).toBeUndefined();
+    });
+
+    it('production on PostgreSQL names the missing owner URL, and not NSC__MONGOOSE__URI', async () => {
+      const error = await load('production', {
+        ...WITHOUT_MONGODB,
+        NSC__DATABASE__URL: POSTGRES.NSC__DATABASE__URL,
+      }).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+      expect(error?.message).toMatch(/: NSC__DATABASE__OWNER_URL\. /);
+    });
+
+    it('production with only the SQL engine set asks for both URLs instead of NSC__MONGOOSE__URI', async () => {
+      const error = await load('production', { ...WITHOUT_MONGODB, NSC__DATABASE__SQL_ENGINE: 'typeorm' }).then(
+        () => undefined,
+        (err: Error) => err,
+      );
+      expect(error?.message).toMatch(/: NSC__DATABASE__URL, NSC__DATABASE__OWNER_URL\. /);
+    });
+
+    it('production with a MongoDB URL in NSC__DATABASE__URL needs no owner URL', async () => {
+      await expect(
+        load('production', { ...WITHOUT_MONGODB, NSC__DATABASE__URL: 'mongodb://db.example.test/contract' }),
+      ).resolves.toBeDefined();
+    });
+
+    // The short form names the application role only: nest-server would evolve no table, the migrations have no owner
+    it('refuses the short form `database: "postgres://…"` in a deployment: the owner URL is required beside it', async () => {
+      const { REQUIRED_DEPLOYED_ENV_VARS } = await load('local');
+      const owner = REQUIRED_DEPLOYED_ENV_VARS.find(({ envVar }) => envVar === 'NSC__DATABASE__OWNER_URL');
+      const shortForm = { database: POSTGRES.NSC__DATABASE__URL };
+      expect(owner?.condition?.(shortForm)).toBe(true);
+      expect(owner?.check(shortForm)).toBe(false);
+    });
+
+    it.each(['local', 'e2e', 'ci'])(
+      '%s runs on the local PostgreSQL with NSC__DATABASE__SQL_ENGINE alone',
+      async (env) => {
+        const { default: resolved } = await load(env, { NSC__DATABASE__SQL_ENGINE: 'typeorm' });
+        expect(resolved.database).toEqual({
+          ownerUrl: `postgres://nest_owner:nest-owner-secret@127.0.0.1:5433/nest-server-starter-${env}`,
+          sqlEngine: 'typeorm',
+          url: `postgres://nest_app:nest-app-secret@127.0.0.1:5433/nest-server-starter-${env}`,
+        });
+        expect(resolved.mongoose).toBeUndefined();
+      },
+    );
+
+    // `lt dev up` exports NSC__MONGOOSE__URI for every project, and the env merge would bring the `mongoose` block back
+    it.each(['local', 'e2e', 'ci'])('%s on PostgreSQL ignores a NSC__MONGOOSE__URI from the shell', async (env) => {
+      const { default: resolved } = await load(env, {
+        NSC__DATABASE__SQL_ENGINE: 'typeorm',
+        NSC__MONGOOSE__URI: 'mongodb://127.0.0.1/crm-local',
+      });
+      expect(resolved.database).toMatchObject({ sqlEngine: 'typeorm' });
+      expect(resolved.mongoose).toBeUndefined();
+    });
+
+    it('production on PostgreSQL keeps NSC__MONGOOSE__URI as the extra source `mongoose`', async () => {
+      const { default: resolved } = await load('production', {
+        ...WITHOUT_MONGODB,
+        ...POSTGRES,
+        NSC__MONGOOSE__URI: 'mongodb://db.example.test/contract',
+      });
+      expect(resolved.mongoose?.uri).toBe('mongodb://db.example.test/contract');
+    });
+
+    it('e2e takes both URLs from the environment, none from the local defaults', async () => {
+      const { default: resolved } = await load('e2e', POSTGRES);
+      expect(resolved.database).toMatchObject({
+        ownerUrl: POSTGRES.NSC__DATABASE__OWNER_URL,
+        url: POSTGRES.NSC__DATABASE__URL,
+      });
+      expect(resolved.mongoose).toBeUndefined();
+    });
+
+    it('local stays on MongoDB without any of the variables', async () => {
+      const { default: resolved } = await load('local');
+      expect(resolved.database).toBeUndefined();
+      expect(resolved.mongoose?.uri).toBe('mongodb://127.0.0.1/nest-server-starter-local');
+    });
   });
 
   /*

@@ -1,21 +1,22 @@
 import { HttpExceptionLogFilter, RoleEnum, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import { Db, MongoClient, ObjectId } from 'mongodb';
 import * as tus from 'tus-js-client';
 
 import envConfig from '../../src/config.env.js';
 import { User } from '../../src/server/modules/user/user.model.js';
 import { imports, ServerModule } from '../../src/server/server.module.js';
+import { openTestDb, type TestDb } from '../test-db.js';
 
 // =====================================================================================================================
 // Helper Functions
 // =====================================================================================================================
 
-interface GridFsFile {
-  _id: ObjectId;
+/** A file in the file store (GridFS on MongoDB, the filesystem driver on PostgreSQL), as tests/test-db.ts returns it */
+interface StoredFile {
   contentType: string;
   filename: string;
+  id: string;
   length: number;
   metadata?: Record<string, unknown>;
 }
@@ -42,8 +43,9 @@ interface TusUploadResult {
   /** The id the server named in `X-File-Id` on the completing response (nest-server 11.42.13+) */
   fileId?: string;
   filename: string;
-  gridFsId?: string;
   location?: string;
+  /** The file's id in the file store, read from the database */
+  storedFileId?: string;
 }
 
 /**
@@ -65,8 +67,9 @@ const TUS_HEADERS = {
   RESUMABLE: '1.0.0',
 } as const;
 
-const GRIDFS_MIGRATION_TIMEOUT = 5000;
-const GRIDFS_MIGRATION_INTERVAL = 100;
+// How long a finished TUS upload may take to arrive in the file store
+const FILE_STORE_MIGRATION_TIMEOUT = 5000;
+const FILE_STORE_MIGRATION_INTERVAL = 100;
 
 // =====================================================================================================================
 // Test Suite
@@ -83,8 +86,7 @@ describe('TUS Module (e2e)', () => {
   let baseUrl: string;
 
   // Database
-  let connection: MongoClient;
-  let db: Db;
+  let db: TestDb;
 
   // Test data
   const users: Partial<User & { token: string }>[] = [];
@@ -195,20 +197,20 @@ describe('TUS Module (e2e)', () => {
   }
 
   /**
-   * Wait for file to appear in GridFS with retry mechanism
+   * Wait for file to appear in the file store with retry mechanism
    */
-  async function waitForGridFsMigration(
+  async function waitForStoredFile(
     filename: string,
-    timeout: number = GRIDFS_MIGRATION_TIMEOUT,
-  ): Promise<GridFsFile | null> {
+    timeout: number = FILE_STORE_MIGRATION_TIMEOUT,
+  ): Promise<StoredFile | null> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
-      const file = await db.collection<GridFsFile>('fs.files').findOne({ filename });
+      const file = (await db.findFile({ filename })) as null | StoredFile;
       if (file) {
         return file;
       }
-      await new Promise((resolve) => setTimeout(resolve, GRIDFS_MIGRATION_INTERVAL));
+      await new Promise((resolve) => setTimeout(resolve, FILE_STORE_MIGRATION_INTERVAL));
     }
 
     return null;
@@ -243,12 +245,12 @@ describe('TUS Module (e2e)', () => {
         },
         onProgress: options.onProgress,
         onSuccess: async () => {
-          const gridFsFile = await waitForGridFsMigration(options.filename);
+          const storedFile = await waitForStoredFile(options.filename);
           resolve({
             fileId,
             filename: options.filename,
-            gridFsId: gridFsFile?._id?.toString(),
             location: upload.url || undefined,
+            storedFileId: storedFile?.id,
           });
         },
         retryDelays: [0, 1000, 3000],
@@ -275,14 +277,14 @@ describe('TUS Module (e2e)', () => {
     const { response: patchResponse } = await patchTusUpload(location, content);
     expect(patchResponse.status).toBe(204);
 
-    const gridFsFile = await waitForGridFsMigration(filename);
-    expect(gridFsFile).toBeDefined();
+    const storedFile = await waitForStoredFile(filename);
+    expect(storedFile).toBeDefined();
 
     return {
       fileId: patchResponse.headers.get('x-file-id') ?? undefined,
       filename,
-      gridFsId: gridFsFile?._id?.toString(),
       location,
+      storedFileId: storedFile?.id,
     };
   }
 
@@ -316,21 +318,18 @@ describe('TUS Module (e2e)', () => {
       testHelper = new TestHelper(app);
 
       // Database connection
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = connection.db();
+      db = await openTestDb(envConfig);
     } catch (e) {
       console.error('beforeAllError', e);
     }
   });
 
   afterAll(async () => {
-    // Clean up uploaded files from GridFS
+    // Clean up uploaded files from the file store
     for (const file of uploadedFiles) {
-      if (file.gridFsId) {
+      if (file.storedFileId) {
         try {
-          const fileId = new ObjectId(file.gridFsId);
-          await db.collection('fs.files').deleteOne({ _id: fileId });
-          await db.collection('fs.chunks').deleteMany({ files_id: fileId });
+          await db.deleteFile(file.storedFileId);
         } catch {
           // Ignore cleanup errors
         }
@@ -341,14 +340,14 @@ describe('TUS Module (e2e)', () => {
     for (const user of users) {
       if (user.id) {
         try {
-          await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+          await db.deleteUsers({ id: user.id });
         } catch {
           // Ignore cleanup errors
         }
       }
     }
 
-    await connection.close();
+    await db.close();
     await app.close();
   });
 
@@ -379,20 +378,18 @@ describe('TUS Module (e2e)', () => {
       expect(res).toBeDefined();
 
       // Get user from database
-      const user = await db.collection('users').findOne({ email: input.email });
+      const user = await db.findUser({ email: input.email });
       expect(user).toBeDefined();
 
       users.push({
         email: input.email,
         firstName: input.name,
-        id: user._id.toString(),
+        id: user.id,
         password,
       });
 
       // Verify user in database
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
+      await db.updateUser({ id: user.id }, { emailVerified: true, verified: true });
     }
 
     expect(users.length).toBeGreaterThanOrEqual(userCount);
@@ -426,9 +423,7 @@ describe('TUS Module (e2e)', () => {
   });
 
   it('prepareUsers', async () => {
-    await db
-      .collection('users')
-      .findOneAndUpdate({ _id: new ObjectId(users[0].id) }, { $set: { roles: [RoleEnum.ADMIN] } });
+    await db.updateUser({ id: users[0].id }, { roles: [RoleEnum.ADMIN] });
   });
 
   // ===================================================================================================================
@@ -544,7 +539,7 @@ describe('TUS Module (e2e)', () => {
 
       const result = await completeTusUpload(filename, content);
 
-      expect(result.gridFsId).toBeDefined();
+      expect(result.storedFileId).toBeDefined();
       uploadedFiles.push(result);
     });
 
@@ -570,11 +565,11 @@ describe('TUS Module (e2e)', () => {
       expect(patch2.status).toBe(204);
       expect(offset2).toBe(totalSize);
 
-      const gridFsFile = await waitForGridFsMigration(filename);
-      expect(gridFsFile).toBeDefined();
-      expect(gridFsFile!.length).toBe(totalSize);
+      const storedFile = await waitForStoredFile(filename);
+      expect(storedFile).toBeDefined();
+      expect(storedFile!.length).toBe(totalSize);
 
-      uploadedFiles.push({ filename, gridFsId: gridFsFile!._id.toString() });
+      uploadedFiles.push({ filename, storedFileId: storedFile!.id });
     });
   });
 
@@ -624,12 +619,12 @@ describe('TUS Module (e2e)', () => {
       const { response: resumeResponse } = await patchTusUpload(location, part2, currentOffset);
       expect(resumeResponse.status).toBe(204);
 
-      // Verify file is complete in GridFS
-      const gridFsFile = await waitForGridFsMigration(filename);
-      expect(gridFsFile).toBeDefined();
-      expect(gridFsFile!.length).toBe(totalSize);
+      // Verify file is complete in the file store
+      const storedFile = await waitForStoredFile(filename);
+      expect(storedFile).toBeDefined();
+      expect(storedFile!.length).toBe(totalSize);
 
-      uploadedFiles.push({ filename, gridFsId: gridFsFile!._id.toString() });
+      uploadedFiles.push({ filename, storedFileId: storedFile!.id });
     });
   });
 
@@ -646,7 +641,7 @@ describe('TUS Module (e2e)', () => {
       });
 
       expect(result.location).toBeDefined();
-      expect(result.gridFsId).toBeDefined();
+      expect(result.storedFileId).toBeDefined();
 
       uploadedFiles.push(result);
     });
@@ -668,7 +663,7 @@ describe('TUS Module (e2e)', () => {
       );
 
       for (const result of results) {
-        expect(result.gridFsId).toBeDefined();
+        expect(result.storedFileId).toBeDefined();
         uploadedFiles.push(result);
       }
     });
@@ -688,7 +683,7 @@ describe('TUS Module (e2e)', () => {
         },
       });
 
-      expect(result.gridFsId).toBeDefined();
+      expect(result.storedFileId).toBeDefined();
       expect(progressUpdates.length).toBeGreaterThan(0);
       expect(progressUpdates[progressUpdates.length - 1]).toBe(100);
 
@@ -701,24 +696,30 @@ describe('TUS Module (e2e)', () => {
   // ===================================================================================================================
 
   describe('FileController Download Integration', () => {
-    let testFile: { content: string; fileId?: string; filename: string; gridFsId: string; location?: string };
+    let testFile: { content: string; fileId?: string; filename: string; location?: string; storedFileId: string };
 
     beforeAll(async () => {
       const filename = `tus-download-test-${Date.now()}.txt`;
       const content = 'This file was uploaded via TUS and will be downloaded via FileController';
 
       const result = await uploadViaTusClient({ content, filename });
-      testFile = { content, fileId: result.fileId, filename, gridFsId: result.gridFsId!, location: result.location };
+      testFile = {
+        content,
+        fileId: result.fileId,
+        filename,
+        location: result.location,
+        storedFileId: result.storedFileId!,
+      };
       uploadedFiles.push(result);
     });
 
     it('should name the stored file in X-File-Id on the completing response', async () => {
       expect(testFile.fileId, 'tus-js-client must see the header (exposed for CORS)').toMatch(/^[0-9a-f]{24}$/);
-      expect(testFile.fileId).toBe(testFile.gridFsId);
+      expect(testFile.fileId).toBe(testFile.storedFileId);
 
       const viaFetch = await completeTusUpload(`tus-file-id-${Date.now()}.txt`, 'completed via fetch');
       uploadedFiles.push(viaFetch);
-      expect(viaFetch.fileId).toBe(viaFetch.gridFsId);
+      expect(viaFetch.fileId).toBe(viaFetch.storedFileId);
     });
 
     it('should download TUS-uploaded file by the ID the server named', async () => {
@@ -762,11 +763,11 @@ describe('TUS Module (e2e)', () => {
         filetype: 'application/octet-stream',
       });
 
-      expect(result.gridFsId).toBeDefined();
+      expect(result.storedFileId).toBeDefined();
       uploadedFiles.push(result);
 
       // Download and verify binary content
-      const downloadedBuffer = await testHelper.downloadBuffer(`/files/id/${result.gridFsId}`, {
+      const downloadedBuffer = await testHelper.downloadBuffer(`/files/id/${result.storedFileId}`, {
         cookies: users[0].token,
       });
       expect(Buffer.compare(downloadedBuffer, binaryData)).toBe(0);
@@ -787,14 +788,12 @@ describe('TUS Module (e2e)', () => {
         filetype: 'application/octet-stream',
       });
 
-      expect(result.gridFsId).toBeDefined();
+      expect(result.storedFileId).toBeDefined();
       uploadedFiles.push(result);
 
-      // Verify file size in GridFS
-      const gridFsFile = await db.collection<GridFsFile>('fs.files').findOne({
-        _id: new ObjectId(result.gridFsId!),
-      });
-      expect(gridFsFile!.length).toBe(largeData.length);
+      // Verify file size in the file store
+      const storedFile = await db.findFile({ id: result.storedFileId! });
+      expect(storedFile!.length).toBe(largeData.length);
     });
   });
 
@@ -839,7 +838,7 @@ describe('TUS Module (e2e)', () => {
   // ===================================================================================================================
 
   describe('Metadata Handling', () => {
-    it('should preserve TUS metadata in GridFS', async () => {
+    it('should preserve TUS metadata in the file store', async () => {
       const filename = `tus-metadata-test-${Date.now()}.txt`;
       const content = 'File with metadata';
 
@@ -849,17 +848,15 @@ describe('TUS Module (e2e)', () => {
         filetype: 'text/plain',
       });
 
-      expect(result.gridFsId).toBeDefined();
+      expect(result.storedFileId).toBeDefined();
       uploadedFiles.push(result);
 
-      // Check metadata in GridFS
-      const gridFsFile = await db.collection<GridFsFile>('fs.files').findOne({
-        _id: new ObjectId(result.gridFsId!),
-      });
+      // Check metadata in the file store
+      const storedFile = await db.findFile({ id: result.storedFileId! });
 
-      expect(gridFsFile!.metadata).toBeDefined();
-      expect(gridFsFile!.metadata!.tusUploadId).toBeDefined();
-      expect(gridFsFile!.metadata!.uploadedAt).toBeDefined();
+      expect(storedFile!.metadata).toBeDefined();
+      expect(storedFile!.metadata!.tusUploadId).toBeDefined();
+      expect(storedFile!.metadata!.uploadedAt).toBeDefined();
     });
   });
 
@@ -869,7 +866,7 @@ describe('TUS Module (e2e)', () => {
 
   it('deleteUsers', async () => {
     for (const user of users) {
-      await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+      await db.deleteUsers({ id: user.id });
     }
   });
 });

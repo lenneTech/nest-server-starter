@@ -78,6 +78,8 @@ test-results
 Dockerfile*
 docker-compose*
 .dockerignore
+# The init scripts of the optional PostgreSQL service in docker-compose.yml; the API image never runs them
+docker
 
 # CI/CD
 .gitlab-ci.yml

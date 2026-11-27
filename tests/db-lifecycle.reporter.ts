@@ -1,5 +1,12 @@
-import { createHash } from 'crypto';
-import { MongoClient } from 'mongodb';
+import {
+  describeServer,
+  fitTestDbName,
+  openMongoTestServer,
+  openPostgresTestServer,
+  postgresDatabaseName,
+  type TestDatabaseServer,
+  testDatabaseKind,
+} from './test-database-server.js';
 
 /**
  * Matches the per-run database names created by tests/global-setup.ts,
@@ -155,12 +162,7 @@ export function splitMongoUri(uri: string): { dbName: string; query: string; ser
 export function deriveTestDbUri(suffix: string): string {
   const baseUri = process.env.NSC__MONGOOSE__URI || 'mongodb://127.0.0.1/nest-server-starter-e2e';
   const { dbName, query, serverUri } = splitMongoUri(baseUri);
-  let name = `${dbName}-${suffix}`;
-  if (name.length > 63) {
-    const hash = createHash('sha1').update(name).digest('hex').slice(0, 8);
-    name = `${name.slice(0, 54)}-${hash}`;
-  }
-  return `${serverUri}/${name}${query}`;
+  return `${serverUri}/${fitTestDbName(`${dbName}-${suffix}`)}${query}`;
 }
 
 /**
@@ -217,8 +219,35 @@ export function isStaleTestDb(name: string, base: string, now: number = Date.now
 }
 
 /**
+ * The run's database as the environment names it — tests/global-setup.ts set it for the run — or `undefined` for an
+ * externally pinned MongoDB URI (e.g. a CI service container), which this reporter does not manage.
+ *
+ * `legacyBase`: whether the bare base name is a leftover of the pre-unique-name scheme. Only on MongoDB: on PostgreSQL
+ * the base is a database somebody created (docker/postgres/initdb/10-roles.sh, a CI service), never one of ours.
+ */
+export function runDatabase(
+  env: NodeJS.ProcessEnv = process.env,
+): { legacyBase: boolean; name: string; open: () => Promise<TestDatabaseServer>; where: string } | undefined {
+  if (testDatabaseKind(env) === 'postgres') {
+    const ownerUrl = env.NSC__DATABASE__OWNER_URL as string;
+    const name = postgresDatabaseName(ownerUrl);
+    return RUN_DB_PATTERN.test(name)
+      ? { legacyBase: false, name, open: () => openPostgresTestServer(ownerUrl), where: describeServer(ownerUrl) }
+      : undefined;
+  }
+  const uri = env.NSC__MONGOOSE__URI;
+  if (!uri) {
+    return undefined;
+  }
+  const { dbName, serverUri } = splitMongoUri(uri);
+  return RUN_DB_PATTERN.test(dbName)
+    ? { legacyBase: true, name: dbName, open: () => openMongoTestServer(uri), where: serverUri }
+    : undefined;
+}
+
+/**
  * Vitest reporter managing the lifecycle of per-run test databases
- * (created by tests/global-setup.ts):
+ * (created by tests/global-setup.ts), on MongoDB and on PostgreSQL alike:
  *
  * - Run PASSED → drop this run's database immediately AND collect leftovers:
  *   run databases whose creating process is dead (crashed or failed earlier
@@ -238,15 +267,12 @@ export default class DbLifecycleReporter {
     unhandledErrors: readonly unknown[],
     reason: 'failed' | 'interrupted' | 'passed',
   ): Promise<void> {
-    const uri = process.env.NSC__MONGOOSE__URI;
-    if (!uri) {
+    const run = runDatabase();
+    if (!run) {
+      // No run database, or an externally pinned one (e.g. CI service container) — not managed here.
       return;
     }
-    const { dbName, serverUri } = splitMongoUri(uri);
-    if (!RUN_DB_PATTERN.test(dbName)) {
-      // Externally pinned database (e.g. CI service container) — not managed here.
-      return;
-    }
+    const { legacyBase, name: dbName, where } = run;
 
     if (reason !== 'passed' || unhandledErrors.length > 0) {
       // The actual test data lives in the per-worker fork databases (`${dbName}-w<N>`, created in
@@ -256,18 +282,17 @@ export default class DbLifecycleReporter {
       // of sight. The pattern + count is enough to connect to the right database.
       let forkCount = 0;
       try {
-        const connection = await MongoClient.connect(uri);
+        const server = await run.open();
         try {
-          const { databases } = await connection.db().admin().listDatabases({ nameOnly: true });
-          forkCount = databases.filter((d) => d.name.startsWith(`${dbName}-w`)).length;
+          forkCount = (await server.list()).filter((name) => name.startsWith(`${dbName}-w`)).length;
         } finally {
-          await connection.close();
+          await server.close();
         }
       } catch {
         /* count stays 0 — the pattern line below is still correct */
       }
       console.info(
-        `\n⚠ Test databases kept for debugging: ${serverUri}/${dbName}-w<N>` +
+        `\n⚠ Test databases kept for debugging: ${where}/${dbName}-w<N>` +
           (forkCount > 0 ? ` (${forkCount} databases, one per worker fork + derived)` : '') +
           '\n  Removed automatically when the next test run starts (startup sweep).',
       );
@@ -275,17 +300,16 @@ export default class DbLifecycleReporter {
     }
 
     try {
-      const connection = await MongoClient.connect(uri);
+      const server = await run.open();
       try {
         const dropped: string[] = [];
-        await connection.db(dbName).dropDatabase();
+        await server.drop(dbName);
         dropped.push(dbName);
 
         const base = dbName.replace(RUN_DB_PATTERN, '');
-        const { databases } = await connection.db().admin().listDatabases({ nameOnly: true });
         let guardSkipped = 0;
-        for (const { name } of databases) {
-          if (name === dbName) {
+        for (const name of await server.list()) {
+          if (name === dbName || (!legacyBase && name === base)) {
             continue;
           }
           // DBs derived from THIS run's name (per-worker `-w<N>` and their derived
@@ -299,7 +323,7 @@ export default class DbLifecycleReporter {
             guardSkipped++;
             continue;
           }
-          await connection.db(name).dropDatabase();
+          await server.drop(name);
           dropped.push(name);
         }
         console.info(`Test database cleanup: dropped ${dropped.join(', ')}`);
@@ -313,7 +337,7 @@ export default class DbLifecycleReporter {
           );
         }
       } finally {
-        await connection.close();
+        await server.close();
       }
     } catch (error) {
       console.warn(`Test database cleanup skipped: ${error instanceof Error ? error.message : 'Unknown error'}`);

@@ -1,6 +1,6 @@
 import { createMigrationStore } from '@lenne.tech/nest-server';
 
-import { resolveMongoUri } from './mongo-uri.js';
+import { resolveMigrationStoreUri } from './database-url.js';
 
 // Since nest-server 11.33.0 the third argument (lock collection) defaults to
 // 'migrations_lock', and `migrate up` acquires that lock around the whole run.
@@ -12,11 +12,12 @@ import { resolveMongoUri } from './mongo-uri.js';
 //
 // With a single replica this costs one uncontended insert/delete per boot.
 // Pass '' as the third argument to opt out of locking entirely.
+//
+// The URL decides the store: the MongoDB URI by default (state in the collection `migrations`), the OWNER role's
+// URL on PostgreSQL (state in the table `lt_migrations`, locked by a transaction-scoped advisory lock instead of the
+// lock collection). See database-url.js. A project that switches an existing deployment from MongoDB to PostgreSQL
+// moves the state first (nest-server src/core/modules/migrate/README.md, "Move the state when you switch").
 export default createMigrationStore(
-  resolveMongoUri(),
+  resolveMigrationStoreUri(),
   'migrations', // optional, default is 'migrations'
 );
-
-// A project whose default source is PostgreSQL / MySQL / MariaDB (nest-server 12.1.0+) passes the
-// URL of the role that OWNS the tables instead; the state then lives in the table `lt_migrations`:
-// export default createMigrationStore(process.env.NSC__DATABASE__OWNER_URL);

@@ -35,7 +35,11 @@ function resolveMongoUri() {
 
   const uri = (config.default || config).mongoose?.uri;
   if (!uri) {
-    throw new Error('config.env.ts loaded but mongoose.uri is empty');
+    // On PostgreSQL there is no MongoDB to name: the migration store reads database-url.js instead
+    throw new Error(
+      'config.env.ts loaded but mongoose.uri is empty' +
+        ((config.default || config).database ? ' (the default source is `database`: use resolveMigrationStoreUri())' : ''),
+    );
   }
   return uri;
 }

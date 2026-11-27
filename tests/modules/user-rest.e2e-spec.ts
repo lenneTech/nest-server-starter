@@ -3,11 +3,11 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import { Server } from 'http';
-import { MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../../src/config.env.js';
 import metaData from '../../src/meta.json' with { type: 'json' };
 import { imports, ServerModule } from '../../src/server/server.module.js';
+import { openTestDb, type TestDb } from '../test-db.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -30,8 +30,7 @@ describe('User Module REST (e2e)', () => {
   let testHelper: TestHelper;
 
   // database
-  let connection;
-  let db;
+  let db: TestDb;
 
   // Global vars for REST tests
   let gRestPrepareUserId: string;
@@ -75,9 +74,7 @@ describe('User Module REST (e2e)', () => {
       testHelper = new TestHelper(app);
 
       // Connection to database
-      console.info(`MongoDB: Create connection to ${envConfig.mongoose.uri}`);
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = await connection.db();
+      db = await openTestDb(envConfig);
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -90,27 +87,27 @@ describe('User Module REST (e2e)', () => {
     // Clean up test users
     if (db && gRestPrepareUserId) {
       try {
-        await db.collection('users').deleteOne({ _id: new ObjectId(gRestPrepareUserId) });
+        await db.deleteUsers({ id: gRestPrepareUserId });
       } catch {
         // Ignore cleanup errors
       }
     }
     if (db && gRestUserId) {
       try {
-        await db.collection('users').deleteOne({ _id: new ObjectId(gRestUserId) });
+        await db.deleteUsers({ id: gRestUserId });
       } catch {
         // Ignore cleanup errors
       }
     }
     if (db && gRestMemberId) {
       try {
-        await db.collection('users').deleteOne({ _id: new ObjectId(gRestMemberId) });
+        await db.deleteUsers({ id: gRestMemberId });
       } catch {
         // Ignore cleanup errors
       }
     }
-    if (connection) {
-      await connection.close();
+    if (db) {
+      await db.close();
     }
     // Explicitly close httpServer
     if (httpServer) {
@@ -146,16 +143,11 @@ describe('User Module REST (e2e)', () => {
     });
 
     // Get user from database
-    const user = await db.collection('users').findOne({ email });
-    gRestPrepareUserId = user._id.toString();
+    const user = await db.findUser({ email });
+    gRestPrepareUserId = user.id;
 
     // Set admin role and verify email
-    await db
-      .collection('users')
-      .updateOne(
-        { _id: new ObjectId(gRestPrepareUserId) },
-        { $set: { emailVerified: true, roles: ['admin'], verified: true } },
-      );
+    await db.updateUser({ id: gRestPrepareUserId }, { emailVerified: true, roles: ['admin'], verified: true });
 
     // Sign in to get session token
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
@@ -261,11 +253,9 @@ describe('User Module REST (e2e)', () => {
       payload: { email, name: 'RESTMember', password: hashPassword(password), termsAndPrivacyAccepted: true },
       statusCode: 201,
     });
-    const user = await db.collection('users').findOne({ email });
-    gRestMemberId = user._id.toString();
-    await db
-      .collection('users')
-      .updateOne({ _id: new ObjectId(gRestMemberId) }, { $set: { emailVerified: true, roles: [], verified: true } });
+    const user = await db.findUser({ email });
+    gRestMemberId = user.id;
+    await db.updateUser({ id: gRestMemberId }, { emailVerified: true, roles: [], verified: true });
 
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
       method: 'POST',
@@ -293,10 +283,10 @@ describe('User Module REST (e2e)', () => {
     });
     await testHelper.rest(`/users/${gRestUserId}`, { method: 'DELETE', statusCode: 401 });
 
-    const target = await db.collection('users').findOne({ _id: new ObjectId(gRestUserId) });
+    const target = await db.findUser({ id: gRestUserId });
     expect(target).not.toBeNull();
     expect(target.firstName).toEqual('RestTest');
-    expect(await db.collection('users').countDocuments({ email: newUser.email })).toEqual(0);
+    expect(await db.countUsers({ email: newUser.email })).toEqual(0);
   });
 
   /**
@@ -307,7 +297,7 @@ describe('User Module REST (e2e)', () => {
     await testHelper.rest('/users', { cookies: gRestMemberToken, statusCode: 403 });
     await testHelper.rest('/users/count', { cookies: gRestMemberToken, statusCode: 403 });
     await testHelper.rest('/users', { cookies: gRestMemberToken, method: 'POST', payload: newUser, statusCode: 403 });
-    expect(await db.collection('users').countDocuments({ email: newUser.email })).toEqual(0);
+    expect(await db.countUsers({ email: newUser.email })).toEqual(0);
   });
 
   /**
@@ -326,7 +316,7 @@ describe('User Module REST (e2e)', () => {
     });
     await testHelper.rest(`/users/${gRestUserId}`, { cookies: gRestMemberToken, method: 'DELETE', statusCode: 403 });
 
-    const target = await db.collection('users').findOne({ _id: new ObjectId(gRestUserId) });
+    const target = await db.findUser({ id: gRestUserId });
     expect(target).not.toBeNull();
     expect(target.firstName).toEqual('RestTest');
   });

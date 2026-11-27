@@ -18,9 +18,10 @@
 #     source (NSC__DATABASE__URL, nest-server 12.1.0+) the framework creates and evolves the
 #     tables at boot as the owner role (NSC__DATABASE__OWNER_URL), not in this script.
 #
-# The state store is migrations-utils/migrate.js: MongoDB through NSC__MONGOOSE__URI. A project
-# whose default source is SQL hands it the owner URL instead — the state then lives in the table
-# `lt_migrations`, and a `migrate create <name> --sql` migration runs with the owner's rights.
+# The state store is migrations-utils/migrate.js; it follows the configuration (database-url.js):
+# MongoDB through NSC__MONGOOSE__URI, or on PostgreSQL the OWNER role (NSC__DATABASE__OWNER_URL) —
+# the state then lives in the table `lt_migrations`, and a migration from
+# `pnpm run migrate:create:sql` runs with the owner's rights.
 #   - No CLI in the image? Skip instead of crash-looping the container.
 #
 # A migration that RAN AND FAILED aborts the start. A failed schema migration is otherwise

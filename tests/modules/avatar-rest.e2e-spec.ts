@@ -2,12 +2,12 @@ import { HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import fs from 'fs';
-import { MongoClient, ObjectId } from 'mongodb';
 import os from 'os';
 import path from 'path';
 
 import envConfig from '../../src/config.env.js';
 import { imports, ServerModule } from '../../src/server/server.module.js';
+import { openTestDb, type TestDb } from '../test-db.js';
 
 /**
  * Avatar upload (e2e)
@@ -15,9 +15,9 @@ import { imports, ServerModule } from '../../src/server/server.module.js';
  * This endpoint had no test at all, and two things about it changed with
  * nest-server 11.33.0:
  *
- * 1. The bytes go into the CENTRAL file storage (GridFS/S3) instead of a
- *    pod-local `staticAssets/avatars` directory that only one replica could read
- *    and a restart discarded. `user.avatar` is therefore a FILE ID now, served
+ * 1. The bytes go into the CENTRAL file storage (GridFS or S3; the filesystem
+ *    driver on PostgreSQL) instead of a pod-local `staticAssets/avatars`
+ *    directory that only one replica could read and a restart discarded. `user.avatar` is therefore a FILE ID now, served
  *    via `GET /files/id/:id` — not a filename under the static assets prefix.
  * 2. That download route is role-gated. This project widens `file.downloadRoles`
  *    to `S_USER` and authorizes per file in `FileService.checkRights()`, so the
@@ -39,8 +39,7 @@ const PNG_HEADER = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex');
 
 describe('Avatar REST (e2e)', () => {
   let app;
-  let connection: MongoClient;
-  let db;
+  let db: TestDb;
   let fixtureDir: string;
   let testHelper: TestHelper;
 
@@ -59,8 +58,7 @@ describe('Avatar REST (e2e)', () => {
     await app.init();
     testHelper = new TestHelper(app);
 
-    connection = await MongoClient.connect(envConfig.mongoose.uri);
-    db = connection.db();
+    db = await openTestDb(envConfig);
 
     // Fixtures live outside the repository: the cleanup below is skipped whenever an
     // upload throws, and every such run would otherwise leave a stray .png behind.
@@ -71,7 +69,7 @@ describe('Avatar REST (e2e)', () => {
     for (const user of users) {
       if (user.id) {
         try {
-          await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+          await db.deleteUsers({ id: user.id });
         } catch {
           // Ignore cleanup errors
         }
@@ -80,7 +78,7 @@ describe('Avatar REST (e2e)', () => {
     if (fixtureDir) {
       await fs.promises.rm(fixtureDir, { force: true, recursive: true });
     }
-    await connection.close();
+    await db.close();
     await app.close();
   });
 
@@ -100,11 +98,9 @@ describe('Avatar REST (e2e)', () => {
         statusCode: 201,
       });
 
-      const dbUser = await db.collection('users').findOne({ email: `${random}@testusers.com` });
+      const dbUser = await db.findUser({ email: `${random}@testusers.com` });
       expect(dbUser).not.toBeNull();
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(dbUser._id) }, { $set: { emailVerified: true, verified: true } });
+      await db.updateUser({ id: dbUser.id }, { emailVerified: true, verified: true });
 
       const signIn = await testHelper.rest('/iam/sign-in/email', {
         method: 'POST',
@@ -115,7 +111,7 @@ describe('Avatar REST (e2e)', () => {
 
       users.push({
         email: `${random}@testusers.com`,
-        id: dbUser._id.toString(),
+        id: dbUser.id,
         password,
         token: TestHelper.extractSessionToken(signIn),
       });
@@ -149,7 +145,7 @@ describe('Avatar REST (e2e)', () => {
     // A file id, not a filename — this is what changed for the frontend.
     expect(String(avatarId)).toMatch(/^[a-f0-9]{24}$/);
 
-    const dbUser = await db.collection('users').findOne({ _id: new ObjectId(users[0].id) });
+    const dbUser = await db.findUser({ id: users[0].id });
     expect(String(dbUser?.avatar)).toEqual(String(avatarId));
 
     // The bytes come from the central store, which is what lets a SECOND replica
@@ -168,7 +164,7 @@ describe('Avatar REST (e2e)', () => {
   });
 
   it('replaces the previous avatar and deletes the orphaned file', async () => {
-    const previous = (await db.collection('users').findOne({ _id: new ObjectId(users[0].id) }))?.avatar;
+    const previous = (await db.findUser({ id: users[0].id }))?.avatar;
     expect(previous).toBeDefined();
 
     const local = path.join(fixtureDir, 'avatar-2.png');
@@ -184,11 +180,10 @@ describe('Avatar REST (e2e)', () => {
     expect(String(avatarId)).not.toEqual(String(previous));
 
     // The replaced file is removed from the store rather than orphaned there
-    const orphan = await db.collection('fs.files').findOne({ _id: new ObjectId(String(previous)) });
+    const orphan = await db.findFile({ id: String(previous) });
     expect(orphan).toBeNull();
 
     // Clean up the current avatar
-    await db.collection('fs.files').deleteOne({ _id: new ObjectId(String(avatarId)) });
-    await db.collection('fs.chunks').deleteMany({ files_id: new ObjectId(String(avatarId)) });
+    await db.deleteFile(String(avatarId));
   });
 });

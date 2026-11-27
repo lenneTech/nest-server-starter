@@ -85,6 +85,54 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: pnpm run check
 
+  # The PostgreSQL variant (src/config.env.ts, `PROJECT_SQL_ENGINE` / NSC__DATABASE__*), with the same `check`.
+  # A release needs this job green as well as `check`: the starter is the template for both databases, and a
+  # project created on PostgreSQL inherits whatever this job did not catch.
+  #
+  # No MongoDB here, deliberately: the job proves that the variant runs without one. NSC__DATABASE__SQL_ENGINE alone
+  # switches the local envs (e2e for the tests, local for the server start) to the PostgreSQL of docker-compose.yml.
+  postgres:
+    name: Check (PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      matrix:
+        node-version: [24.x]
+
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+
+      # The service of docker-compose.yml, not a `services:` container: those start before the checkout and could
+      # not run docker/postgres/initdb/10-roles.sh, which creates the owner and the application role. This way the
+      # job also proves the compose file and the init script a developer uses. `--wait` returns once the healthcheck
+      # passes, which is after the init script has run.
+      - name: Start PostgreSQL
+        run: docker compose --profile postgres up -d --wait
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NSC__DATABASE__SQL_ENGINE: typeorm
+        run: pnpm run check
+
+      - name: PostgreSQL log
+        if: failure()
+        run: docker compose --profile postgres logs postgres
+
   windows:
     name: Windows (non-blocking)
     runs-on: windows-latest

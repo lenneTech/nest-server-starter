@@ -326,6 +326,12 @@ overrides:
   # 00:06 UTC, past the release-age gate; a hardening release: the malformed-path guard of `mount()` stays
   # in the built output, `parseBody()` skips `constructor.prototype` keys, `basicAuth()` refuses a
   # non-string username or password at setup). 4.13.22 is the newest 4.x.
+  # 2026-11-27: NOT raised, release-age gate. 4.13.23 (published 2026-11-26 21:23 UTC) closes three medium
+  # repository advisories of 2026-11-26 that all cover 4.13.22: GHSA-mhwf-w6q6-q58w (`getPath()` drops the first
+  # path segment of a URL without scheme and host, Bun only), GHSA-656w-x92q-369m (TrieRouter treats `__proto__`
+  # as an HTTP method) and GHSA-586x-c76g-h528 (TrieRouter matches a partial alternative of a constrained
+  # parameter, bypassing `except()` middleware). None is in the global advisory database yet, so `pnpm audit`
+  # stays green on 4.13.22. Raise key and target to 4.13.23 in the first run after 2026-11-27 21:23 UTC.
   'hono@>=4.0.0 <4.13.22': 4.13.22
 
   # REMOVED 2026-10-29: '@graphql-tools/utils@>=12.0.0 <12.1.0': 12.1.0 (GHSA-7mx3-vvmw-hjmv,

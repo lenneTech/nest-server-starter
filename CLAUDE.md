@@ -3,7 +3,8 @@
 ## Project Overview
 
 Starter template for `@lenne.tech/nest-server` based NestJS applications. Used by `lt server create` and
-`lt fullstack init` to scaffold new projects.
+`lt fullstack init` to scaffold new projects. One codebase for two databases: MongoDB (the default) and PostgreSQL,
+switched by configuration (see "Database: MongoDB or PostgreSQL" below).
 
 ## Framework Mode (npm vs. vendor) — read first
 
@@ -35,9 +36,15 @@ src/
 │   ├── server.module.ts       # Root module (imports all feature modules)
 │   └── modules/
 │       ├── user/              # User module (CRUD, auth, avatar)
-│       ├── file/              # File module (upload, download, GridFS)
+│       ├── file/              # File module (upload, download; GridFS on MongoDB, filesystem on PostgreSQL)
 │       └── meta/              # Meta module (server info)
+docker-compose.yml             # Optional PostgreSQL service for development (profile `postgres`)
+docker/postgres/initdb/        # Creates the owner and the application role of PostgreSQL
+migrations-utils/database-url.js # Migration store URL: MongoDB URI, or the PostgreSQL owner role
 tests/
+├── test-db.ts                 # Neutral database access for specs (MongoDB or PostgreSQL)
+├── test-database-server.ts    # Run lifecycle: create / list / drop test databases on either server
+├── postgres-roles.e2e-spec.ts # PostgreSQL only: the application role cannot bypass row-level security
 ├── iam.e2e-spec.ts            # IAM/Auth integration tests
 ├── common.e2e-spec.ts         # Common endpoint tests
 ├── project.e2e-spec.ts        # Project-level tests
@@ -102,6 +109,10 @@ Declares mode-specific files, packages, and scripts:
 - `*-rest.e2e-spec.ts` - Only REST tests (deleted in GraphQL mode)
 - `*.e2e-spec.ts` (no suffix) - Shared tests (all modes)
 - Shared tests use noop PubSub: `{ provide: 'PUB_SUB', useValue: { publish: async () => {} } }`
+- A spec reads and prepares database state through `tests/test-db.ts` (`openTestDb(envConfig)`:
+  `findUser`, `updateUser`, `deleteUsers`, `countUsers`, `findFile`, `deleteFile`), never through a
+  `MongoClient` or `pg` client of its own: one spec then proves both databases. A spec that needs an
+  empty database calls `useOwnTestDatabase(suffix)` before importing the configuration.
 
 ### strip-markers Script
 
@@ -125,11 +136,49 @@ docker build --build-arg API_DIR=projects/api -t api .
 - `docker-entrypoint.sh` — Runs database migrations before server start via `migrate up`. A migration that **ran and failed** aborts the start by default; `MIGRATIONS_ALLOW_FAILURE=true` (long form `MIGRATE_FAILURE_POLICY=warn`) starts anyway, per deploy. A missing migration step never blocks the start, and neither does a recorded migration whose file was pruned (the migrate CLI only warns unless `NSC__MIGRATE__STRICT=true`)
 - `.dockerignore` — Keeps build context lean
 
-**Environment:** The migration store reads MongoDB URI from `NSC__MONGOOSE__URI` env var (not `config.env.ts`), so it works in Docker production where TypeScript source is not available.
+**Environment:** The migration store (`migrations-utils/migrate.js` → `database-url.js`) reads the compiled
+configuration, and the environment only where none is loadable: the MongoDB URI (`NSC__MONGOOSE__URI`), or on
+PostgreSQL the owner role (`NSC__DATABASE__OWNER_URL`). On PostgreSQL the migrations therefore run as the owner and
+keep their state in the table `lt_migrations`.
 
 ```bash
 docker run -e NSC__MONGOOSE__URI=mongodb://host:27017/mydb -p 3000:3000 api
 ```
+
+## Database: MongoDB or PostgreSQL
+
+MongoDB is the default. PostgreSQL (nest-server 12.1.0+) is switched on by configuration, never by a branch or a
+second copy of the code:
+
+- **In code, for every env:** `PROJECT_SQL_ENGINE` in `src/config.env.ts` (`'typeorm'`, `'kysely'`, `'drizzle'`).
+  The local envs then use `LOCAL_POSTGRES` (the `postgres` service of `docker-compose.yml`, 127.0.0.1:5433), the
+  deployed envs the URLs from `NSC__DATABASE__URL` / `NSC__DATABASE__OWNER_URL`.
+- **Per run or deployment:** `NSC__DATABASE__URL` and `NSC__DATABASE__OWNER_URL`; locally `NSC__DATABASE__SQL_ENGINE`
+  alone switches to `LOCAL_POSTGRES`.
+
+With PostgreSQL configured, `localConfig()` sets no `mongoose` block (a configured `mongoose` would connect a MongoDB
+beside it), a local env drops a `NSC__MONGOOSE__URI` from the shell (`lt dev up` exports one; kept only when
+`database.models` routes a model to `mongoose`), and the deployed envs require the two database URLs instead of
+`NSC__MONGOOSE__URI`. `lt dev up` does not recognise the variant yet, so every stack runs on the database of the
+`local` env. `POSTGRES_APP_DATABASES` in `docker-compose.yml` has to equal `dbName` of the `local` block (the lt CLI
+does not rename it yet). Two roles, always:
+the owner owns the tables and runs the boot's schema evolution and the migrations; the application role owns nothing
+and has neither SUPERUSER nor BYPASSRLS (`docker/postgres/initdb/10-roles.sh`). New SQL migrations:
+`pnpm run migrate:create:sql <name>`. MySQL / MariaDB are not part of the template.
+
+```bash
+docker compose --profile postgres up -d
+NSC__DATABASE__SQL_ENGINE=typeorm pnpm run check   # what the CI job `postgres` runs
+```
+
+Both package sets stay declared (`mongoose`, `@nestjs/mongoose`, `mongodb` and `pg`, `typeorm`); removing the unused
+one is the lt CLI's job when it creates a project. The starter's own source imports `mongoose` for types only
+(`import type`), so `tsc` needs it on PostgreSQL too: keep it at least as a devDependency there. Code here must
+stay database-neutral: models through `CorePersistenceModule.forFeature()`, data access through `CrudService` / the
+store, no `getNativeCollection()` in shared code paths.
+
+**CI and releases:** `.github/workflows/test.yml` runs `check` twice, job `check` on MongoDB and job `postgres` on
+PostgreSQL (without any MongoDB). A change ships only when both are green.
 
 ## Tooling
 
@@ -268,6 +317,7 @@ the "where to change what" guide. Quick map:
 | Operator knobs (booleans/numbers/CSV) | direct `process.env.X` reads in the helper bodies (`LEGACY_AUTH_ENABLED`, `CORS_ALLOWED_ORIGINS`, `SMTP_PORT`, `SMTP_SECURE`, `TWO_FACTOR_APP_NAME`, `BREVO_API_KEY`) |
 | Log levels of the Nest logger (`log` and above when deployed, every level locally) | `resolveLogLevels()`, applied to the Nest logger while `config.env.ts` loads (before `CoreModule.forRoot()` runs); per deployment NestJS's own `NEST_LOG_LEVEL` |
 | API documentation (`/swagger`, `/api-docs-json`): off when deployed, on locally (nest-server 12.7.0) | `swagger` stays unset in `deployedConfig()`; per deployment `NSC__SWAGGER=true` |
+| Database: MongoDB (default) or PostgreSQL | `PROJECT_SQL_ENGINE` and `LOCAL_POSTGRES` at the top; per run or deployment `NSC__DATABASE__URL` / `__OWNER_URL` / `__SQL_ENGINE` |
 
 ### Secrets policy
 
@@ -283,7 +333,10 @@ the "where to change what" guide. Quick map:
 3. Add a public dummy value for it to `COMPLETE` in `src/config.env.spec.ts`. The test
    "covers every unconditional requirement" stays red until you do; then `pnpm test` confirms that
    `develop`/`test`/`production` refuse to start without the var, name it in the error, and start
-   once it is set. (An entry with a `condition` is not in `COMPLETE`; cover its opt-in case there.)
+   once it is set. `COMPLETE` holds what a deployment WITHOUT opt-ins needs: every entry without a
+   `condition`, and every one whose condition holds for an empty configuration (`NSC__MONGOOSE__URI`,
+   MongoDB being the default). Any other conditional entry is not in `COMPLETE`; cover its opt-in case
+   there (as the `PostgreSQL (database)` block does for the database URLs).
 
 ### Pipelines
 
@@ -421,6 +474,10 @@ Kai, 2026-11-03):
    and leave `version` as it is: no patch bump, no starter-only
    release, no tag (`tag.yml` finds the tag in place and does nothing).
    They ship under the next nest-server version.
+4. **Both databases green.** A release (and every push to `main`)
+   needs both CI jobs of `.github/workflows/test.yml` green: `check`
+   (MongoDB) and `postgres` (PostgreSQL). `tag.yml` does not wait for
+   them, so this is checked before the push, not by the tag.
 
 **This rule does NOT apply to projects generated from this starter.**
 There the project carries its own version and upgrades the framework

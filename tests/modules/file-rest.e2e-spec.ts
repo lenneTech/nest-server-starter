@@ -2,7 +2,6 @@ import { HttpExceptionLogFilter, RoleEnum, TestHelper } from '@lenne.tech/nest-s
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import fs from 'fs';
-import { MongoClient, ObjectId } from 'mongodb';
 import os from 'os';
 import path from 'path';
 
@@ -10,6 +9,7 @@ import envConfig from '../../src/config.env.js';
 import { FileInfo } from '../../src/server/modules/file/file-info.model.js';
 import { User } from '../../src/server/modules/user/user.model.js';
 import { imports, ServerModule } from '../../src/server/server.module.js';
+import { openTestDb, type TestDb } from '../test-db.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -31,8 +31,7 @@ describe('File Module REST (e2e)', () => {
   let testHelper: TestHelper;
 
   // database
-  let connection;
-  let db;
+  let db: TestDb;
 
   // Global vars
   const users: Partial<User & { token: string }>[] = [];
@@ -68,8 +67,7 @@ describe('File Module REST (e2e)', () => {
       testHelper = new TestHelper(app);
 
       // Connection to database
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = await connection.db();
+      db = await openTestDb(envConfig);
 
       // Upload fixtures need a real path on disk (TestHelper takes file paths, not
       // buffers). They must not live next to this spec: the cleanup below is skipped
@@ -91,7 +89,7 @@ describe('File Module REST (e2e)', () => {
     for (const user of users) {
       if (user.id) {
         try {
-          await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+          await db.deleteUsers({ id: user.id });
         } catch {
           // Ignore cleanup errors
         }
@@ -103,7 +101,7 @@ describe('File Module REST (e2e)', () => {
       await fs.promises.rm(fixtureDir, { force: true, recursive: true });
     }
 
-    await connection.close();
+    await db.close();
     await app.close();
   });
 
@@ -135,22 +133,20 @@ describe('File Module REST (e2e)', () => {
 
       expect(res).toBeDefined();
 
-      // Get user from database. findOne returns null when nothing matches, and
+      // Get user from database. findUser returns null when nothing matches, and
       // toBeDefined() would pass on null — assert not-null instead.
-      const user = await db.collection('users').findOne({ email: input.email });
+      const user = await db.findUser({ email: input.email });
       expect(user).not.toBeNull();
 
       users.push({
         email: input.email,
         firstName: input.name,
-        id: user._id.toString(),
+        id: user.id,
         password,
       });
 
       // Verify user in database
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
+      await db.updateUser({ id: user.id }, { emailVerified: true, verified: true });
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
   });
@@ -180,9 +176,7 @@ describe('File Module REST (e2e)', () => {
    * Prepare users
    */
   it('prepareUsers', async () => {
-    await db
-      .collection('users')
-      .findOneAndUpdate({ _id: new ObjectId(users[0].id) }, { $set: { roles: [RoleEnum.ADMIN] } });
+    await db.updateUser({ id: users[0].id }, { roles: [RoleEnum.ADMIN] });
   });
 
   // ===================================================================================================================
@@ -328,7 +322,7 @@ describe('File Module REST (e2e)', () => {
    */
   it('deleteUsers', async () => {
     for (const user of users) {
-      await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+      await db.deleteUsers({ id: user.id });
     }
   });
 });

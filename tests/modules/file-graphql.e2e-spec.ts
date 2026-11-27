@@ -4,7 +4,6 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import { PubSub } from 'graphql-subscriptions';
 import { VariableType } from 'json-to-graphql-query';
-import { Db, MongoClient, ObjectId } from 'mongodb';
 import os from 'os';
 import path from 'path';
 
@@ -12,6 +11,7 @@ import envConfig from '../../src/config.env.js';
 import { FileInfo } from '../../src/server/modules/file/file-info.model.js';
 import { User } from '../../src/server/modules/user/user.model.js';
 import { imports, ServerModule } from '../../src/server/server.module.js';
+import { openTestDb, type TestDb } from '../test-db.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -27,10 +27,11 @@ function hashPassword(password: string): string {
 // Helper Functions & Types for TUS
 // =====================================================================================================================
 
-interface GridFsFile {
-  _id: ObjectId;
+/** A file in the file store (GridFS on MongoDB, the filesystem driver on PostgreSQL), as tests/test-db.ts returns it */
+interface StoredFile {
   contentType: string;
   filename: string;
+  id: string;
   length: number;
   metadata?: Record<string, unknown>;
 }
@@ -43,8 +44,8 @@ interface TusCreateOptions {
 
 interface TusUploadResult {
   filename: string;
-  gridFsId?: string;
   location?: string;
+  storedFileId?: string;
 }
 
 const TUS_HEADERS = {
@@ -52,8 +53,9 @@ const TUS_HEADERS = {
   RESUMABLE: '1.0.0',
 } as const;
 
-const GRIDFS_MIGRATION_TIMEOUT = 5000;
-const GRIDFS_MIGRATION_INTERVAL = 100;
+// How long a finished TUS upload may take to arrive in the file store
+const FILE_STORE_MIGRATION_TIMEOUT = 5000;
+const FILE_STORE_MIGRATION_INTERVAL = 100;
 
 describe('File Module GraphQL (e2e)', () => {
   // To enable debugging, include these flags in the options of the request you want to debug
@@ -66,8 +68,7 @@ describe('File Module GraphQL (e2e)', () => {
   let baseUrl: string;
 
   // database
-  let connection: MongoClient;
-  let db: Db;
+  let db: TestDb;
 
   // Global vars
   const users: Partial<User & { token: string }>[] = [];
@@ -75,7 +76,7 @@ describe('File Module GraphQL (e2e)', () => {
   let fileContent: string;
 
   // TUS test data
-  let tusTestFile: { content: string; filename: string; gridFsId: string };
+  let tusTestFile: { content: string; filename: string; storedFileId: string };
 
   /**
    * Cookie header for the raw-fetch TUS calls below, assigned by `signInUsers`.
@@ -143,18 +144,18 @@ describe('File Module GraphQL (e2e)', () => {
     return { newOffset, response };
   }
 
-  async function waitForGridFsMigration(
+  async function waitForStoredFile(
     filename: string,
-    timeout: number = GRIDFS_MIGRATION_TIMEOUT,
-  ): Promise<GridFsFile | null> {
+    timeout: number = FILE_STORE_MIGRATION_TIMEOUT,
+  ): Promise<StoredFile | null> {
     const startTime = Date.now();
 
     while (Date.now() - startTime < timeout) {
-      const file = await db.collection<GridFsFile>('fs.files').findOne({ filename });
+      const file = (await db.findFile({ filename })) as null | StoredFile;
       if (file) {
         return file;
       }
-      await new Promise((resolve) => setTimeout(resolve, GRIDFS_MIGRATION_INTERVAL));
+      await new Promise((resolve) => setTimeout(resolve, FILE_STORE_MIGRATION_INTERVAL));
     }
 
     return null;
@@ -173,15 +174,15 @@ describe('File Module GraphQL (e2e)', () => {
     const { response: patchResponse } = await patchTusUpload(location, content);
     expect(patchResponse.status).toBe(204);
 
-    // waitForGridFsMigration returns null on timeout, and toBeDefined() would pass
+    // waitForStoredFile returns null on timeout, and toBeDefined() would pass
     // on null — assert not-null so a failed migration actually fails the test.
-    const gridFsFile = await waitForGridFsMigration(filename);
-    expect(gridFsFile).not.toBeNull();
+    const storedFile = await waitForStoredFile(filename);
+    expect(storedFile).not.toBeNull();
 
     return {
       filename,
-      gridFsId: gridFsFile?._id?.toString(),
       location,
+      storedFileId: storedFile?.id,
     };
   }
 
@@ -222,8 +223,7 @@ describe('File Module GraphQL (e2e)', () => {
       testHelper = new TestHelper(app);
 
       // Connection to database
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = connection.db();
+      db = await openTestDb(envConfig);
 
       // Upload fixtures need a real path on disk (TestHelper takes file paths, not
       // buffers). They must not live next to this spec: the cleanup below is skipped
@@ -245,19 +245,17 @@ describe('File Module GraphQL (e2e)', () => {
     for (const user of users) {
       if (user.id) {
         try {
-          await db.collection('users').deleteOne({ _id: new ObjectId(user.id) });
+          await db.deleteUsers({ id: user.id });
         } catch {
           // Ignore cleanup errors
         }
       }
     }
 
-    // Clean up TUS test file from GridFS
-    if (tusTestFile?.gridFsId) {
+    // Clean up TUS test file from the file store
+    if (tusTestFile?.storedFileId) {
       try {
-        const fileId = new ObjectId(tusTestFile.gridFsId);
-        await db.collection('fs.files').deleteOne({ _id: fileId });
-        await db.collection('fs.chunks').deleteMany({ files_id: fileId });
+        await db.deleteFile(tusTestFile.storedFileId);
       } catch {
         // Ignore cleanup errors
       }
@@ -269,7 +267,7 @@ describe('File Module GraphQL (e2e)', () => {
       await fs.promises.rm(fixtureDir, { force: true, recursive: true });
     }
 
-    await connection.close();
+    await db.close();
     await app.close();
   });
 
@@ -301,22 +299,20 @@ describe('File Module GraphQL (e2e)', () => {
 
       expect(res).toBeDefined();
 
-      // Get user from database. findOne returns null when nothing matches, and
+      // Get user from database. findUser returns null when nothing matches, and
       // toBeDefined() would pass on null — assert not-null instead.
-      const user = await db.collection('users').findOne({ email: input.email });
+      const user = await db.findUser({ email: input.email });
       expect(user).not.toBeNull();
 
       users.push({
         email: input.email,
         firstName: input.name,
-        id: user._id.toString(),
+        id: user.id,
         password,
       });
 
       // Verify user in database
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
+      await db.updateUser({ id: user.id }, { emailVerified: true, verified: true });
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
   });
@@ -354,9 +350,7 @@ describe('File Module GraphQL (e2e)', () => {
    * Prepare users
    */
   it('prepareUsers', async () => {
-    await db
-      .collection('users')
-      .findOneAndUpdate({ _id: new ObjectId(users[0].id) }, { $set: { roles: [RoleEnum.ADMIN] } });
+    await db.updateUser({ id: users[0].id }, { roles: [RoleEnum.ADMIN] });
   });
 
   // ===================================================================================================================
@@ -465,17 +459,16 @@ describe('File Module GraphQL (e2e)', () => {
     expect(res[1].id).toBeDefined();
     expect(res[1].filename).toBe('test2.txt');
 
-    // Verify files exist in GridFS. findOne returns null when nothing matches, and
+    // Verify files exist in the file store. findFile returns null when nothing matches, and
     // toBeDefined() would pass on null — assert the filename so the check has teeth.
-    const file1 = await db.collection('fs.files').findOne({ _id: new ObjectId(res[0].id) });
+    const file1 = await db.findFile({ id: res[0].id });
     expect(file1?.filename).toBe('test1.txt');
-    const file2 = await db.collection('fs.files').findOne({ _id: new ObjectId(res[1].id) });
+    const file2 = await db.findFile({ id: res[1].id });
     expect(file2?.filename).toBe('test2.txt');
 
-    // Clean up - delete files from GridFS
+    // Clean up - delete files from the file store
     for (const file of res) {
-      await db.collection('fs.files').deleteOne({ _id: new ObjectId(file.id) });
-      await db.collection('fs.chunks').deleteMany({ files_id: new ObjectId(file.id) });
+      await db.deleteFile(file.id);
     }
   });
 
@@ -489,7 +482,7 @@ describe('File Module GraphQL (e2e)', () => {
       const content = 'This file was uploaded via TUS and will be queried via GraphQL';
 
       const result = await completeTusUpload(filename, content);
-      tusTestFile = { content, filename, gridFsId: result.gridFsId! };
+      tusTestFile = { content, filename, storedFileId: result.storedFileId! };
     });
 
     it('should get TUS file info via GraphQL', async () => {
@@ -503,7 +496,7 @@ describe('File Module GraphQL (e2e)', () => {
         { cookies: users[0].token },
       );
 
-      expect(res.id).toBe(tusTestFile.gridFsId);
+      expect(res.id).toBe(tusTestFile.storedFileId);
       expect(res.filename).toBe(tusTestFile.filename);
       expect(res.contentType).toBe('text/plain');
       expect(res.length).toBe(Buffer.byteLength(tusTestFile.content));
@@ -565,7 +558,7 @@ describe('File Module GraphQL (e2e)', () => {
       expect(res.errors[0].message).toEqual(ErrorCode.ACCESS_DENIED);
 
       // The file must still be there — a denied mutation must not have side effects.
-      const stillThere = await db.collection('fs.files').findOne({ _id: new ObjectId(tusTestFile.gridFsId) });
+      const stillThere = await db.findFile({ id: tusTestFile.storedFileId });
       expect(stillThere).not.toBeNull();
     });
   });
@@ -579,9 +572,7 @@ describe('File Module GraphQL (e2e)', () => {
    */
   it('deleteUsers', async () => {
     // Add admin role to last user
-    await db
-      .collection('users')
-      .findOneAndUpdate({ _id: new ObjectId(users[users.length - 1].id) }, { $set: { roles: ['admin'] } });
+    await db.updateUser({ id: users[users.length - 1].id }, { roles: ['admin'] });
 
     for (const user of users) {
       const res: any = await testHelper.graphQl(

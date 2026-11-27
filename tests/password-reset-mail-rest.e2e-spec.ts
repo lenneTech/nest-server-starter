@@ -1,10 +1,10 @@
 import { EmailService, HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import { MongoClient } from 'mongodb';
 
 import envConfig from '../src/config.env.js';
 import { imports, ServerModule } from '../src/server/server.module.js';
+import { openTestDb, type TestDb } from './test-db.js';
 
 /**
  * Story: the password-reset mail this starter sends is one a person can actually use.
@@ -46,8 +46,7 @@ function hashPassword(password: string): string {
 describe('Password reset mail - REST (e2e)', () => {
   let app;
   let testHelper: TestHelper;
-  let connection;
-  let db;
+  let db: TestDb;
 
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const email = `reset-mail-${suffix}@test.com`;
@@ -76,8 +75,7 @@ describe('Password reset mail - REST (e2e)', () => {
     await app.init();
     testHelper = new TestHelper(app);
 
-    connection = await MongoClient.connect(envConfig.mongoose.uri, {});
-    db = connection.db();
+    db = await openTestDb(envConfig);
 
     await testHelper.rest('/iam/sign-up/email', {
       method: 'POST',
@@ -87,14 +85,9 @@ describe('Password reset mail - REST (e2e)', () => {
   });
 
   afterAll(async () => {
-    const user = await db.collection('users').findOne({ email });
-    if (user) {
-      const ids: any[] = [user._id, user._id.toString(), user.iamId, user.id].filter(Boolean);
-      await db.collection('account').deleteMany({ userId: { $in: ids } });
-      await db.collection('session').deleteMany({ userId: { $in: ids } });
-    }
-    await db.collection('users').deleteMany({ email });
-    await connection.close();
+    // Sessions and accounts go with the user
+    await db?.deleteUsers({ email });
+    await db?.close();
     await app.close();
   });
 
@@ -119,7 +112,7 @@ describe('Password reset mail - REST (e2e)', () => {
     expect(link).toMatch(/^https?:\/\/[^/]+\/auth\/reset-password\?token=[a-f0-9]{64}$/);
 
     // THE token, not merely a well-shaped one — a value that does not match unlocks nothing.
-    const stored = await db.collection('users').findOne({ email });
+    const stored = await db.findUser({ email });
     expect(link.endsWith(String(stored?.passwordResetToken))).toBe(true);
   });
 

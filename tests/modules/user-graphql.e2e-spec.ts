@@ -11,10 +11,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import { PubSub } from 'graphql-subscriptions';
 import { Server } from 'http';
-import { MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../../src/config.env.js';
 import { imports, ServerModule } from '../../src/server/server.module.js';
+import { openTestDb, type TestDb } from '../test-db.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -37,8 +37,7 @@ describe('User Module GraphQL (e2e)', () => {
   let testHelper: TestHelper;
 
   // database
-  let connection;
-  let db;
+  let db: TestDb;
 
   // Services
   let configService: ConfigService;
@@ -87,9 +86,7 @@ describe('User Module GraphQL (e2e)', () => {
       configService = moduleFixture.get(ConfigService);
 
       // Connection to database
-      console.info(`MongoDB: Create connection to ${envConfig.mongoose.uri}`);
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = await connection.db();
+      db = await openTestDb(envConfig);
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -102,13 +99,13 @@ describe('User Module GraphQL (e2e)', () => {
     // Clean up test users
     if (db && gId) {
       try {
-        await db.collection('users').deleteOne({ _id: new ObjectId(gId) });
+        await db.deleteUsers({ id: gId });
       } catch {
         // Ignore cleanup errors
       }
     }
-    if (connection) {
-      await connection.close();
+    if (db) {
+      await db.close();
     }
     // Explicitly close httpServer
     if (httpServer) {
@@ -145,14 +142,12 @@ describe('User Module GraphQL (e2e)', () => {
     expect(res).toBeDefined();
 
     // Get user ID from database
-    const user = await db.collection('users').findOne({ email: gEmail });
+    const user = await db.findUser({ email: gEmail });
     expect(user).toBeDefined();
-    gId = user._id.toString();
+    gId = user.id;
 
     // Verify email for BetterAuth
-    await db
-      .collection('users')
-      .updateOne({ _id: new ObjectId(gId) }, { $set: { emailVerified: true, verified: true } });
+    await db.updateUser({ id: gId }, { emailVerified: true, verified: true });
   });
 
   /**
@@ -265,7 +260,7 @@ describe('User Module GraphQL (e2e)', () => {
    * Get user (as admin)
    */
   it('getUser', async () => {
-    await db.collection('users').findOneAndUpdate({ _id: new ObjectId(gId) }, { $set: { roles: ['admin'] } });
+    await db.updateUser({ id: gId }, { roles: ['admin'] });
     const res: any = await testHelper.graphQl(
       {
         arguments: {

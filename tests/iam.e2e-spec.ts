@@ -3,10 +3,10 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import { Server } from 'http';
-import { Db, MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../src/config.env.js';
 import { imports, ServerModule } from '../src/server/server.module.js';
+import { openTestDb, type TestDb } from './test-db.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -33,8 +33,7 @@ describe('Auth Integration (e2e)', () => {
   let betterAuthService: CoreBetterAuthService;
 
   // Database
-  let connection: MongoClient;
-  let db: Db;
+  let db: TestDb;
 
   // UserA: IAM registration, IAM login, IAM logout
   let userAEmail: string;
@@ -79,8 +78,7 @@ describe('Auth Integration (e2e)', () => {
       betterAuthService = moduleFixture.get(CoreBetterAuthService);
 
       // Connection to database
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = connection.db();
+      db = await openTestDb(envConfig);
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -90,16 +88,16 @@ describe('Auth Integration (e2e)', () => {
     // Clean up test users
     if (db) {
       if (userAId) {
-        await db.collection('users').deleteOne({ _id: new ObjectId(userAId) });
+        await db.deleteUsers({ id: userAId });
       }
       if (userBId) {
-        await db.collection('users').deleteOne({ _id: new ObjectId(userBId) });
+        await db.deleteUsers({ id: userBId });
       }
     }
 
     // Close database connection
-    if (connection) {
-      await connection.close();
+    if (db) {
+      await db.close();
     }
 
     // Explicitly close httpServer
@@ -161,10 +159,8 @@ describe('Auth Integration (e2e)', () => {
         payload: { email, name: 'Sentinel', password: hashPassword(password), termsAndPrivacyAccepted: true },
         statusCode: 201,
       });
-      const user = await db.collection('users').findOne({ email });
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
+      const user = await db.findUser({ email });
+      await db.updateUser({ id: user.id }, { emailVerified: true, verified: true });
 
       const res = await testHelper.rest('/iam/sign-in/email', {
         method: 'POST',
@@ -185,7 +181,7 @@ describe('Auth Integration (e2e)', () => {
       expect(TestHelper.extractSessionToken(res)).toBeDefined();
 
       // Cleanup
-      await db.collection('users').deleteOne({ _id: new ObjectId(user._id) });
+      await db.deleteUsers({ id: user.id });
     });
   });
 
@@ -216,14 +212,12 @@ describe('Auth Integration (e2e)', () => {
       if (res.user?.id) {
         userAId = res.user.id;
       } else {
-        const user = await db.collection('users').findOne({ email: userAEmail });
-        if (user) userAId = user._id.toString();
+        const user = await db.findUser({ email: userAEmail });
+        if (user) userAId = user.id;
       }
 
       // Verify email for BetterAuth
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(userAId) }, { $set: { emailVerified: true, verified: true } });
+      await db.updateUser({ id: userAId }, { emailVerified: true, verified: true });
 
       // Assign a real role so the 11.26.1 roles-exposure fix can be asserted on
       // sign-in/session below. Match by email (robust regardless of the
@@ -234,7 +228,7 @@ describe('Auth Integration (e2e)', () => {
       // mapSessionUser() reads the user's current roles straight from the DB —
       // by design, precisely so E2E suites can promote a fresh user to admin via
       // a direct DB write. The 15s cache only applies to real deployments.
-      await db.collection('users').updateOne({ email: userAEmail }, { $set: { roles: ['admin'] } });
+      await db.updateUser({ email: userAEmail }, { roles: ['admin'] });
     });
 
     it('should sign in via IAM', async () => {
@@ -321,14 +315,12 @@ describe('Auth Integration (e2e)', () => {
       if (res.user?.id) {
         userBId = res.user.id;
       } else {
-        const user = await db.collection('users').findOne({ email: userBEmail });
-        if (user) userBId = user._id.toString();
+        const user = await db.findUser({ email: userBEmail });
+        if (user) userBId = user.id;
       }
 
       // Verify email for BetterAuth
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(userBId) }, { $set: { emailVerified: true, verified: true } });
+      await db.updateUser({ id: userBId }, { emailVerified: true, verified: true });
     });
 
     it('should sign in and receive session via IAM', async () => {

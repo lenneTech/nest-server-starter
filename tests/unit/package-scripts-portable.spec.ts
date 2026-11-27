@@ -29,7 +29,7 @@
  * itself stays, because deleting it breaks the build on every platform.
  *
  * WHAT IS STILL OPEN
- * The shell function in `migrate:create`, named in a known list below. The former `find` in
+ * The shell function in `migrate:create` and `migrate:create:sql`, named in a known list below. The former `find` in
  * `test:cleanup`, `open` in `docs`, `${…:-…}` in `link:nest-server` and the `bash scripts/…` steps
  * now run through Node scripts under `scripts/`; check-envs.sh was replaced by a unit test in
  * src/config.env.spec.ts.
@@ -301,7 +301,8 @@ describe('package.json scripts run on Windows', () => {
 
   it('does not use POSIX shell functions or positional parameters', () => {
     // `migrate:create` is the known exception: the lt cli generates the same function, so its Node
-    // replacement has to land in both places together.
-    expectOnlyKnown(scriptsMatching(usesShellSyntax), ['migrate:create'], 'POSIX shell syntax');
+    // replacement has to land in both places together. `migrate:create:sql` (PostgreSQL) is the same
+    // function with `--sql` and goes with it.
+    expectOnlyKnown(scriptsMatching(usesShellSyntax), ['migrate:create', 'migrate:create:sql'], 'POSIX shell syntax');
   });
 });

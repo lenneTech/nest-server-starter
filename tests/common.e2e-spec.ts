@@ -1,11 +1,11 @@
 import { ConfigService, HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import { MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../src/config.env.js';
 import metaData from '../src/meta.json' with { type: 'json' };
 import { imports, ServerModule } from '../src/server/server.module.js';
+import { openTestDb, type TestDb } from './test-db.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -27,8 +27,7 @@ describe('Common (e2e)', () => {
   let testHelper: TestHelper;
 
   // database
-  let connection;
-  let db;
+  let db: TestDb;
 
   // Services
   let configService: ConfigService;
@@ -67,9 +66,7 @@ describe('Common (e2e)', () => {
       configService = moduleFixture.get(ConfigService);
 
       // Connection to database
-      console.info(`MongoDB: Create connection to ${envConfig.mongoose.uri}`);
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = await connection.db();
+      db = await openTestDb(envConfig);
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -79,7 +76,7 @@ describe('Common (e2e)', () => {
    * After all tests are finished
    */
   afterAll(async () => {
-    await connection.close();
+    await db?.close();
     await app.close();
   });
 
@@ -169,17 +166,12 @@ describe('Common (e2e)', () => {
     if (signUpRes.user?.id) {
       gAdminId = signUpRes.user.id;
     } else {
-      const user = await db.collection('users').findOne({ email: gAdminEmail });
-      if (user) gAdminId = user._id.toString();
+      const user = await db.findUser({ email: gAdminEmail });
+      if (user) gAdminId = user.id;
     }
 
     // Set admin role and verify email
-    await db
-      .collection('users')
-      .findOneAndUpdate(
-        { _id: new ObjectId(gAdminId) },
-        { $set: { emailVerified: true, roles: ['admin'], verified: true } },
-      );
+    await db.updateUser({ id: gAdminId }, { emailVerified: true, roles: ['admin'], verified: true });
 
     // Sign in via IAM
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
@@ -222,14 +214,12 @@ describe('Common (e2e)', () => {
     if (signUpRes.user?.id) {
       userId = signUpRes.user.id;
     } else {
-      const user = await db.collection('users').findOne({ email });
-      if (user) userId = user._id.toString();
+      const user = await db.findUser({ email });
+      if (user) userId = user.id;
     }
 
     // Verify user email (but not admin)
-    await db
-      .collection('users')
-      .updateOne({ _id: new ObjectId(userId) }, { $set: { emailVerified: true, verified: true } });
+    await db.updateUser({ id: userId }, { emailVerified: true, verified: true });
 
     // Sign in via IAM
     const signInRes = await testHelper.rest('/iam/sign-in/email', {
@@ -247,7 +237,7 @@ describe('Common (e2e)', () => {
     await testHelper.rest('/config', { cookies: userSessionToken, statusCode: 403 });
 
     // Clean up
-    await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
+    await db.deleteUsers({ id: userId });
   });
 
   /**
@@ -321,6 +311,6 @@ describe('Common (e2e)', () => {
    * Clean up admin user
    */
   it('clean up admin user', async () => {
-    await db.collection('users').deleteOne({ _id: new ObjectId(gAdminId) });
+    await db.deleteUsers({ id: gAdminId });
   });
 });

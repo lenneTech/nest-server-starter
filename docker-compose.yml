@@ -1,0 +1,51 @@
+# =====================================================================================================================
+# Services this API can run on locally, beside the API itself (which runs with `pnpm start` / `lt dev up`).
+#
+# MongoDB, the default database, is not in this file: the local envs expect it on 127.0.0.1:27017 (a local mongod,
+# as for every lt project). The PostgreSQL variant (src/config.env.ts, `PROJECT_SQL_ENGINE` or NSC__DATABASE__*) runs on
+# the optional service below, in the profile `postgres`, so a plain `docker compose up` starts nothing:
+#
+#   docker compose --profile postgres up -d      # start; the first start creates the roles and the local database
+#   docker compose --profile postgres down       # stop, keep the data
+#   docker compose --profile postgres down -v    # stop and drop the data; the next start initialises again
+#
+# For development and CI. A deployment compose can mount the same init script with POSTGRES_TEST_RIGHTS=false.
+# =====================================================================================================================
+services:
+  postgres:
+    profiles: [postgres]
+    # PostgreSQL 15+ is required (nest-server's unique indexes are NULLS NOT DISTINCT). Pinned like nest-server's own
+    # test container (scripts/test-infra.mjs there), so the starter is tested against the version the framework is.
+    image: postgres:18.6-alpine3.24
+    environment:
+      # The superuser of the container, used only by the init script. Public dummy values for local use.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres-secret
+      POSTGRES_DB: postgres
+      # The two roles of src/config.env.ts (LOCAL_POSTGRES): change them together. Why two: docker/postgres/initdb/10-roles.sh
+      POSTGRES_OWNER_USER: nest_owner
+      POSTGRES_OWNER_PASSWORD: nest-owner-secret
+      POSTGRES_APP_USER: nest_app
+      POSTGRES_APP_PASSWORD: nest-app-secret
+      # The database of the `local` env (the e2e suite creates its own per run). It has to equal `dbName` of the `local`
+      # block in src/config.env.ts: a project created from this starter sets its own name here before the first `up`
+      # (on an existing volume a change takes effect only after `down -v`).
+      POSTGRES_APP_DATABASES: nest-server-starter-local
+    ports:
+      # 5433 on the host, 127.0.0.1 only: keeps clear of a PostgreSQL already on 5432 and off the network
+      - '127.0.0.1:5433:5432'
+    volumes:
+      # PostgreSQL 18 images keep their data in a version subdirectory of /var/lib/postgresql
+      - postgres_data:/var/lib/postgresql
+      - ./docker/postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -U postgres -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # PostgreSQL writes a shutdown checkpoint on SIGTERM; Docker's default 10 s can SIGKILL it halfway
+    stop_grace_period: 60s
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

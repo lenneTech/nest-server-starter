@@ -1,4 +1,5 @@
 import {
+  type DatabaseSqlEngine,
   getEnvironmentConfig,
   IServerOptions,
   isLocalEnv,
@@ -40,6 +41,8 @@ import metaData from './meta.json' with { type: 'json' };
  *   truth for both the fail-fast guard and the inline doc.
  * - **Log levels** (`log` and above when deployed, every level locally)
  *   → `resolveLogLevels()` below; per deployment NestJS's `NEST_LOG_LEVEL`.
+ * - **Database** (MongoDB by default, PostgreSQL by configuration)
+ *   → `PROJECT_SQL_ENGINE` below, or the `NSC__DATABASE__*` env vars.
  *
  * --------------------------------------------------------------------------
  * Secrets policy
@@ -62,8 +65,9 @@ import metaData from './meta.json' with { type: 'json' };
  * --------------------------------------------------------------------------
  * - `local`, `ci`, `e2e`: localhost defaults (API:3000, App:3001) — no setup needed.
  *   Override defaults via env vars: PORT, BIND_ADDRESS, BASE_URL, APP_URL,
- *   NSC__MONGOOSE__URI, SMTP_HOST, SMTP_PORT (e.g. for `lt dev up` parallel projects
- *   that serve the API as `https://api.<slug>.localhost` behind Caddy).
+ *   NSC__MONGOOSE__URI (NSC__DATABASE__URL / __OWNER_URL on PostgreSQL), SMTP_HOST,
+ *   SMTP_PORT (e.g. for `lt dev up` parallel projects that serve the API as
+ *   `https://api.<slug>.localhost` behind Caddy).
  * - `develop`, `test`, `production`: set `NSC__BASE_URL`; `appUrl` is auto-derived
  *   (e.g. `https://api.example.com` → `https://example.com`).
  *
@@ -169,6 +173,63 @@ const PROJECT_TUS: IServerOptions['tus'] = undefined;
  * never widens the role gate — `'public'` still needs `downloadRoles: [RoleEnum.S_EVERYONE]`.
  */
 
+/**
+ * The database: MongoDB, the default, or PostgreSQL (nest-server 12.1.0+). One codebase for both: the models are
+ * registered through `CorePersistenceModule.forFeature()`, and the configuration decides where they are stored.
+ *
+ * `undefined` keeps MongoDB: the `mongoose` configuration is the only data source, exactly as before. The SQL engine
+ * (`'typeorm'`, `'kysely'` or `'drizzle'`, each needs its package next to `pg`) switches every environment to
+ * PostgreSQL:
+ *
+ *   const PROJECT_SQL_ENGINE: DatabaseSqlEngine | undefined = 'typeorm';
+ *
+ * - **local, e2e, ci** then run on the PostgreSQL of docker-compose.yml (`docker compose --profile postgres up -d`) with
+ *   the public dummy roles of LOCAL_POSTGRES below, and connect to no MongoDB (a NSC__MONGOOSE__URI from the shell, as
+ *   `lt dev up` exports it, is dropped there unless `database.models` routes a model to it).
+ * - **Deployed envs** read the URLs from NSC__DATABASE__URL (application role) and NSC__DATABASE__OWNER_URL (owner
+ *   role); both become required, NSC__MONGOOSE__URI no longer (REQUIRED_DEPLOYED_ENV_VARS).
+ *
+ * Without a code change, the env vars switch a single run or deployment: NSC__DATABASE__URL and
+ * NSC__DATABASE__OWNER_URL name the databases, NSC__DATABASE__SQL_ENGINE alone puts the local envs on LOCAL_POSTGRES
+ * (the CI job `postgres` does that). Both roles and why they are separate: docker/postgres/initdb/10-roles.sh.
+ *
+ * Per-model exceptions (`database.models`), several sources, MySQL / MariaDB: nest-server migration guide
+ * 12.0.x → 12.1.x, §3 and §7. Moving existing MongoDB data is a data migration; nothing is copied by itself.
+ */
+const PROJECT_SQL_ENGINE: DatabaseSqlEngine | undefined = undefined;
+
+/**
+ * The PostgreSQL of the local envs: the `postgres` service of docker-compose.yml with the roles its init script creates
+ * (docker/postgres/initdb/10-roles.sh). Public dummy credentials, like the other secrets of localConfig() — NEVER in a
+ * deployment. 5433 rather than 5432 keeps clear of a PostgreSQL already running on the machine.
+ */
+const LOCAL_POSTGRES = {
+  app: 'nest_app:nest-app-secret',
+  host: '127.0.0.1:5433',
+  owner: 'nest_owner:nest-owner-secret',
+};
+
+/** The env vars that configure the default data source; any of them switches a local env to it */
+const DATABASE_ENV_VARS = ['NSC__DATABASE__URL', 'NSC__DATABASE__OWNER_URL', 'NSC__DATABASE__SQL_ENGINE'];
+
+/**
+ * The `database` block of a local env, or `undefined` for MongoDB. URLs from the environment win over LOCAL_POSTGRES,
+ * both or neither: half from each would migrate one database and serve another.
+ */
+function localDatabase(dbName: string): IServerOptions['database'] | undefined {
+  if (!PROJECT_SQL_ENGINE && !DATABASE_ENV_VARS.some((name) => process.env[name])) {
+    return undefined;
+  }
+  if (process.env.NSC__DATABASE__URL || process.env.NSC__DATABASE__OWNER_URL) {
+    return { sqlEngine: PROJECT_SQL_ENGINE };
+  }
+  return {
+    ownerUrl: `postgres://${LOCAL_POSTGRES.owner}@${LOCAL_POSTGRES.host}/${dbName}`,
+    sqlEngine: PROJECT_SQL_ENGINE,
+    url: `postgres://${LOCAL_POSTGRES.app}@${LOCAL_POSTGRES.host}/${dbName}`,
+  };
+}
+
 /** Demo cron job — disabled by default; flip `disabled: false` to activate. */
 const DEMO_CRON_JOBS = {
   sayHello: {
@@ -196,6 +257,26 @@ function getBetterAuthSecret(config: Partial<IServerOptions>): string | undefine
   return typeof config.betterAuth === 'object' ? config.betterAuth.secret : undefined;
 }
 
+/** Does a `database` block configure the default source? Without one, `mongoose` is the default source */
+function hasDatabase(config: Partial<IServerOptions>): boolean {
+  return config.database !== undefined && config.database !== false;
+}
+
+/** The URL of the default source: `database` as a URL string, or its `url` */
+function getDatabaseUrl(config: Partial<IServerOptions>): string | undefined {
+  return typeof config.database === 'string' ? config.database : config.database ? config.database.url : undefined;
+}
+
+/** A `database` block whose default source is (or, without a URL yet, will be) a SQL database */
+function hasSqlDatabase(config: Partial<IServerOptions>): boolean {
+  return hasDatabase(config) && !/^mongodb(\+srv)?:/i.test(getDatabaseUrl(config) ?? '');
+}
+
+/** Whether `database.models` keeps a model in the MongoDB of the `mongoose` configuration */
+function routesModelsToMongoose(config: Partial<IServerOptions>): boolean {
+  return typeof config.database === 'object' && Object.values(config.database.models ?? {}).includes('mongoose');
+}
+
 // =============================================================================
 // Required `NSC__*` env vars for deployed envs (single source of truth)
 // -----------------------------------------------------------------------------
@@ -215,7 +296,17 @@ interface RequiredEnvVar {
 
 export const REQUIRED_DEPLOYED_ENV_VARS: RequiredEnvVar[] = [
   { check: (c) => !!c.baseUrl, envVar: 'NSC__BASE_URL' },
-  { check: (c) => !!c.mongoose?.uri, envVar: 'NSC__MONGOOSE__URI' },
+  // MongoDB, the default: required while no `database` block names the default source (PROJECT_SQL_ENGINE,
+  // NSC__DATABASE__*). A deployment on PostgreSQL needs no MongoDB, and setting the URI anyway connects one.
+  { check: (c) => !!c.mongoose?.uri, condition: (c) => !hasDatabase(c), envVar: 'NSC__MONGOOSE__URI' },
+  // PostgreSQL: the application role serves the requests, the owner role brings the schema up to date at boot and
+  // runs the migrations (docker-entrypoint.sh). Without the owner, the boot stops at the first pending schema change.
+  { check: (c) => !!getDatabaseUrl(c), condition: hasDatabase, envVar: 'NSC__DATABASE__URL' },
+  {
+    check: (c) => typeof c.database === 'object' && !!c.database.ownerUrl,
+    condition: hasSqlDatabase,
+    envVar: 'NSC__DATABASE__OWNER_URL',
+  },
   { check: (c) => !!getBetterAuthSecret(c), envVar: 'NSC__BETTER_AUTH__SECRET' },
   { check: (c) => isSmtpOptionsObject(c.email?.smtp) && !!c.email.smtp.host, envVar: 'NSC__EMAIL__SMTP__HOST' },
   {
@@ -431,20 +522,27 @@ function deployedConfig(
     // secret. A stage that needs it sets NSC__CONFIG_ENDPOINT=true (.env.example); the answer stays masked.
     // CORS propagated to GraphQL/REST/BetterAuth via shared buildCorsConfig
     cors: { allowedOrigins: process.env.CORS_ALLOWED_ORIGINS?.split(',').filter(Boolean) },
-    // PostgreSQL / MySQL / MariaDB instead of, or beside, MongoDB (nest-server 12.1.0+). Left out on purpose: then
-    // the `mongoose` configuration is the only data source, exactly as before. NSC__DATABASE__URL, __OWNER_URL and
-    // __SQL_ENGINE fill the same object from the environment (.env.example, "Database"). The URL's scheme picks the
-    // database; the application role only reads and writes rows, the owner role evolves the tables at boot:
+    // PostgreSQL instead of MongoDB (PROJECT_SQL_ENGINE above). Left out by default: then the `mongoose` configuration
+    // (NSC__MONGOOSE__URI) is the only data source, exactly as before. The URLs never live in this file: the
+    // application role from NSC__DATABASE__URL, the owner role from NSC__DATABASE__OWNER_URL (.env.example,
+    // "Database"). Written out, the block the two fill in:
     //
     // database: {
-    //   ownerUrl: 'postgres://owner_role@db/project', // mysql:// or mariadb:// for MySQL 8.4 / MariaDB 11.8
+    //   models: { Article: 'mongoose' }, // exceptions per model, here: Article stays in MongoDB (NSC__MONGOOSE__URI)
+    //   ownerUrl: 'postgres://owner_role@db/project', // owns the tables, evolves them at boot, runs the migrations
     //   sqlEngine: 'typeorm', // or 'kysely' / 'drizzle'
-    //   url: 'postgres://app_role@db/project',
+    //   url: 'postgres://app_role@db/project', // owns nothing, no BYPASSRLS: every request runs as this role
     // },
     //
-    // With `mongoose` still configured, MongoDB stays as the extra source `mongoose`. On SQL alone, also drop the
-    // NSC__MONGOOSE__URI entry from REQUIRED_DEPLOYED_ENV_VARS and hand the owner URL to migrations-utils/migrate.js.
-    // Per database: nest-server migration-guides/12.0.x-to-12.1.x.md §3 (PostgreSQL), §7 (MySQL / MariaDB).
+    // `models` is optional. With NSC__MONGOOSE__URI also set, MongoDB stays as the extra source `mongoose`, and only the
+    // models listed there are stored in it.
+    //
+    // The short form `database: 'postgres://app_role@db/project'` names the application role only. nest-server then
+    // evolves no table (it only verifies them and stops the boot while a change is pending), and the migrations have no
+    // owner to run as. The deployed envs therefore refuse it and ask for NSC__DATABASE__OWNER_URL beside it; an
+    // NSC__DATABASE__* variable replaces a short form as a whole, so set NSC__DATABASE__URL with it.
+    // Per database: nest-server migration-guides/12.0.x-to-12.1.x.md §3 (PostgreSQL).
+    ...(PROJECT_SQL_ENGINE ? { database: { sqlEngine: PROJECT_SQL_ENGINE } } : {}),
     email: {
       // defaultSender.email comes from NSC__EMAIL__DEFAULT_SENDER__EMAIL
       defaultSender: { name: brand },
@@ -500,7 +598,7 @@ function deployedConfig(
     // Logs the stack of every HttpException at `debug`, so on deployed stages only with NEST_LOG_LEVEL=debug
     // (resolveLogLevels() below). Errors that are no HttpException still reach the log at `error`, with stack.
     logExceptions: true,
-    // mongoose.uri comes from NSC__MONGOOSE__URI (no fallback in deployed envs)
+    // mongoose.uri comes from NSC__MONGOOSE__URI (no fallback in deployed envs; not needed on PostgreSQL)
     permissions: true,
     port: Number(process.env.PORT) || 3000,
     sha256: true,
@@ -562,7 +660,9 @@ function deployedConfig(
     //
     // Storage note: `file.storage` and `s3` are deliberately NOT set here. Unset,
     // the driver derives to GridFS (a database is configured, no `s3` block is) —
-    // which is what this starter runs on. Configuring `s3.bucket` alone would make
+    // which is what this starter runs on. On PostgreSQL it derives to `filesystem`
+    // instead (`uploads/files`, pod-local: mount it as a volume or configure `s3`
+    // before running more than one replica). Configuring `s3.bucket` alone would make
     // S3 the derived driver and MOVE the bytes; `FileService` already forwards
     // `configService` + `s3Service` to `super()`, so that works instead of failing
     // the boot. See `.env.example` → "File storage" for the operator-facing knobs.
@@ -596,6 +696,8 @@ function localConfig(
 ): Partial<IServerOptions> {
   const brand = `Nest Server Starter ${options.brandSuffix}`;
   const upper = envName.toUpperCase();
+  // PostgreSQL (PROJECT_SQL_ENGINE or NSC__DATABASE__*) instead of the `mongoose` block below, never both
+  const database = localDatabase(options.dbName);
 
   const base: Partial<IServerOptions> = {
     appUrl: process.env.APP_URL,
@@ -614,6 +716,7 @@ function localConfig(
     bodyParser: PROJECT_BODY_PARSER,
     compression: true,
     cors: { allowAll: true },
+    ...(database ? { database } : {}),
     email: {
       defaultSender: { email: 'noreply@test.local', name: brand },
       // The page nuxt-base-starter ships (`app/pages/auth/reset-password.vue`) reads the token from
@@ -650,22 +753,8 @@ function localConfig(
     hostname: process.env.BIND_ADDRESS,
     ignoreSelectionsForPopulate: true,
     logExceptions: true,
-    mongoose: {
-      // Fail fast when Mongo is not there. The driver's default is 30 s per
-      // operation, which is the right call for a deployed service riding out a
-      // replica-set election — and the wrong one everywhere localConfig applies
-      // (local, e2e, ci), where "no Mongo" means it is simply not running.
-      //
-      // At 30 s the symptom is indistinguishable from a hang: every test burns
-      // its own timeout waiting, a CI suite spends its whole budget proving the
-      // same fault, and the log blames whatever test happened to run first. At
-      // 5 s it is an error message. Deployed environments keep the default —
-      // deployedConfig does not go through here.
-      //
-      // Override per environment via NSC__MONGOOSE__OPTIONS__SERVER_SELECTION_TIMEOUT_MS.
-      options: { serverSelectionTimeoutMS: 5000 },
-      uri: process.env.NSC__MONGOOSE__URI || `mongodb://127.0.0.1/${options.dbName}`,
-    },
+    // Left out on PostgreSQL: a configured `mongoose` would connect a MongoDB beside it (source `mongoose`)
+    ...(database ? {} : { mongoose: localMongoose(options.dbName) }),
     port: Number(process.env.PORT) || 3000,
     sha256: true,
     staticAssets: PROJECT_STATIC_ASSETS,
@@ -674,6 +763,26 @@ function localConfig(
   };
 
   return options.config ? merge({}, base, options.config) : base;
+}
+
+/** The MongoDB of the local envs (the default database) */
+function localMongoose(dbName: string): IServerOptions['mongoose'] {
+  return {
+    // Fail fast when Mongo is not there. The driver's default is 30 s per
+    // operation, which is the right call for a deployed service riding out a
+    // replica-set election — and the wrong one everywhere localConfig applies
+    // (local, e2e, ci), where "no Mongo" means it is simply not running.
+    //
+    // At 30 s the symptom is indistinguishable from a hang: every test burns
+    // its own timeout waiting, a CI suite spends its whole budget proving the
+    // same fault, and the log blames whatever test happened to run first. At
+    // 5 s it is an error message. Deployed environments keep the default —
+    // deployedConfig does not go through here.
+    //
+    // Override per environment via NSC__MONGOOSE__OPTIONS__SERVER_SELECTION_TIMEOUT_MS.
+    options: { serverSelectionTimeoutMS: 5000 },
+    uri: process.env.NSC__MONGOOSE__URI || `mongodb://127.0.0.1/${dbName}`,
+  };
 }
 
 // =============================================================================
@@ -810,6 +919,14 @@ if (requestedEnv && !Object.hasOwn(config, requestedEnv)) {
 }
 
 const resolved = getEnvironmentConfig({ config });
+
+// A local env on PostgreSQL connects no MongoDB, also when the shell exports NSC__MONGOOSE__URI (`lt dev up` does for
+// every project): getEnvironmentConfig() merges it into every env, and nest-server would then open a MongoDB beside the
+// PostgreSQL, or wait minutes at boot for one that is not running. It stays only where `database.models` routes a model
+// to the source `mongoose`. The deployed envs keep it: there NSC__MONGOOSE__URI is the documented opt-in.
+if (isLocalEnv(resolved.env) && hasSqlDatabase(resolved) && !routesModelsToMongoose(resolved)) {
+  delete resolved.mongoose;
+}
 
 // Every env that is not local: develop, test, production, and a block a project adds (e.g. `staging`).
 if (!isLocalEnv(resolved.env)) {

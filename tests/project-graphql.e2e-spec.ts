@@ -9,11 +9,11 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
 import { PubSub } from 'graphql-subscriptions';
-import { MongoClient, ObjectId } from 'mongodb';
 
 import envConfig from '../src/config.env.js';
 import { User } from '../src/server/modules/user/user.model.js';
 import { imports, ServerModule } from '../src/server/server.module.js';
+import { openTestDb, type TestDb } from './test-db.js';
 
 /**
  * Helper to hash password with SHA256 if enabled in config
@@ -35,8 +35,7 @@ describe('Project GraphQL (e2e)', () => {
   let testHelper: TestHelper;
 
   // database
-  let connection;
-  let db;
+  let db: TestDb;
 
   // Global vars
   const users: Partial<User & { token: string }>[] = [];
@@ -67,8 +66,7 @@ describe('Project GraphQL (e2e)', () => {
       testHelper = new TestHelper(app);
 
       // Connection to database
-      connection = await MongoClient.connect(envConfig.mongoose.uri);
-      db = await connection.db();
+      db = await openTestDb(envConfig);
     } catch (e) {
       console.error('beforeAllError', e);
     }
@@ -78,7 +76,7 @@ describe('Project GraphQL (e2e)', () => {
    * After all tests are finished
    */
   afterAll(async () => {
-    await connection.close();
+    await db?.close();
     await app.close();
   });
 
@@ -111,20 +109,18 @@ describe('Project GraphQL (e2e)', () => {
       expect(res).toBeDefined();
 
       // Get user from database
-      const user = await db.collection('users').findOne({ email: input.email });
+      const user = await db.findUser({ email: input.email });
       expect(user).toBeDefined();
 
       users.push({
         email: input.email,
         firstName: input.name,
-        id: user._id.toString(),
+        id: user.id,
         password,
       });
 
       // Verify user in database
-      await db
-        .collection('users')
-        .updateOne({ _id: new ObjectId(user._id) }, { $set: { emailVerified: true, verified: true } });
+      await db.updateUser({ id: user.id }, { emailVerified: true, verified: true });
     }
     expect(users.length).toBeGreaterThanOrEqual(userCount);
   });
@@ -154,9 +150,7 @@ describe('Project GraphQL (e2e)', () => {
    * Prepare users
    */
   it('prepareUsers', async () => {
-    await db
-      .collection('users')
-      .findOneAndUpdate({ _id: new ObjectId(users[0].id) }, { $set: { roles: [RoleEnum.ADMIN] } });
+    await db.updateUser({ id: users[0].id }, { roles: [RoleEnum.ADMIN] });
   });
 
   // ===================================================================================================================
@@ -258,9 +252,7 @@ describe('Project GraphQL (e2e)', () => {
    */
   it('deleteUsers', async () => {
     // Add admin role to last user
-    await db
-      .collection('users')
-      .findOneAndUpdate({ _id: new ObjectId(users[users.length - 1].id) }, { $set: { roles: ['admin'] } });
+    await db.updateUser({ id: users[users.length - 1].id }, { roles: ['admin'] });
 
     for (const user of users) {
       const res: any = await testHelper.graphQl(

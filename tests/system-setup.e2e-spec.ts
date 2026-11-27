@@ -2,9 +2,8 @@ import { HttpExceptionLogFilter, TestHelper } from '@lenne.tech/nest-server';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import { Db, MongoClient } from 'mongodb';
 
-import { deriveTestDbUri } from './db-lifecycle.reporter.js';
+import { applicationDatabaseName, openTestDb, type TestDb, useOwnTestDatabase } from './test-db.js';
 
 /**
  * System setup: the first administrator of a fresh instance, through the path the frontend's setup page takes
@@ -19,28 +18,26 @@ import { deriveTestDbUri } from './db-lifecycle.reporter.js';
  *
  * ISOLATION: the setup needs a database without users, and the per-worker database (tests/setup.ts) is shared with the
  * other spec files of the same fork. This spec derives a database of its own from it BEFORE the configuration is
- * imported (hence the dynamic imports below) and drops it afterwards. `deriveTestDbUri()` keeps the name within
- * MongoDB's 63 characters: a project generated from this starter puts its own name in front of `-e2e-run-…`, and a
- * longer project name plus `-setup` would otherwise be refused on every run.
+ * imported (hence the dynamic imports below) and drops it afterwards, on MongoDB and on PostgreSQL alike
+ * (`useOwnTestDatabase()`). The name stays within the 63 characters both allow: a project generated from this starter
+ * puts its own name in front of `-e2e-run-…`, and a longer project name plus `-setup` would otherwise be refused (or,
+ * on PostgreSQL, truncated) on every run.
  */
-const INHERITED_DB_URI = process.env.NSC__MONGOOSE__URI;
-const SETUP_DB_URI = deriveTestDbUri('setup');
-process.env.NSC__MONGOOSE__URI = SETUP_DB_URI;
+const ownDatabase = await useOwnTestDatabase('setup');
 
 const ADMIN = { email: 'first-admin@system-setup.test', name: 'First Admin', password: 'FirstAdmin123!' };
 
 describe('System setup through the setup page (e2e)', () => {
   let app: NestExpressApplication;
   let testHelper: TestHelper;
-  let connection: MongoClient;
-  let db: Db;
+  let db: TestDb;
   let sha256 = false;
 
   beforeAll(async () => {
     const { default: envConfig } = await import('../src/config.env.js');
     const { imports, ServerModule } = await import('../src/server/server.module.js');
     // Everything below depends on this database being the one the application uses
-    expect(envConfig.mongoose.uri).toBe(SETUP_DB_URI);
+    expect(applicationDatabaseName(envConfig)).toBe(ownDatabase.name);
     sha256 = !!envConfig.sha256;
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -54,29 +51,18 @@ describe('System setup through the setup page (e2e)', () => {
     await app.init();
     testHelper = new TestHelper(app);
 
-    connection = await MongoClient.connect(SETUP_DB_URI);
-    db = connection.db();
+    db = await openTestDb(envConfig);
   });
 
   afterAll(async () => {
     // App first: dropping while the app is alive races against async initialisation re-creating the database
     await app?.close();
-    try {
-      await db?.dropDatabase();
-    } catch {
-      // The reporter collects it as a leftover of this run
-    }
-    await connection?.close();
-    // Assigning undefined would store the string "undefined"
-    if (INHERITED_DB_URI === undefined) {
-      delete process.env.NSC__MONGOOSE__URI;
-    } else {
-      process.env.NSC__MONGOOSE__URI = INHERITED_DB_URI;
-    }
+    await db?.close();
+    await ownDatabase.release();
   });
 
   it('starts without users', async () => {
-    expect(await db.collection('users').countDocuments({})).toBe(0);
+    expect(await db.countUsers({})).toBe(0);
   });
 
   it('offers the setup form: setup needed, HTTP init open, no token', async () => {
@@ -115,6 +101,6 @@ describe('System setup through the setup page (e2e)', () => {
       statusCode: 403,
     });
     expect(refused.message).toContain('LTNS_0050');
-    expect(await db.collection('users').countDocuments({})).toBe(1);
+    expect(await db.countUsers({})).toBe(1);
   });
 });

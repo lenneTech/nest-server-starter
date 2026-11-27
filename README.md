@@ -28,7 +28,7 @@ and applying them to your own project (see [Update Notes](update)).
   the version control system for your source code
 
 - [MongoDB](https://docs.mongodb.com/manual/installation/#mongodb-community-edition-installation-tutorials)
-  (or any other database compatible with [MikroORM](https://mikro-orm.io)):  
+  (the default) or [PostgreSQL](https://www.postgresql.org) 15+ (see [Database](#database-mongodb-or-postgresql)):  
   the database for your objects
 
 ## 1. Install the starter kit via [CLI](https://github.com/lenneTech/cli)
@@ -101,6 +101,73 @@ Vitest config: vitest-e2e.config.ts
 ```
 see [E2E-Tests.run.xml](.run/E2E-Tests.run.xml)
 
+## Database: MongoDB or PostgreSQL
+
+MongoDB is the default and needs nothing: the local environments expect it on `127.0.0.1:27017`. The same codebase
+also runs on **PostgreSQL** (nest-server 12.1.0+). The modules register their models through
+`CorePersistenceModule.forFeature()`, so the configuration decides where they are stored. Nothing else changes:
+the same services, controllers, resolvers and tests run on both databases.
+
+### Switching to PostgreSQL
+
+| Scope | How |
+|-------|-----|
+| Every environment, in code | `const PROJECT_SQL_ENGINE = 'typeorm'` in `src/config.env.ts` (or `'kysely'` / `'drizzle'`, each with its package) |
+| One deployment | `NSC__DATABASE__URL` and `NSC__DATABASE__OWNER_URL`, optionally `NSC__DATABASE__SQL_ENGINE` |
+| One local run | `NSC__DATABASE__SQL_ENGINE=typeorm` alone: the local envs then use the PostgreSQL of `docker-compose.yml` |
+
+Locally:
+
+```bash
+docker compose --profile postgres up -d          # PostgreSQL 18 on 127.0.0.1:5433, roles and local database
+NSC__DATABASE__SQL_ENGINE=typeorm pnpm start
+NSC__DATABASE__SQL_ENGINE=typeorm pnpm run test:e2e
+```
+
+`POSTGRES_APP_DATABASES` in `docker-compose.yml` names the database of the `local` env and has to equal `dbName` of
+the `local` block in `src/config.env.ts`. A project created from this starter sets its own name there before the
+first start.
+
+With PostgreSQL configured, the local environments connect to no MongoDB at all, also when the shell exports
+`NSC__MONGOOSE__URI` (as `lt dev up` does). `lt dev up` does not recognise the PostgreSQL variant yet: every stack
+then runs on the database of the `local` env. The e2e suite creates a database per run and worker as the owner role
+and drops it again, exactly as it does on MongoDB.
+
+Single models can stay in MongoDB: `database.models` lists them, with `NSC__MONGOOSE__URI` set beside it. The
+commented `database` block in `deployedConfig()` of `src/config.env.ts` shows it.
+
+### Two roles
+
+| Role | Variable | Rights |
+|------|----------|--------|
+| owner | `NSC__DATABASE__OWNER_URL` | Owns the tables. nest-server uses it only to create and evolve the schema at boot; the migrations run with it. |
+| application | `NSC__DATABASE__URL` | Every request. Owns nothing, neither superuser nor `BYPASSRLS`, so row-level security binds it. The boot refuses a role that could get around it. |
+
+`docker/postgres/initdb/10-roles.sh` creates both, locally and in CI. For a deployment, run it with
+`POSTGRES_TEST_RIGHTS=false`: the owner then gets no `CREATEDB` and no `pg_signal_backend`, which only the e2e suite
+needs. `tests/postgres-roles.e2e-spec.ts` checks that the application role cannot bypass row-level security.
+
+The short form `database: 'postgres://…'` names only the application role. Without the owner, nest-server creates and
+evolves no table and the migrations have no role to run as, so the deployed envs refuse it and ask for
+`NSC__DATABASE__OWNER_URL`.
+
+### What differs
+
+- **Required in deployed envs:** `NSC__DATABASE__URL` and `NSC__DATABASE__OWNER_URL` instead of `NSC__MONGOOSE__URI`
+  (`REQUIRED_DEPLOYED_ENV_VARS` in `src/config.env.ts`).
+- **Migrations:** `pnpm run migrate:create:sql <name>` writes a migration that runs SQL as the owner role. The state
+  lives in the table `lt_migrations` instead of the collection `migrations` (`migrations-utils/database-url.js`).
+  The schema itself needs no migration as long as nest-server can apply a change safely; it stops the boot with
+  suggested statements when it cannot.
+- **File storage:** the derived driver is `filesystem` (`uploads/files`) instead of GridFS. That directory is pod-local:
+  mount it as a volume, or configure `s3` before running more than one replica.
+- **Packages:** the starter declares both sets, `mongoose`, `@nestjs/mongoose` and `mongodb` as well as `pg` and
+  `typeorm`, so either variant runs without an install step.
+
+Moving an existing MongoDB deployment is a data migration; nothing is copied by itself. MySQL 8.4 and MariaDB 11.8 run
+on nest-server too, but are not part of this template: they have no row-level security. Details: nest-server
+migration guide 12.0.x → 12.1.x, §3.
+
 ## Docker
 
 The project includes a production-ready multi-stage Dockerfile. It works both as a standalone project and inside a monorepo created with `lt fullstack init`.
@@ -111,6 +178,10 @@ The project includes a production-ready multi-stage Dockerfile. It works both as
 # Standalone
 docker build -t api .
 docker run -e NSC__MONGOOSE__URI=mongodb://host:27017/mydb -p 3000:3000 api
+
+# On PostgreSQL (plus the other required NSC__* variables of a deployed env)
+docker run -e NSC__DATABASE__URL=postgres://app_role:…@host:5432/mydb \
+  -e NSC__DATABASE__OWNER_URL=postgres://owner_role:…@host:5432/mydb -p 3000:3000 api
 
 # Monorepo (build context = monorepo root)
 docker build --build-arg API_DIR=projects/api -t api .
@@ -128,11 +199,13 @@ docker build --build-arg API_DIR=projects/api -t api .
 |------|---------|
 | `Dockerfile` | Multi-stage production build |
 | `docker-entrypoint.sh` | Runs DB migrations before server start |
+| `docker-compose.yml` | The optional PostgreSQL service for development (profile `postgres`) |
+| `docker/postgres/initdb/10-roles.sh` | Creates the owner and the application role of PostgreSQL |
 | `.dockerignore` | Excludes node_modules, dist, tests, key material, `.env*`, and local runtime state (`uploads` — the TUS staging dir holding real user documents — plus `.lt-dev`) from the build context. Inert in an lt-monorepo: see the file's header. |
 
 ### Environment
 
-The migration store reads the MongoDB URI from the `NSC__MONGOOSE__URI` environment variable, so it works in Docker production where `config.env.ts` is not available as TypeScript source.
+The migration store reads the compiled configuration, and the environment where none is loadable: the MongoDB URI from `NSC__MONGOOSE__URI`, or on PostgreSQL the owner role from `NSC__DATABASE__OWNER_URL`. The migrations therefore run as the owner, before the server starts.
 
 | Variable | Default | Effect |
 |----------|---------|--------|
@@ -202,8 +275,8 @@ See `.env.example` for the complete catalog of required and optional env vars.
 ### Verifying configurations
 
 `src/config.env.spec.ts` checks the contract on every `pnpm test`: `develop`, `test` and
-`production` refuse to start while a required `NSC__*` var is missing and name every missing one;
-`local`, `e2e` and `ci` start without any of them.
+`production` refuse to start while a required `NSC__*` var is missing and name every missing one,
+on MongoDB and on PostgreSQL; `local`, `e2e` and `ci` start without any of them.
 
 ### API documentation (Swagger)
 

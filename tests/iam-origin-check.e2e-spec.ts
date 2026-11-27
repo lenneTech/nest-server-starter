@@ -21,9 +21,9 @@ import {
 } from '@lenne.tech/nest-server';
 import { Test, TestingModule } from '@nestjs/testing';
 import { createHash } from 'crypto';
-import { MongoClient } from 'mongodb';
 
 import envConfig from '../src/config.env.js';
+import { openTestDb, type TestDb } from './test-db.js';
 
 const FOREIGN_ORIGIN = 'https://evil.example';
 
@@ -35,8 +35,7 @@ function hashPassword(password: string): string {
 describe('IAM origin check switched on (e2e)', () => {
   let app;
   let testHelper: TestHelper;
-  let connection;
-  let db;
+  let db: TestDb;
   let appOrigin: string;
   let sessionCookies: string;
 
@@ -65,8 +64,7 @@ describe('IAM origin check switched on (e2e)', () => {
     await app.init();
     testHelper = new TestHelper(app);
 
-    connection = await MongoClient.connect(envConfig.mongoose.uri, {});
-    db = connection.db();
+    db = await openTestDb(envConfig);
 
     // Without this, every refusal below could come from somewhere else and every acceptance would
     // prove nothing: the switch has to have reached Better-Auth.
@@ -86,18 +84,13 @@ describe('IAM origin check switched on (e2e)', () => {
       statusCode: 201,
     });
     // Sign-in requires a verified address; the verification mail is not what this suite is about.
-    await db.collection('users').updateOne({ email }, { $set: { emailVerified: true, verified: true } });
+    await db.updateUser({ email }, { emailVerified: true, verified: true });
   });
 
   afterAll(async () => {
-    const user = await db?.collection('users').findOne({ email });
-    if (user) {
-      const ids: any[] = [user._id, user._id.toString(), user.iamId, user.id].filter(Boolean);
-      await db.collection('account').deleteMany({ userId: { $in: ids } });
-      await db.collection('session').deleteMany({ userId: { $in: ids } });
-    }
-    await db?.collection('users').deleteMany({ email });
-    await connection?.close();
+    // Sessions and accounts go with the user
+    await db?.deleteUsers({ email });
+    await db?.close();
     await app?.close();
   });
 

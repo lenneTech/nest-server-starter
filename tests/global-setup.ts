@@ -6,6 +6,7 @@ import { MongoClient } from 'mongodb';
 import envConfig from '../src/config.env.js';
 import {
   EXTERNALLY_DROPPABLE_DB_PATTERN,
+  isDroppableTestDb,
   isExternallyDroppableTestDb,
   isStaleTestDb,
   NON_DISPOSABLE_DB_PATTERN,
@@ -13,6 +14,15 @@ import {
   splitMongoUri,
 } from './db-lifecycle.reporter.js';
 import { acquireRunSlot } from './e2e-run-slots.js';
+import {
+  describeServer,
+  openMongoTestServer,
+  openPostgresTestServer,
+  postgresBaseUrls,
+  postgresDatabaseName,
+  type TestDatabaseServer,
+  withPostgresDatabase,
+} from './test-database-server.js';
 
 /**
  * Vitest global setup: give every test run its OWN database.
@@ -54,11 +64,23 @@ import { acquireRunSlot } from './e2e-run-slots.js';
  * out of the unique-name scheme AND the sweep/governor: that URI is used as-is
  * and dropped up front, exactly like the previous behavior — but only if it
  * names a disposable test database (see the guard below).
+ *
+ * POSTGRESQL (`database` in the configuration, e.g. NSC__DATABASE__SQL_ENGINE=typeorm): the same three steps with
+ * the same names and guards, on the server the configured URLs point at (tests/test-database-server.ts). The
+ * configured database is only the BASE of the names, never used or dropped itself: the run gets
+ * `<base>-run-<ts>-p<pid>` through NSC__DATABASE__URL and NSC__DATABASE__OWNER_URL, and every worker creates its
+ * `-w<N>` database as the owner role in tests/setup.ts. There is no externally pinned variant — a PostgreSQL database
+ * has to be created before the application can use it, so every run creates its own.
  */
 
 let releaseRunSlot: (() => void) | undefined;
 
 export async function setup() {
+  if (usesSqlDatabase(envConfig.database)) {
+    await setupPostgres(envConfig.database);
+    return;
+  }
+
   if (process.env.NSC__MONGOOSE__URI) {
     // A URI without a path (`mongodb://host`, `mongodb://host/`) makes the driver resolve to its
     // DEFAULT database, `test`. Nobody chose that database. The guard below refuses the name `test`
@@ -114,11 +136,89 @@ export async function setup() {
 
   const { dbName, query, serverUri } = splitMongoUri(envConfig.mongoose.uri);
 
-  // 0. Filesystem sweep — remove upload-test artifacts (`tests/*.txt` / `*.bin`)
-  // left behind by aborted file-upload specs. Same philosophy as the DB sweep
-  // below: restarting the suite restores a clean state no matter how the
-  // previous run died. No tracked fixtures match these patterns (git-verified);
-  // `pnpm run test:cleanup` remains for manual use.
+  // 0. Filesystem sweep — see sweepUploadArtifacts().
+  sweepUploadArtifacts();
+
+  // 1. Startup sweep — restore a clean state regardless of how earlier runs ended.
+  await sweepStaleDatabases(() => openMongoTestServer(`${serverUri}/${dbName}${query}`), dbName, true);
+
+  // 2. Machine-wide run governor — wait for a free e2e slot before spawning forks.
+  releaseRunSlot = await acquireRunSlot();
+
+  // 3. Unique per-run database.
+  const runDbName = `${dbName}-run-${Date.now()}-p${process.pid}`;
+  process.env.NSC__MONGOOSE__URI = `${serverUri}/${runDbName}${query}`;
+  console.info(`Test database for this run: ${runDbName}`);
+}
+
+/**
+ * Does the configuration put the default source on a SQL database? Then the run is on PostgreSQL — the only SQL
+ * database this suite supports (tests/test-database-server.ts refuses the others by name).
+ */
+function usesSqlDatabase(database: unknown): boolean {
+  if (database === undefined || database === false || database === null) {
+    return false;
+  }
+  const url = typeof database === 'string' ? database : (database as { url?: string }).url;
+  return !/^mongodb(\+srv)?:/i.test(url ?? '');
+}
+
+/**
+ * The longest base a PostgreSQL run name can carry: 53 bytes for the run name (63 minus a worker suffix) less the
+ * longest `-run-<13-digit ms>-p<7-digit pid>` (27 bytes). Exported for its unit spec.
+ */
+export const MAX_POSTGRES_RUN_BASE_BYTES = 53 - 27;
+
+/**
+ * The run on PostgreSQL: the same sweep, governor and unique run name as on MongoDB. The run's name is the base of
+ * every database of the run (`-w<N>` per worker, `-<suffix>` for a spec's own), so it has to fit PostgreSQL's 63 bytes
+ * with room for those: a longer one would be truncated and lose the part the cleanup matches on.
+ */
+async function setupPostgres(database: unknown) {
+  const { appUrl, ownerUrl } = postgresBaseUrls(database);
+  const base = postgresDatabaseName(ownerUrl);
+  const runDbName = `${base}-run-${Date.now()}-p${process.pid}`;
+
+  // The configured database is only the base of the names; what the run creates and drops carries `-run-`. The guard
+  // still applies to those names: a base like `<slug>-local` (the developer's own database) must not lend its name.
+  if (!isDroppableTestDb(runDbName)) {
+    throw new Error(
+      `Refusing to create test databases named after "${base}": not recognizably a test database. The configured ` +
+        `database of the e2e run needs a delimited e2e/ci/test/acctest segment — ${SAFE_TEST_DB_PATTERN} — and must ` +
+        `not carry an environment suffix — ${NON_DISPOSABLE_DB_PATTERN}.`,
+    );
+  }
+  // Measured against the longest run name, not this one: `-run-<13-digit ms>-p<pid>` grows with the PID (up to 7 digits
+  // on Linux), and a check on the actual name would pass or fail by the PID of the process
+  if (Buffer.byteLength(base) > MAX_POSTGRES_RUN_BASE_BYTES) {
+    throw new Error(
+      `The database name "${base}" is too long for the e2e run on PostgreSQL: at most ` +
+        `${MAX_POSTGRES_RUN_BASE_BYTES} bytes, so that a run database ("${runDbName}") and its worker databases stay ` +
+        'within the 63 bytes PostgreSQL keeps of a name. Shorten `dbName` of the e2e block in src/config.env.ts.',
+    );
+  }
+
+  sweepUploadArtifacts();
+  await sweepStaleDatabases(() => openPostgresTestServer(ownerUrl), base, false);
+  releaseRunSlot = await acquireRunSlot();
+
+  process.env.NSC__DATABASE__URL = withPostgresDatabase(appUrl, runDbName);
+  process.env.NSC__DATABASE__OWNER_URL = withPostgresDatabase(ownerUrl, runDbName);
+  // The run uses one database. A MongoDB URI from the shell (`lt dev up` exports one) would otherwise connect a MongoDB
+  // beside it as the source `mongoose`, and the tests would pass or fail on a database they never meant to use.
+  if (process.env.NSC__MONGOOSE__URI) {
+    console.info('PostgreSQL run: NSC__MONGOOSE__URI from the environment is not used');
+    delete process.env.NSC__MONGOOSE__URI;
+  }
+  console.info(`Test database for this run: ${describeServer(ownerUrl)}/${runDbName}`);
+}
+
+/**
+ * Filesystem sweep — remove upload-test artifacts (`tests/*.txt` / `*.bin`) left behind by aborted file-upload specs.
+ * Same philosophy as the DB sweep: restarting the suite restores a clean state no matter how the previous run died.
+ * No tracked fixtures match these patterns (git-verified); `pnpm run test:cleanup` remains for manual use.
+ */
+function sweepUploadArtifacts() {
   try {
     // vitest runs globalSetup with cwd = project root (config `root: './'`).
     const testsDir = join(process.cwd(), 'tests');
@@ -130,23 +230,29 @@ export async function setup() {
   } catch {
     /* best-effort — never block the run on artifact cleanup */
   }
+}
 
-  // 1. Startup sweep — restore a clean state regardless of how earlier runs ended.
+/**
+ * Startup sweep — drop every stale leftover database of this project's base name, on whichever server the run uses.
+ *
+ * `legacyBase`: whether the bare base name itself counts as a leftover (MongoDB's fixed-name database from before the
+ * unique-name scheme). On PostgreSQL the base is a database somebody created and is never touched.
+ */
+async function sweepStaleDatabases(open: () => Promise<TestDatabaseServer>, base: string, legacyBase: boolean) {
   try {
-    const connection = await MongoClient.connect(`${serverUri}/${dbName}${query}`);
+    const server = await open();
     try {
-      const { databases } = await connection.db().admin().listDatabases({ nameOnly: true });
       const swept: string[] = [];
       let guardSkipped = 0;
-      for (const { name } of databases) {
-        if (!isStaleTestDb(name, dbName)) {
+      for (const name of await server.list()) {
+        if ((!legacyBase && name === base) || !isStaleTestDb(name, base)) {
           continue;
         }
         if (!SAFE_TEST_DB_PATTERN.test(name)) {
           guardSkipped++;
           continue;
         }
-        await connection.db(name).dropDatabase();
+        await server.drop(name);
         swept.push(name);
       }
       if (swept.length > 0) {
@@ -159,24 +265,16 @@ export async function setup() {
         // here is exactly how that goes unnoticed, so it gets a line.
         console.warn(
           `Startup sweep: ${guardSkipped} stale database(s) skipped by the safety guard — ` +
-            `"${dbName}" needs a delimited e2e/ci/test/acctest segment for cleanup to work.`,
+            `"${base}" needs a delimited e2e/ci/test/acctest segment for cleanup to work.`,
         );
       }
     } finally {
-      await connection.close();
+      await server.close();
     }
   } catch (error) {
     // Best-effort: a failed sweep must never block the test run itself.
     console.warn(`Startup sweep skipped: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-
-  // 2. Machine-wide run governor — wait for a free e2e slot before spawning forks.
-  releaseRunSlot = await acquireRunSlot();
-
-  // 3. Unique per-run database.
-  const runDbName = `${dbName}-run-${Date.now()}-p${process.pid}`;
-  process.env.NSC__MONGOOSE__URI = `${serverUri}/${runDbName}${query}`;
-  console.info(`Test database for this run: ${runDbName}`);
 }
 
 export async function teardown() {
